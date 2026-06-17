@@ -57,18 +57,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
     }
 
-    // Calculate score
+    // Calculate score based on custom marks
     let score = 0;
-    const total = quiz.questions.length;
+    let correctCount = 0;
+    let incorrectCount = 0;
+    let totalMarks = 0;
 
     quiz.questions.forEach((question: any, index: number) => {
+      const qMarks = question.marks || 1;
+      totalMarks += qMarks;
       const studentAnswer = answers[index];
       if (studentAnswer !== undefined && studentAnswer === question.correctAnswerIndex) {
-        score++;
+        score += qMarks;
+        correctCount++;
+      } else {
+        incorrectCount++;
       }
     });
 
-    const percentage = parseFloat(((score / total) * 100).toFixed(1));
+    const percentage = parseFloat(((score / totalMarks) * 100).toFixed(1));
 
     // Determine grade
     let grade = "F";
@@ -83,9 +90,11 @@ export async function POST(request: Request) {
     const update = {
       quizTitle: quiz.title,
       score,
-      total,
+      total: totalMarks,
       percentage,
       grade,
+      correctCount,
+      incorrectCount,
       date: new Date(),
     };
 

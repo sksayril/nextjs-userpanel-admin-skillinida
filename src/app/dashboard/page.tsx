@@ -47,6 +47,9 @@ export default function DashboardPage() {
   const [selectedAnswers, setSelectedAnswers] = useState<number[]>([]);
   const [submittingQuiz, setSubmittingQuiz] = useState<boolean>(false);
 
+  // Print Target State
+  const [printTarget, setPrintTarget] = useState<any>(null);
+
   // Authenticate session and fetch dashboard data
   useEffect(() => {
     const checkSession = async () => {
@@ -131,6 +134,13 @@ export default function DashboardPage() {
     window.print();
   };
 
+  const triggerPrint = (type: "marksheet" | "certificate" | "cumulative_marksheet", data: any) => {
+    setPrintTarget({ type, data });
+    setTimeout(() => {
+      window.print();
+    }, 150);
+  };
+
   // Start Exam Quiz Handler
   const handleStartQuiz = (quiz: any) => {
     setActiveQuiz(quiz);
@@ -191,7 +201,8 @@ export default function DashboardPage() {
           internal: internal > 30 ? 30 : internal,
           external: external > 70 ? 70 : external,
           total,
-          grade: r.grade
+          grade: r.grade,
+          originalData: r
         };
       })
     : [
@@ -229,6 +240,373 @@ export default function DashboardPage() {
   const avatarInitials = candidate.name
     ? candidate.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
     : "ST";
+
+  const renderPrintCertificate = (res: any) => {
+    if (!res) return null;
+    const totalQuestions = res.correctCount + res.incorrectCount;
+    const formattedDate = new Date(res.date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    return (
+      <div
+        className="w-[297mm] h-[210mm] bg-white relative overflow-hidden box-border select-none"
+        style={{
+          WebkitPrintColorAdjust: "exact",
+          printColorAdjust: "exact"
+        }}
+      >
+        {/* Background Template Image */}
+        <img
+          src="/certificate-template.png"
+          className="absolute inset-0 w-full h-full object-fill z-0"
+          alt="Certificate Template"
+        />
+
+        {/* Force Landscape Printing */}
+        <style>{`
+          @page {
+            size: landscape;
+            margin: 0;
+          }
+        `}</style>
+
+        {/* Center Content Mask */}
+        <div className="absolute inset-[20mm] bg-white flex flex-col justify-between p-8 z-10 text-center">
+          {/* Header */}
+          <div className="flex flex-col items-center space-y-2">
+            <div className="flex items-center gap-4">
+              <img src="/smi-logo.png" className="h-16 w-16 object-contain" alt="SMI Logo" />
+              <div className="text-left">
+                <h1 className="text-lg font-black tracking-tight text-[#0a1c3a] font-serif">SUPPORT MISSION INDIA</h1>
+                <p className="text-[9px] uppercase font-bold text-[#b89047] tracking-widest leading-none">Sarkari Skill Certification Authority</p>
+              </div>
+            </div>
+            <h2 className="text-xl font-extrabold text-[#0a1c3a] tracking-wide uppercase font-serif mt-2">
+              CBT Mock Test Completion Certificate
+            </h2>
+            <div className="w-56 h-0.5 bg-[#b89047] mx-auto my-1" />
+          </div>
+
+          {/* Certification Text */}
+          <div className="space-y-4 px-12">
+            <p className="text-xs italic text-slate-500 font-serif">This is to certify that</p>
+            <p className="text-2xl font-black text-[#9b7a2f] tracking-wide font-serif">
+              {candidate?.name || "[Candidate Name]"}
+            </p>
+            <p className="text-[11px] text-slate-700 leading-relaxed max-w-xl mx-auto">
+              has successfully participated in and completed the Computer Based Test (CBT) Mock Examination
+              on <span className="font-bold text-[#0a1c3a]">{res.quizTitle}</span> conducted on <span className="font-bold text-[#0a1c3a]">{formattedDate}</span>.
+            </p>
+          </div>
+
+          {/* Grade Display */}
+          <div className="flex flex-col items-center justify-center">
+            <span className="text-[9px] uppercase font-bold tracking-widest text-[#b89047]">Grade Obtained</span>
+            <span className="text-3xl font-black text-[#9b7a2f] font-serif tracking-wide mt-1">{res.grade}</span>
+          </div>
+
+          {/* Signatures & Verification Info */}
+          <div className="flex justify-between items-end px-8 mt-2">
+            <div className="text-center w-40 space-y-1">
+              <div className="h-8 flex items-center justify-center">
+                <span className="font-serif italic text-sm text-[#0a1c3a]/80">Dr. K. Verma</span>
+              </div>
+              <div className="border-t border-[#b89047]/50 pt-1 text-[8.5px] font-bold text-slate-500 uppercase tracking-wider">
+                Authorized Signatory
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center">
+              <div className="h-10 w-10 rounded-full border-2 border-[#b89047] bg-gradient-to-tr from-[#b89047] to-[#d4af37] flex items-center justify-center shadow-md">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="white" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z" />
+                </svg>
+              </div>
+              <span className="text-[7px] font-bold text-[#b89047] uppercase tracking-widest mt-1">VERIFIED</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="text-right">
+                <p className="text-[8.5px] font-bold text-[#0a1c3a] leading-none">SCAN TO VERIFY</p>
+                <p className="text-[6.5px] text-slate-400 font-medium mt-1 leading-normal max-w-[100px]">
+                  Verify certificate validity and enrollment details
+                </p>
+              </div>
+              <div className="h-11 w-11 border border-slate-300 p-0.5 bg-white flex items-center justify-center shrink-0">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
+                    `https://supportmissionindia.org/verify?reg=${candidate?.registrationId || "N/A"}&id=${res._id}`
+                  )}`}
+                  className="h-10 w-10 object-contain"
+                  alt="QR Code"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Footer Text */}
+          <div className="text-center text-[7.5px] text-slate-400 mt-2 border-t border-slate-100 pt-2 px-12 leading-relaxed">
+            This certificate is for practice and self-assessment purposes only and does not constitute an official qualification or guarantee of employment.
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderPrintMarksheet = (res: any) => {
+    if (!res) return null;
+    const totalQuestions = res.correctCount + res.incorrectCount;
+    const formattedDate = new Date(res.date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    const candidateName = candidate?.name || "N/A";
+    const regId = candidate?.registrationId || "N/A";
+    const courseName = candidate?.course || "N/A";
+
+    return (
+      <div className="w-[210mm] h-[297mm] border-[6px] border-slate-900 bg-white p-12 flex flex-col justify-between font-sans relative box-border">
+        {/* Force Portrait Printing */}
+        <style>{`
+          @page {
+            size: portrait;
+            margin: 0;
+          }
+        `}</style>
+        <div>
+          {/* Header */}
+          <div className="text-center border-b-2 border-slate-900/20 pb-5 mb-8 flex flex-col items-center gap-2">
+            <img src="/smi-logo.png" className="h-16 w-16 object-contain" alt="SMI Logo" />
+            <div>
+              <h1 className="text-xl font-black tracking-tight text-slate-900">SUPPORT MISSION INDIA</h1>
+              <p className="text-[10px] uppercase font-bold text-deepskyblue-dark tracking-widest mt-1">
+                Sarkari Skill Certification Authority
+              </p>
+              <h2 className="text-sm font-bold text-slate-700 mt-3">QUIZ EVALUATION MARKSHEET</h2>
+            </div>
+          </div>
+
+          {/* Student Info */}
+          <div className="grid grid-cols-2 gap-y-4 gap-x-8 text-xs border-b border-slate-100 pb-5 mb-8">
+            <div>
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[9px]">Candidate Name</span>
+              <span className="font-bold text-slate-800 text-sm">{candidateName}</span>
+            </div>
+            <div>
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[9px]">Registration ID</span>
+              <span className="font-bold text-slate-800 text-sm">{regId}</span>
+            </div>
+            <div>
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[9px]">Enrolled Course</span>
+              <span className="font-semibold text-slate-700">{courseName}</span>
+            </div>
+            <div>
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[9px]">Examination Date</span>
+              <span className="font-semibold text-slate-700">{formattedDate}</span>
+            </div>
+          </div>
+
+          {/* Marks Breakdown Table */}
+          <div className="space-y-4">
+            <h3 className="text-xs font-black uppercase tracking-widest text-slate-900 mb-2">Subject Performance Analysis</h3>
+            <table className="w-full text-left text-xs border-collapse border border-slate-200">
+              <thead>
+                <tr className="bg-slate-50 text-slate-500 uppercase text-[9px] tracking-wider font-bold">
+                  <th className="py-3 px-4 border-b border-slate-200">Assessment Description</th>
+                  <th className="py-3 px-4 border-b border-slate-200 text-center">Correct Answers</th>
+                  <th className="py-3 px-4 border-b border-slate-200 text-center">Incorrect Answers</th>
+                  <th className="py-3 px-4 border-b border-slate-200 text-center">Total Marks</th>
+                  <th className="py-3 px-4 border-b border-slate-200 text-right">Obtained Marks</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                <tr className="text-slate-700">
+                  <td className="py-4 px-4 font-bold text-slate-800">{res.quizTitle}</td>
+                  <td className="py-4 px-4 text-center font-semibold text-emerald-600">{res.correctCount} / {totalQuestions}</td>
+                  <td className="py-4 px-4 text-center font-semibold text-rose-500">{res.incorrectCount} / {totalQuestions}</td>
+                  <td className="py-4 px-4 text-center font-semibold">{res.total}</td>
+                  <td className="py-4 px-4 text-right font-black text-slate-900">{res.score}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Summary Performance Section */}
+          <div className="mt-8 grid grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200/60">
+            <div className="text-center">
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[8px]">Obtained Percentage</span>
+              <span className="text-lg font-black text-slate-900 mt-1 block">{res.percentage}%</span>
+            </div>
+            <div className="text-center">
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[8px]">Assigned Grade</span>
+              <span className="text-lg font-black text-deepskyblue-dark mt-1 block">{res.grade}</span>
+            </div>
+            <div className="text-center">
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[8px]">Evaluation Status</span>
+              <span className={`text-lg font-black mt-1 block ${res.percentage >= 50 ? "text-emerald-600" : "text-rose-600"}`}>
+                {res.percentage >= 50 ? "PASS" : "FAIL"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-between items-end border-t border-slate-200/80 pt-6">
+          <div className="space-y-1 text-[10px] text-slate-500">
+            <p>Verification Code: <span className="font-mono text-slate-700 font-bold">{res._id}</span></p>
+            <p>Generated by Sarkari Skill Portal on {new Date().toLocaleString()}</p>
+          </div>
+          <div className="text-center w-36 space-y-1">
+            <p className="font-serif italic text-xs text-slate-600 h-6">Dr. K. Verma</p>
+            <div className="border-t border-slate-300 pt-1 text-[8px] font-bold text-slate-500 uppercase tracking-wider">
+              Exam Controller
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderPrintCumulativeMarksheet = (resList: any[]) => {
+    const list = resList && resList.length > 0 ? resList : [];
+    const overallTotalScore = list.reduce((acc, curr) => acc + curr.score, 0);
+    const overallTotalPossible = list.reduce((acc, curr) => acc + curr.total, 0);
+    const averagePercentage = list.length > 0
+      ? parseFloat((list.reduce((acc, curr) => acc + curr.percentage, 0) / list.length).toFixed(1))
+      : 0;
+
+    let overallGrade = "F";
+    if (averagePercentage >= 90) overallGrade = "A+";
+    else if (averagePercentage >= 80) overallGrade = "A";
+    else if (averagePercentage >= 70) overallGrade = "B+";
+    else if (averagePercentage >= 60) overallGrade = "B";
+    else if (averagePercentage >= 50) overallGrade = "C";
+
+    const overallStatus = averagePercentage >= 50 ? "PASS" : "FAIL";
+    const candidateName = candidate?.name || "N/A";
+    const regId = candidate?.registrationId || "N/A";
+    const courseName = candidate?.course || "N/A";
+
+    return (
+      <div className="w-[210mm] h-[297mm] border-[6px] border-slate-900 bg-white p-12 flex flex-col justify-between font-sans relative box-border">
+        {/* Force Portrait Printing */}
+        <style>{`
+          @page {
+            size: portrait;
+            margin: 0;
+          }
+        `}</style>
+        <div>
+          {/* Header */}
+          <div className="text-center border-b-2 border-slate-900/20 pb-5 mb-8 flex flex-col items-center gap-2">
+            <img src="/smi-logo.png" className="h-16 w-16 object-contain" alt="SMI Logo" />
+            <div>
+              <h1 className="text-xl font-black tracking-tight text-slate-900">SUPPORT MISSION INDIA</h1>
+              <p className="text-[10px] uppercase font-bold text-deepskyblue-dark tracking-widest mt-1">
+                Sarkari Skill Certification Authority
+              </p>
+              <h2 className="text-sm font-bold text-slate-700 mt-3">SEMESTER CUMULATIVE MARK SHEET</h2>
+            </div>
+          </div>
+
+          {/* Student Info */}
+          <div className="grid grid-cols-2 gap-y-4 gap-x-8 text-xs border-b border-slate-100 pb-5 mb-8">
+            <div>
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[9px]">Candidate Name</span>
+              <span className="font-bold text-slate-800 text-sm">{candidateName}</span>
+            </div>
+            <div>
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[9px]">Registration ID</span>
+              <span className="font-bold text-slate-800 text-sm">{regId}</span>
+            </div>
+            <div>
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[9px]">Enrolled Course</span>
+              <span className="font-semibold text-slate-700">{courseName}</span>
+            </div>
+            <div>
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[9px]">Date Printed</span>
+              <span className="font-semibold text-slate-700">{new Date().toLocaleDateString()}</span>
+            </div>
+          </div>
+
+          {/* Marks Breakdown Table */}
+          <div className="space-y-4">
+            <h3 className="text-xs font-black uppercase tracking-widest text-slate-900 mb-2">Academic Assessment Summary</h3>
+            <table className="w-full text-left text-xs border-collapse border border-slate-200">
+              <thead>
+                <tr className="bg-slate-50 text-slate-500 uppercase text-[9px] tracking-wider font-bold">
+                  <th className="py-3 px-4 border-b border-slate-200">Exam Subject Paper</th>
+                  <th className="py-3 px-4 border-b border-slate-200 text-center">Int (30)</th>
+                  <th className="py-3 px-4 border-b border-slate-200 text-center">Ext (70)</th>
+                  <th className="py-3 px-4 border-b border-slate-200 text-center">Total Score</th>
+                  <th className="py-3 px-4 border-b border-slate-200 text-center">Percentage</th>
+                  <th className="py-3 px-4 border-b border-slate-200 text-right">Grade</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {list.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-6 text-center text-slate-400">No assessment records found in portal database.</td>
+                  </tr>
+                ) : (
+                  list.map((res, i) => {
+                    const internal = Math.round(res.score * (30 / res.total));
+                    const external = Math.round((res.total - res.score) * (70 / res.total)) + res.score * 5;
+                    return (
+                      <tr key={i} className="text-slate-700">
+                        <td className="py-3 px-4 font-bold text-slate-800">{res.quizTitle}</td>
+                        <td className="py-3 px-4 text-center">{internal > 30 ? 30 : internal}</td>
+                        <td className="py-3 px-4 text-center">{external > 70 ? 70 : external}</td>
+                        <td className="py-3 px-4 text-center font-bold">{res.score} / {res.total}</td>
+                        <td className="py-3 px-4 text-center">{res.percentage}%</td>
+                        <td className="py-3 px-4 text-right font-black text-deepskyblue-dark">{res.grade}</td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Summary Performance Section */}
+          <div className="mt-8 grid grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200/60">
+            <div className="text-center">
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[8px]">Overall Score</span>
+              <span className="text-lg font-black text-slate-900 mt-1 block">{overallTotalScore} / {overallTotalPossible}</span>
+            </div>
+            <div className="text-center">
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[8px]">Average Percentage</span>
+              <span className="text-lg font-black text-slate-900 mt-1 block">{averagePercentage}%</span>
+            </div>
+            <div className="text-center">
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[8px]">Aggregate Grade / Result</span>
+              <span className={`text-lg font-black mt-1 block ${overallStatus === "PASS" ? "text-emerald-600" : "text-rose-600"}`}>
+                {overallGrade} ({overallStatus})
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-between items-end border-t border-slate-200/80 pt-6">
+          <div className="space-y-1 text-[10px] text-slate-500">
+            <p>Support Mission India Skill Program Registration: <span className="font-mono text-slate-700 font-bold">{regId}</span></p>
+            <p>Generated by Sarkari Skill Portal on {new Date().toLocaleString()}</p>
+          </div>
+          <div className="text-center w-36 space-y-1">
+            <p className="font-serif italic text-xs text-slate-600 h-6">Dr. K. Verma</p>
+            <div className="border-t border-slate-300 pt-1 text-[8px] font-bold text-slate-500 uppercase tracking-wider">
+              Exam Controller
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans select-none overflow-x-hidden relative">
@@ -573,7 +951,6 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
-
           {/* TAB CONTENT: MY RESULT & MARKS */}
           {activeTab === "results" && (
             <div className="space-y-6 max-w-4xl print:space-y-0 animate-fade-in">
@@ -585,13 +962,24 @@ export default function DashboardPage() {
                   </h2>
                   <p className="text-xs text-slate-500 mt-1">Download and inspect verified semester mark sheets</p>
                 </div>
-                <button
-                  onClick={handlePrint}
-                  className="flex items-center gap-2 py-2 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-xs font-bold text-slate-700 shadow-sm transition-all active:scale-[0.98] cursor-pointer"
-                >
-                  <Printer className="h-3.5 w-3.5" />
-                  <span>Print Mark Sheet</span>
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => triggerPrint("cumulative_marksheet", results)}
+                    className="flex items-center gap-2 py-2 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-xs font-bold text-slate-700 shadow-sm transition-all active:scale-[0.98] cursor-pointer"
+                  >
+                    <Printer className="h-3.5 w-3.5" />
+                    <span>Print Mark Sheet</span>
+                  </button>
+                  {results.length > 0 && (
+                    <button
+                      onClick={() => triggerPrint("certificate", results[results.length - 1])}
+                      className="flex items-center gap-2 py-2 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-xs font-bold text-white shadow shadow-amber-500/10 transition-all active:scale-[0.98] cursor-pointer"
+                    >
+                      <Award className="h-3.5 w-3.5 text-white" />
+                      <span>Print Certificate</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Printable Marksheet Container */}
@@ -638,18 +1026,39 @@ export default function DashboardPage() {
                         <th className="py-2.5 text-center">Int (30)</th>
                         <th className="py-2.5 text-center">Ext (70)</th>
                         <th className="py-2.5 text-center">Total (100)</th>
-                        <th className="py-2.5 text-right">Grade</th>
+                        <th className="py-2.5 text-center print:text-right">Grade</th>
+                        <th className="py-2.5 text-right print:hidden">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 print:divide-zinc-200">
-                      {resultsToDisplay.map((res, i) => (
+                      {resultsToDisplay.map((res: any, i) => (
                         <tr key={i} className="text-slate-700 print:text-black">
                           <td className="py-3 font-semibold text-slate-500 print:text-zinc-600">{res.code}</td>
                           <td className="py-3 font-medium text-slate-800">{res.subject}</td>
                           <td className="py-3 text-center">{res.internal}</td>
                           <td className="py-3 text-center">{res.external}</td>
                           <td className="py-3 text-center font-bold text-slate-900 print:text-black">{res.total}</td>
-                          <td className="py-3 text-right font-black text-deepskyblue-dark print:text-zinc-800">{res.grade}</td>
+                          <td className="py-3 text-center print:text-right font-black text-deepskyblue-dark print:text-zinc-800">{res.grade}</td>
+                          <td className="py-3 text-right print:hidden">
+                            <div className="flex gap-2 justify-end">
+                              {res.originalData && (
+                                <>
+                                  <button
+                                    onClick={() => triggerPrint("marksheet", res.originalData)}
+                                    className="py-1 px-2.5 rounded-lg bg-slate-50 border border-slate-200 hover:bg-slate-100 text-[10px] font-bold text-slate-600 transition cursor-pointer"
+                                  >
+                                    Marksheet
+                                  </button>
+                                  <button
+                                    onClick={() => triggerPrint("certificate", res.originalData)}
+                                    className="py-1 px-2.5 rounded-lg bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-[10px] font-bold text-white shadow shadow-amber-500/10 transition cursor-pointer"
+                                  >
+                                    Certificate
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -944,6 +1353,13 @@ export default function DashboardPage() {
           <span className="text-[9px] uppercase tracking-wider font-semibold">Profile</span>
         </button>
       </footer>
+
+      {/* PRINT AREA CONTAINER (Hidden on screen, shown in printing) */}
+      <div id="print-area-wrapper" className="hidden print:block">
+        {printTarget?.type === "marksheet" && renderPrintMarksheet(printTarget.data)}
+        {printTarget?.type === "cumulative_marksheet" && renderPrintCumulativeMarksheet(printTarget.data)}
+        {printTarget?.type === "certificate" && renderPrintCertificate(printTarget.data)}
+      </div>
 
     </div>
   );

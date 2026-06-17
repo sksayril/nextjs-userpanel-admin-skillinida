@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -57,15 +57,22 @@ export default function SignupPage() {
   // Registered candidate object returned from server
   const [registeredCandidate, setRegisteredCandidate] = useState<any>(null);
 
-  const courses = [
-    "Diploma in Computer Application (DCA)",
-    "Post Graduate Diploma in Computer Application (PGDCA)",
-    "Advanced Diploma in Information Technology (ADIT)",
-    "Web Development & Design Masterclass",
-    "Digital Marketing Specialist",
-    "Data Analytics & Machine Learning",
-    "Cyber Security & Ethical Hacking",
-  ];
+  const [coursesList, setCoursesList] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const res = await fetch("/api/courses");
+        const data = await res.json();
+        if (res.ok && data.success) {
+          setCoursesList(data.courses || []);
+        }
+      } catch (err) {
+        console.error("Failed to load courses:", err);
+      }
+    };
+    fetchCourses();
+  }, []);
 
   // Handle textual changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -456,12 +463,15 @@ export default function SignupPage() {
                     id="course"
                     value={formData.course}
                     onChange={handleChange}
-                    className="block w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/10"
+                    disabled={coursesList.length === 0}
+                    className="block w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/10 disabled:opacity-60"
                   >
-                    <option value="" disabled>Select a course program</option>
-                    {courses.map((courseOption, index) => (
-                      <option key={index} value={courseOption} className="bg-white text-slate-850">
-                        {courseOption}
+                    <option value="" disabled>
+                      {coursesList.length === 0 ? "No course programs available at the moment" : "Select a course program"}
+                    </option>
+                    {coursesList.map((courseOption, index) => (
+                      <option key={index} value={courseOption.title} className="bg-white text-slate-850">
+                        {courseOption.title} ({courseOption.code})
                       </option>
                     ))}
                   </select>

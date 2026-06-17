@@ -22,7 +22,8 @@ import {
   UserPlus,
   Search,
   Menu,
-  BookMarked
+  BookMarked,
+  Printer
 } from "lucide-react";
 
 export default function AdminDashboardPage() {
@@ -52,6 +53,13 @@ export default function AdminDashboardPage() {
   // Messages
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+
+  // Student Lookup Detail States
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [studentDetails, setStudentDetails] = useState<any>(null);
+  const [loadingDetails, setLoadingDetails] = useState<boolean>(false);
+  const [modalActiveTab, setModalActiveTab] = useState<string>("profile");
+  const [printTarget, setPrintTarget] = useState<any>(null);
 
   // ================= FORM STATES =================
   // 1. Create Course
@@ -103,25 +111,16 @@ export default function AdminDashboardPage() {
   const [quizForm, setQuizForm] = useState({
     title: "",
     course: "",
+    scheduledAt: new Date().toISOString().slice(0, 16),
     questions: [
       {
         questionText: "",
         options: ["", "", "", ""],
-        correctAnswerIndex: 0
+        correctAnswerIndex: 0,
+        marks: 1
       }
     ]
   });
-
-  // Fallback Courses
-  const defaultCourses = [
-    "Diploma in Computer Application (DCA)",
-    "Post Graduate Diploma in Computer Application (PGDCA)",
-    "Advanced Diploma in Information Technology (ADIT)",
-    "Web Development & Design Masterclass",
-    "Digital Marketing Specialist",
-    "Data Analytics & Machine Learning",
-    "Cyber Security & Ethical Hacking"
-  ];
 
   // ================= FETCH LOGIC =================
   useEffect(() => {
@@ -179,7 +178,7 @@ export default function AdminDashboardPage() {
       // Update Stats
       setStats({
         studentsCount: students.length,
-        coursesCount: courses.length > 0 ? courses.length : defaultCourses.length,
+        coursesCount: courses.length,
         papersCount: papers.length,
         quizzesCount: quizzes.length
       });
@@ -380,12 +379,18 @@ export default function AdminDashboardPage() {
     setQuizForm(prev => ({ ...prev, questions: updatedQuestions }));
   };
 
+  const handleQuizMarksChange = (qIndex: number, val: number) => {
+    const updatedQuestions = [...quizForm.questions];
+    updatedQuestions[qIndex].marks = val;
+    setQuizForm(prev => ({ ...prev, questions: updatedQuestions }));
+  };
+
   const addQuizQuestion = () => {
     setQuizForm(prev => ({
       ...prev,
       questions: [
         ...prev.questions,
-        { questionText: "", options: ["", "", "", ""], correctAnswerIndex: 0 }
+        { questionText: "", options: ["", "", "", ""], correctAnswerIndex: 0, marks: 1 }
       ]
     }));
   };
@@ -413,7 +418,8 @@ export default function AdminDashboardPage() {
         setQuizForm({
           title: "",
           course: "",
-          questions: [{ questionText: "", options: ["", "", "", ""], correctAnswerIndex: 0 }]
+          scheduledAt: new Date().toISOString().slice(0, 16),
+          questions: [{ questionText: "", options: ["", "", "", ""], correctAnswerIndex: 0, marks: 1 }]
         });
         await fetchAllData();
         setTimeout(() => setSuccessMsg(""), 4000);
@@ -423,6 +429,407 @@ export default function AdminDashboardPage() {
     } catch (err) {
       setErrorMsg("Network error creating quiz.");
     }
+  };
+
+  const handleViewStudentDetails = async (studentId: string) => {
+    setSelectedStudentId(studentId);
+    setLoadingDetails(true);
+    setModalActiveTab("profile");
+    try {
+      const res = await fetch(`/api/admin/users/${studentId}/details`);
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setStudentDetails({
+          student: data.student,
+          attendance: data.attendance,
+          results: data.results,
+        });
+      } else {
+        alert(data.error || "Failed to load student details");
+        setSelectedStudentId(null);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Network error fetching student details");
+      setSelectedStudentId(null);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
+  const triggerPrint = (type: "marksheet" | "certificate" | "cumulative_marksheet", data: any) => {
+    setPrintTarget({ type, data });
+    setTimeout(() => {
+      window.print();
+    }, 150);
+  };
+
+  const renderPrintCertificate = (res: any) => {
+    if (!res) return null;
+    const totalQuestions = res.correctCount + res.incorrectCount;
+    const formattedDate = new Date(res.date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    const candidateName = studentDetails?.student?.name || "[Candidate Name]";
+
+    return (
+      <div
+        className="w-[297mm] h-[210mm] bg-white relative overflow-hidden box-border select-none"
+        style={{
+          WebkitPrintColorAdjust: "exact",
+          printColorAdjust: "exact"
+        }}
+      >
+        {/* Background Template Image */}
+        <img
+          src="/certificate-template.png"
+          className="absolute inset-0 w-full h-full object-fill z-0"
+          alt="Certificate Template"
+        />
+
+        {/* Force Landscape Printing */}
+        <style>{`
+          @page {
+            size: landscape;
+            margin: 0;
+          }
+        `}</style>
+
+        {/* Center Content Mask */}
+        <div className="absolute inset-[20mm] bg-white flex flex-col justify-between p-8 z-10 text-center">
+          {/* Header */}
+          <div className="flex flex-col items-center space-y-2">
+            <div className="flex items-center gap-4">
+              <img src="/smi-logo.png" className="h-16 w-16 object-contain" alt="SMI Logo" />
+              <div className="text-left">
+                <h1 className="text-lg font-black tracking-tight text-[#0a1c3a] font-serif">SUPPORT MISSION INDIA</h1>
+                <p className="text-[9px] uppercase font-bold text-[#b89047] tracking-widest leading-none">Sarkari Skill Certification Authority</p>
+              </div>
+            </div>
+            <h2 className="text-xl font-extrabold text-[#0a1c3a] tracking-wide uppercase font-serif mt-2">
+              CBT Mock Test Completion Certificate
+            </h2>
+            <div className="w-56 h-0.5 bg-[#b89047] mx-auto my-1" />
+          </div>
+
+          {/* Certification Text */}
+          <div className="space-y-4 px-12">
+            <p className="text-xs italic text-slate-500 font-serif">This is to certify that</p>
+            <p className="text-2xl font-black text-[#9b7a2f] tracking-wide font-serif">
+              {candidateName}
+            </p>
+            <p className="text-[11px] text-slate-700 leading-relaxed max-w-xl mx-auto">
+              has successfully participated in and completed the Computer Based Test (CBT) Mock Examination
+              on <span className="font-bold text-[#0a1c3a]">{res.quizTitle}</span> conducted on <span className="font-bold text-[#0a1c3a]">{formattedDate}</span>.
+            </p>
+          </div>
+
+          {/* Grade Display */}
+          <div className="flex flex-col items-center justify-center">
+            <span className="text-[9px] uppercase font-bold tracking-widest text-[#b89047]">Grade Obtained</span>
+            <span className="text-3xl font-black text-[#9b7a2f] font-serif tracking-wide mt-1">{res.grade}</span>
+          </div>
+
+          {/* Signatures & Verification Info */}
+          <div className="flex justify-between items-end px-8 mt-2">
+            <div className="text-center w-40 space-y-1">
+              <div className="h-8 flex items-center justify-center">
+                <span className="font-serif italic text-sm text-[#0a1c3a]/80">Dr. K. Verma</span>
+              </div>
+              <div className="border-t border-[#b89047]/50 pt-1 text-[8.5px] font-bold text-slate-500 uppercase tracking-wider">
+                Authorized Signatory
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center">
+              <div className="h-10 w-10 rounded-full border-2 border-[#b89047] bg-gradient-to-tr from-[#b89047] to-[#d4af37] flex items-center justify-center shadow-md">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="white" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z" />
+                </svg>
+              </div>
+              <span className="text-[7px] font-bold text-[#b89047] uppercase tracking-widest mt-1">VERIFIED</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="text-right">
+                <p className="text-[8.5px] font-bold text-[#0a1c3a] leading-none">SCAN TO VERIFY</p>
+                <p className="text-[6.5px] text-slate-400 font-medium mt-1 leading-normal max-w-[100px]">
+                  Verify certificate validity and enrollment details
+                </p>
+              </div>
+              <div className="h-11 w-11 border border-slate-300 p-0.5 bg-white flex items-center justify-center shrink-0">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
+                    `https://supportmissionindia.org/verify?reg=${studentDetails?.student?.registrationId || "N/A"}&id=${res._id}`
+                  )}`}
+                  className="h-10 w-10 object-contain"
+                  alt="QR Code"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Footer Text */}
+          <div className="text-center text-[7.5px] text-slate-400 mt-2 border-t border-slate-100 pt-2 px-12 leading-relaxed">
+            This certificate is for practice and self-assessment purposes only and does not constitute an official qualification or guarantee of employment.
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderPrintMarksheet = (res: any) => {
+    if (!res) return null;
+    const totalQuestions = res.correctCount + res.incorrectCount;
+    const formattedDate = new Date(res.date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    const candidateName = studentDetails?.student?.name || "N/A";
+    const regId = studentDetails?.student?.registrationId || "N/A";
+    const courseName = studentDetails?.student?.course || "N/A";
+
+    return (
+      <div className="w-[210mm] h-[297mm] border-[6px] border-slate-900 bg-white p-12 flex flex-col justify-between font-sans relative box-border">
+        {/* Force Portrait Printing */}
+        <style>{`
+          @page {
+            size: portrait;
+            margin: 0;
+          }
+        `}</style>
+        <div>
+          {/* Header */}
+          <div className="text-center border-b-2 border-slate-900/20 pb-5 mb-8 flex flex-col items-center gap-2">
+            <img src="/smi-logo.png" className="h-16 w-16 object-contain" alt="SMI Logo" />
+            <div>
+              <h1 className="text-xl font-black tracking-tight text-slate-900">SUPPORT MISSION INDIA</h1>
+              <p className="text-[10px] uppercase font-bold text-deepskyblue-dark tracking-widest mt-1">
+                Sarkari Skill Certification Authority
+              </p>
+              <h2 className="text-sm font-bold text-slate-700 mt-3">QUIZ EVALUATION MARKSHEET</h2>
+            </div>
+          </div>
+
+          {/* Student Info */}
+          <div className="grid grid-cols-2 gap-y-4 gap-x-8 text-xs border-b border-slate-100 pb-5 mb-8">
+            <div>
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[9px]">Candidate Name</span>
+              <span className="font-bold text-slate-800 text-sm">{candidateName}</span>
+            </div>
+            <div>
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[9px]">Registration ID</span>
+              <span className="font-bold text-slate-800 text-sm">{regId}</span>
+            </div>
+            <div>
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[9px]">Enrolled Course</span>
+              <span className="font-semibold text-slate-700">{courseName}</span>
+            </div>
+            <div>
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[9px]">Examination Date</span>
+              <span className="font-semibold text-slate-700">{formattedDate}</span>
+            </div>
+          </div>
+
+          {/* Marks Breakdown Table */}
+          <div className="space-y-4">
+            <h3 className="text-xs font-black uppercase tracking-widest text-slate-900 mb-2">Subject Performance Analysis</h3>
+            <table className="w-full text-left text-xs border-collapse border border-slate-200">
+              <thead>
+                <tr className="bg-slate-50 text-slate-500 uppercase text-[9px] tracking-wider font-bold">
+                  <th className="py-3 px-4 border-b border-slate-200">Assessment Description</th>
+                  <th className="py-3 px-4 border-b border-slate-200 text-center">Correct Answers</th>
+                  <th className="py-3 px-4 border-b border-slate-200 text-center">Incorrect Answers</th>
+                  <th className="py-3 px-4 border-b border-slate-200 text-center">Total Marks</th>
+                  <th className="py-3 px-4 border-b border-slate-200 text-right">Obtained Marks</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                <tr className="text-slate-700">
+                  <td className="py-4 px-4 font-bold text-slate-800">{res.quizTitle}</td>
+                  <td className="py-4 px-4 text-center font-semibold text-emerald-600">{res.correctCount} / {totalQuestions}</td>
+                  <td className="py-4 px-4 text-center font-semibold text-rose-500">{res.incorrectCount} / {totalQuestions}</td>
+                  <td className="py-4 px-4 text-center font-semibold">{res.total}</td>
+                  <td className="py-4 px-4 text-right font-black text-slate-900">{res.score}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Summary Performance Section */}
+          <div className="mt-8 grid grid-cols-3 gap-4 bg-slate-55 p-4 rounded-xl border border-slate-200/60">
+            <div className="text-center">
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[8px]">Obtained Percentage</span>
+              <span className="text-lg font-black text-slate-900 mt-1 block">{res.percentage}%</span>
+            </div>
+            <div className="text-center">
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[8px]">Assigned Grade</span>
+              <span className="text-lg font-black text-deepskyblue-dark mt-1 block">{res.grade}</span>
+            </div>
+            <div className="text-center">
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[8px]">Evaluation Status</span>
+              <span className={`text-lg font-black mt-1 block ${res.percentage >= 50 ? "text-emerald-600" : "text-rose-600"}`}>
+                {res.percentage >= 50 ? "PASS" : "FAIL"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-between items-end border-t border-slate-200/80 pt-6">
+          <div className="space-y-1 text-[10px] text-slate-500">
+            <p>Verification Code: <span className="font-mono text-slate-700 font-bold">{res._id}</span></p>
+            <p>Generated by Sarkari Skill Portal on {new Date().toLocaleString()}</p>
+          </div>
+          <div className="text-center w-36 space-y-1">
+            <p className="font-serif italic text-xs text-slate-655 h-6">Dr. K. Verma</p>
+            <div className="border-t border-slate-300 pt-1 text-[8px] font-bold text-slate-500 uppercase tracking-wider">
+              Exam Controller
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderPrintCumulativeMarksheet = (resList: any[]) => {
+    const list = resList && resList.length > 0 ? resList : [];
+    const overallTotalScore = list.reduce((acc, curr) => acc + curr.score, 0);
+    const overallTotalPossible = list.reduce((acc, curr) => acc + curr.total, 0);
+    const averagePercentage = list.length > 0
+      ? parseFloat((list.reduce((acc, curr) => acc + curr.percentage, 0) / list.length).toFixed(1))
+      : 0;
+
+    let overallGrade = "F";
+    if (averagePercentage >= 90) overallGrade = "A+";
+    else if (averagePercentage >= 80) overallGrade = "A";
+    else if (averagePercentage >= 70) overallGrade = "B+";
+    else if (averagePercentage >= 60) overallGrade = "B";
+    else if (averagePercentage >= 50) overallGrade = "C";
+
+    const overallStatus = averagePercentage >= 50 ? "PASS" : "FAIL";
+    const candidateName = studentDetails?.student?.name || "N/A";
+    const regId = studentDetails?.student?.registrationId || "N/A";
+    const courseName = studentDetails?.student?.course || "N/A";
+
+    return (
+      <div className="w-[210mm] h-[297mm] border-[6px] border-slate-900 bg-white p-12 flex flex-col justify-between font-sans relative box-border">
+        {/* Force Portrait Printing */}
+        <style>{`
+          @page {
+            size: portrait;
+            margin: 0;
+          }
+        `}</style>
+        <div>
+          {/* Header */}
+          <div className="text-center border-b-2 border-slate-900/20 pb-5 mb-8 flex flex-col items-center gap-2">
+            <img src="/smi-logo.png" className="h-16 w-16 object-contain" alt="SMI Logo" />
+            <div>
+              <h1 className="text-xl font-black tracking-tight text-slate-900">SUPPORT MISSION INDIA</h1>
+              <p className="text-[10px] uppercase font-bold text-deepskyblue-dark tracking-widest mt-1">
+                Sarkari Skill Certification Authority
+              </p>
+              <h2 className="text-sm font-bold text-slate-700 mt-3">SEMESTER CUMULATIVE MARK SHEET</h2>
+            </div>
+          </div>
+
+          {/* Student Info */}
+          <div className="grid grid-cols-2 gap-y-4 gap-x-8 text-xs border-b border-slate-100 pb-5 mb-8">
+            <div>
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[9px]">Candidate Name</span>
+              <span className="font-bold text-slate-800 text-sm">{candidateName}</span>
+            </div>
+            <div>
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[9px]">Registration ID</span>
+              <span className="font-bold text-slate-800 text-sm">{regId}</span>
+            </div>
+            <div>
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[9px]">Enrolled Course</span>
+              <span className="font-semibold text-slate-700">{courseName}</span>
+            </div>
+            <div>
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[9px]">Date Printed</span>
+              <span className="font-semibold text-slate-700">{new Date().toLocaleDateString()}</span>
+            </div>
+          </div>
+
+          {/* Marks Breakdown Table */}
+          <div className="space-y-4">
+            <h3 className="text-xs font-black uppercase tracking-widest text-slate-900 mb-2">Academic Assessment Summary</h3>
+            <table className="w-full text-left text-xs border-collapse border border-slate-200">
+              <thead>
+                <tr className="bg-slate-50 text-slate-500 uppercase text-[9px] tracking-wider font-bold">
+                  <th className="py-3 px-4 border-b border-slate-200">Exam Subject Paper</th>
+                  <th className="py-3 px-4 border-b border-slate-200 text-center">Int (30)</th>
+                  <th className="py-3 px-4 border-b border-slate-200 text-center">Ext (70)</th>
+                  <th className="py-3 px-4 border-b border-slate-200 text-center">Total Score</th>
+                  <th className="py-3 px-4 border-b border-slate-200 text-center">Percentage</th>
+                  <th className="py-3 px-4 border-b border-slate-200 text-right">Grade</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {list.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-6 text-center text-slate-400">No assessment records found in portal database.</td>
+                  </tr>
+                ) : (
+                  list.map((res, i) => {
+                    const internal = Math.round(res.score * (30 / res.total));
+                    const external = Math.round((res.total - res.score) * (70 / res.total)) + res.score * 5;
+                    return (
+                      <tr key={i} className="text-slate-700">
+                        <td className="py-3 px-4 font-bold text-slate-800">{res.quizTitle}</td>
+                        <td className="py-3 px-4 text-center">{internal > 30 ? 30 : internal}</td>
+                        <td className="py-3 px-4 text-center">{external > 70 ? 70 : external}</td>
+                        <td className="py-3 px-4 text-center font-bold">{res.score} / {res.total}</td>
+                        <td className="py-3 px-4 text-center">{res.percentage}%</td>
+                        <td className="py-3 px-4 text-right font-black text-deepskyblue-dark">{res.grade}</td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Summary Performance Section */}
+          <div className="mt-8 grid grid-cols-3 gap-4 bg-slate-55 p-4 rounded-xl border border-slate-200/60">
+            <div className="text-center">
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[8px]">Overall Score</span>
+              <span className="text-lg font-black text-slate-900 mt-1 block">{overallTotalScore} / {overallTotalPossible}</span>
+            </div>
+            <div className="text-center">
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[8px]">Average Percentage</span>
+              <span className="text-lg font-black text-slate-900 mt-1 block">{averagePercentage}%</span>
+            </div>
+            <div className="text-center">
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[8px]">Aggregate Grade / Result</span>
+              <span className={`text-lg font-black mt-1 block ${overallStatus === "PASS" ? "text-emerald-600" : "text-rose-600"}`}>
+                {overallGrade} ({overallStatus})
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-between items-end border-t border-slate-200/80 pt-6">
+          <div className="space-y-1 text-[10px] text-slate-500">
+            <p>Support Mission India Skill Program Registration: <span className="font-mono text-slate-700 font-bold">{regId}</span></p>
+            <p>Generated by Sarkari Skill Portal on {new Date().toLocaleString()}</p>
+          </div>
+          <div className="text-center w-36 space-y-1">
+            <p className="font-serif italic text-xs text-slate-655 h-6">Dr. K. Verma</p>
+            <div className="border-t border-slate-300 pt-1 text-[8px] font-bold text-slate-500 uppercase tracking-wider">
+              Exam Controller
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -441,7 +848,7 @@ export default function AdminDashboardPage() {
     );
   }
 
-  const courseOptions = coursesList.length > 0 ? coursesList.map(c => c.title) : defaultCourses;
+  const courseOptions = coursesList.map(c => c.title);
 
   // Filter students based on search query
   const filteredStudents = studentsList.filter(s => 
@@ -990,7 +1397,8 @@ export default function AdminDashboardPage() {
                           <th className="pb-3">Candidate Name</th>
                           <th className="pb-3">Enrolled Program</th>
                           <th className="pb-3">Email ID</th>
-                          <th className="pb-3 text-right pr-2">Date Created</th>
+                          <th className="pb-3">Date Created</th>
+                          <th className="pb-3 text-right pr-2">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
@@ -1007,8 +1415,16 @@ export default function AdminDashboardPage() {
                             </td>
                             <td className="py-3.5 text-slate-500 font-medium">{stud.course}</td>
                             <td className="py-3.5 text-slate-500 font-mono">{stud.email}</td>
-                            <td className="py-3.5 text-right pr-2 text-slate-400 font-medium">
+                            <td className="py-3.5 text-slate-400 font-medium">
                               {new Date(stud.createdAt).toLocaleDateString()}
+                            </td>
+                            <td className="py-3.5 text-right pr-2">
+                              <button
+                                onClick={() => handleViewStudentDetails(stud._id)}
+                                className="px-3 py-1.5 rounded-xl bg-deepskyblue/10 text-deepskyblue-dark text-[10px] font-extrabold hover:bg-deepskyblue hover:text-white transition cursor-pointer"
+                              >
+                                View Details
+                              </button>
                             </td>
                           </tr>
                         ))}
@@ -1226,9 +1642,12 @@ export default function AdminDashboardPage() {
                       required
                       value={studentForm.course}
                       onChange={e => setStudentForm(prev => ({ ...prev, course: e.target.value }))}
-                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                      disabled={courseOptions.length === 0}
+                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all disabled:opacity-60"
                     >
-                      <option value="" disabled>Select Enrolled Course</option>
+                      <option value="" disabled>
+                        {courseOptions.length === 0 ? "No courses created yet. Go to Courses tab to add one." : "Select Enrolled Course"}
+                      </option>
                       {courseOptions.map((co, idx) => (
                         <option key={idx} value={co} className="bg-white">{co}</option>
                       ))}
@@ -1473,9 +1892,12 @@ export default function AdminDashboardPage() {
                     required
                     value={paperForm.course}
                     onChange={e => setPaperForm(prev => ({ ...prev, course: e.target.value }))}
-                    className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                    disabled={courseOptions.length === 0}
+                    className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all disabled:opacity-60"
                   >
-                    <option value="" disabled>Select Target Course</option>
+                    <option value="" disabled>
+                      {courseOptions.length === 0 ? "No courses created yet. Go to Courses tab to add one." : "Select Target Course"}
+                    </option>
                     {courseOptions.map((co, idx) => (
                       <option key={idx} value={co} className="bg-white">{co}</option>
                     ))}
@@ -1575,13 +1997,14 @@ export default function AdminDashboardPage() {
 
           {/* ================= TAB CONTENT 6: CREATE QUIZ ================= */}
           {activeTab === "quizzes" && (
-            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-md shadow-slate-200/40">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-4 mb-6">
-                Interactive Quiz Builder Creator
-              </h3>
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start animate-fade-in">
+              {/* Left Column: Create Quiz Form */}
+              <form onSubmit={handleCreateQuiz} className="md:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-6">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-3">
+                  Interactive Quiz Builder
+                </h3>
 
-              <form onSubmit={handleCreateQuiz} className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="space-y-4">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Quiz Title</label>
                     <input
@@ -1600,13 +2023,27 @@ export default function AdminDashboardPage() {
                       required
                       value={quizForm.course}
                       onChange={e => setQuizForm(prev => ({ ...prev, course: e.target.value }))}
-                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                      disabled={courseOptions.length === 0}
+                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white disabled:opacity-60"
                     >
-                      <option value="" disabled>Select Target Course</option>
+                      <option value="" disabled>
+                        {courseOptions.length === 0 ? "No courses created yet. Go to Courses tab to add one." : "Select Target Course"}
+                      </option>
                       {courseOptions.map((co, idx) => (
                         <option key={idx} value={co} className="bg-white">{co}</option>
                       ))}
                     </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Start Date & Time</label>
+                    <input
+                      type="datetime-local"
+                      required
+                      value={quizForm.scheduledAt}
+                      onChange={e => setQuizForm(prev => ({ ...prev, scheduledAt: e.target.value }))}
+                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white"
+                    />
                   </div>
                 </div>
 
@@ -1620,7 +2057,7 @@ export default function AdminDashboardPage() {
                     <button
                       type="button"
                       onClick={addQuizQuestion}
-                      className="flex items-center gap-1.5 py-1.5 px-3.5 rounded-xl bg-deepskyblue hover:bg-deepskyblue-dark text-[10px] font-bold text-white shadow"
+                      className="flex items-center gap-1.5 py-1.5 px-3.5 rounded-xl bg-deepskyblue hover:bg-deepskyblue-dark text-[10px] font-bold text-white shadow cursor-pointer"
                     >
                       <Plus className="h-4 w-4" />
                       <span>Add Question</span>
@@ -1671,19 +2108,34 @@ export default function AdminDashboardPage() {
                         ))}
                       </div>
 
-                      {/* Correct answer Selection */}
-                      <div className="space-y-1 sm:w-1/2">
-                        <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Select Correct Choice Index</label>
-                        <select
-                          value={question.correctAnswerIndex}
-                          onChange={e => handleQuizCorrectIndexChange(qIdx, parseInt(e.target.value))}
-                          className="block w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-750 text-xs focus:outline-none focus:border-deepskyblue"
-                        >
-                          <option value={0}>Option 1</option>
-                          <option value={1}>Option 2</option>
-                          <option value={2}>Option 3</option>
-                          <option value={3}>Option 4</option>
-                        </select>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Correct answer Selection */}
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Correct Choice Index</label>
+                          <select
+                            value={question.correctAnswerIndex}
+                            onChange={e => handleQuizCorrectIndexChange(qIdx, parseInt(e.target.value))}
+                            className="block w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-750 text-xs focus:outline-none focus:border-deepskyblue"
+                          >
+                            <option value={0}>Option 1</option>
+                            <option value={1}>Option 2</option>
+                            <option value={2}>Option 3</option>
+                            <option value={3}>Option 4</option>
+                          </select>
+                        </div>
+
+                        {/* Question Marks Selection */}
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Question Marks</label>
+                          <input
+                            type="number"
+                            required
+                            min={1}
+                            value={question.marks || 1}
+                            onChange={e => handleQuizMarksChange(qIdx, parseInt(e.target.value) || 1)}
+                            className="block w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-750 text-xs focus:outline-none focus:border-deepskyblue"
+                          />
+                        </div>
                       </div>
 
                     </div>
@@ -1698,10 +2150,309 @@ export default function AdminDashboardPage() {
                   <span>Build and Assign Quiz</span>
                 </button>
               </form>
+
+              {/* Right Column: Quizzes List */}
+              <div className="md:col-span-7 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-4">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-3">
+                  Created Quizzes Directory
+                </h3>
+                {quizzesList.length === 0 ? (
+                  <p className="text-xs text-slate-450 py-8 text-center font-medium">No quizzes created in database yet.</p>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3">
+                    {quizzesList.map((quiz, idx) => {
+                      const totalQuizMarks = quiz.questions.reduce((acc: number, q: any) => acc + (q.marks || 1), 0);
+                      return (
+                        <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200/60 flex justify-between items-center">
+                          <div className="space-y-1">
+                            <span className="text-[9px] font-bold bg-deepskyblue/10 text-deepskyblue-dark px-2 py-0.5 rounded-full uppercase tracking-wider">{quiz.course}</span>
+                            <h4 className="text-xs font-bold text-slate-800 mt-1">{quiz.title}</h4>
+                            <p className="text-[9px] text-slate-400 font-bold mt-1">
+                              Scheduled: {quiz.scheduledAt ? new Date(quiz.scheduledAt).toLocaleString() : "Now"}
+                            </p>
+                          </div>
+                          <div className="text-right flex flex-col items-end gap-1.5">
+                            <span className="text-[10px] font-bold text-slate-400 bg-white border border-slate-200 px-2 py-1 rounded-lg">
+                              {quiz.questions.length} Questions
+                            </span>
+                            <span className="text-[10px] font-extrabold text-deepskyblue-dark">
+                              Total Marks: {totalQuizMarks}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
         </main>
+      </div>
+
+      {/* STUDENT DETAILS LOOKUP OVERLAY MODAL */}
+      {selectedStudentId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+          <div className="relative w-full max-w-4xl bg-white border border-slate-250 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 my-8 text-left">
+            <div className="flex justify-between items-start border-b border-slate-150 pb-4">
+              <div>
+                <h3 className="text-lg font-extrabold text-slate-900 uppercase tracking-tight">Student Details Lookup</h3>
+                {studentDetails?.student && (
+                  <p className="text-xs text-slate-400 mt-1 font-semibold">
+                    Name: {studentDetails.student.name} ({studentDetails.student.registrationId})
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedStudentId(null);
+                  setStudentDetails(null);
+                }}
+                className="text-slate-655 hover:text-slate-950 text-xs font-bold bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 cursor-pointer transition-colors"
+              >
+                Close Details
+              </button>
+            </div>
+
+            {loadingDetails ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-3">
+                <div className="h-10 w-10 border-4 border-deepskyblue/30 border-t-deepskyblue rounded-full animate-spin" />
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Fetching Student Profile Data...</p>
+              </div>
+            ) : studentDetails ? (
+              <div className="space-y-6">
+                {/* Tabs */}
+                <div className="flex border-b border-slate-100">
+                  <button
+                    onClick={() => setModalActiveTab("profile")}
+                    className={`pb-2.5 px-4 text-xs font-bold transition-all border-b-2 cursor-pointer ${
+                      modalActiveTab === "profile"
+                        ? "border-deepskyblue text-deepskyblue-dark font-black"
+                        : "border-transparent text-slate-450 hover:text-slate-700"
+                    }`}
+                  >
+                    Profile Info
+                  </button>
+                  <button
+                    onClick={() => setModalActiveTab("attendance")}
+                    className={`pb-2.5 px-4 text-xs font-bold transition-all border-b-2 cursor-pointer ${
+                      modalActiveTab === "attendance"
+                        ? "border-deepskyblue text-deepskyblue-dark font-black"
+                        : "border-transparent text-slate-450 hover:text-slate-700"
+                    }`}
+                  >
+                    Attendance Sheet ({studentDetails.attendance?.length || 0})
+                  </button>
+                  <button
+                    onClick={() => setModalActiveTab("results")}
+                    className={`pb-2.5 px-4 text-xs font-bold transition-all border-b-2 cursor-pointer ${
+                      modalActiveTab === "results"
+                        ? "border-deepskyblue text-deepskyblue-dark font-black"
+                        : "border-transparent text-slate-450 hover:text-slate-700"
+                    }`}
+                  >
+                    Quiz Results ({studentDetails.results?.length || 0})
+                  </button>
+                </div>
+
+                {/* Tab content 1: Profile Info */}
+                {modalActiveTab === "profile" && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-xs text-slate-700">
+                    <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Father&apos;s Name</span>
+                      <span className="font-semibold text-slate-800">{studentDetails.student.fatherName}</span>
+                    </div>
+                    <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Mother&apos;s Name</span>
+                      <span className="font-semibold text-slate-800">{studentDetails.student.motherName}</span>
+                    </div>
+                    <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Date of Birth</span>
+                      <span className="font-semibold text-slate-800">{new Date(studentDetails.student.dob).toLocaleDateString()}</span>
+                    </div>
+                    <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Email ID</span>
+                      <span className="font-semibold text-slate-800">{studentDetails.student.email}</span>
+                    </div>
+                    <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Phone Number</span>
+                      <span className="font-semibold text-slate-800">{studentDetails.student.phone}</span>
+                    </div>
+                    <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Enrolled Course</span>
+                      <span className="font-semibold text-deepskyblue-dark">{studentDetails.student.course}</span>
+                    </div>
+                    <div className="py-2.5 border-b border-slate-100 sm:col-span-2 flex flex-col gap-2">
+                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Address</span>
+                      <span className="text-slate-600 font-medium break-words leading-relaxed">{studentDetails.student.address}</span>
+                    </div>
+                    <div className="sm:col-span-2 space-y-2 pt-2">
+                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px] block">Uploaded Documents (S3 Links)</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {studentDetails.student.admitUrl && (
+                          <a href={studentDetails.student.admitUrl} target="_blank" rel="noreferrer" className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-[11px] font-bold text-slate-655 hover:bg-slate-100 transition">
+                            <span>Admit Card</span>
+                            <span className="text-deepskyblue-dark font-black hover:underline">Open link</span>
+                          </a>
+                        )}
+                        {studentDetails.student.qualificationUrl && (
+                          <a href={studentDetails.student.qualificationUrl} target="_blank" rel="noreferrer" className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-[11px] font-bold text-slate-655 hover:bg-slate-100 transition">
+                            <span>Last Qualification</span>
+                            <span className="text-deepskyblue-dark font-black hover:underline">Open link</span>
+                          </a>
+                        )}
+                        {studentDetails.student.extraQualificationUrl && (
+                          <a href={studentDetails.student.extraQualificationUrl} target="_blank" rel="noreferrer" className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-[11px] font-bold text-slate-655 hover:bg-slate-100 transition">
+                            <span>Extra Certificate</span>
+                            <span className="text-deepskyblue-dark font-black hover:underline">Open link</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tab content 2: Attendance */}
+                {modalActiveTab === "attendance" && (
+                  <div className="space-y-4">
+                    {/* Attendance summary statistics */}
+                    {(() => {
+                      const total = studentDetails.attendance?.length || 0;
+                      const present = studentDetails.attendance?.filter((a: any) => a.status === "present").length || 0;
+                      const absent = studentDetails.attendance?.filter((a: any) => a.status === "absent").length || 0;
+                      const leave = studentDetails.attendance?.filter((a: any) => a.status === "leave").length || 0;
+                      const percent = total > 0 ? ((present / total) * 100).toFixed(1) : "100.0";
+                      
+                      return (
+                        <div className="grid grid-cols-4 gap-4 text-center bg-slate-50 p-4 border border-slate-200/80 rounded-2xl">
+                          <div>
+                            <span className="text-[10px] text-slate-400 font-bold uppercase block">Attendance Rate</span>
+                            <span className="text-lg font-black text-deepskyblue-dark mt-1 block">{percent}%</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-400 font-bold uppercase block">Present</span>
+                            <span className="text-lg font-black text-emerald-600 mt-1 block">{present} Lectures</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-400 font-bold uppercase block">Absent</span>
+                            <span className="text-lg font-black text-rose-500 mt-1 block">{absent} Lectures</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-400 font-bold uppercase block">Leave</span>
+                            <span className="text-lg font-black text-amber-500 mt-1 block">{leave} Sessions</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Attendance List */}
+                    {studentDetails.attendance?.length === 0 ? (
+                      <p className="text-xs text-slate-400 text-center py-10">No attendance history logs recorded for this student.</p>
+                    ) : (
+                      <div className="max-h-[30vh] overflow-y-auto pr-1">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead>
+                            <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] font-bold">
+                              <th className="pb-2">Date</th>
+                              <th className="pb-2">Attendance Status</th>
+                              <th className="pb-2 text-right">Google Meet Cohort Link</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {studentDetails.attendance.map((att: any, idx: number) => (
+                              <tr key={idx} className="text-slate-700">
+                                <td className="py-2.5 font-semibold text-slate-500">{new Date(att.date).toLocaleDateString()}</td>
+                                <td className="py-2.5">
+                                  <span className={`px-2 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${
+                                    att.status === "present" ? "bg-emerald-50 text-emerald-600" :
+                                    att.status === "absent" ? "bg-rose-50 text-rose-600" : "bg-amber-50 text-amber-600"
+                                  }`}>
+                                    {att.status}
+                                  </span>
+                                </td>
+                                <td className="py-2.5 text-right font-semibold">
+                                  {att.googleMeetLink ? (
+                                    <a href={att.googleMeetLink} target="_blank" rel="noreferrer" className="text-deepskyblue-dark hover:underline hover:text-deepskyblue font-bold text-[10px]">
+                                      Open Meet Link
+                                    </a>
+                                  ) : <span className="text-slate-300">—</span>}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Tab content 3: Quiz Results */}
+                {modalActiveTab === "results" && (
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center bg-slate-50 p-4 border border-slate-200/80 rounded-2xl">
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-800">Academic Records Statement</h4>
+                        <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Generate cumulative grades card for the student</p>
+                      </div>
+                      <button
+                        onClick={() => triggerPrint("cumulative_marksheet", studentDetails.results)}
+                        className="flex items-center gap-1.5 py-1.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-900 font-bold text-white text-[10px] cursor-pointer shadow transition"
+                      >
+                        <Printer className="h-3.5 w-3.5 mr-1" />
+                        <span>Print Cumulative Marksheet</span>
+                      </button>
+                    </div>
+
+                    {studentDetails.results?.length === 0 ? (
+                      <p className="text-xs text-slate-400 text-center py-10">No quizzes or interactive evaluations completed by this student.</p>
+                    ) : (
+                      <div className="space-y-3 max-h-[30vh] overflow-y-auto pr-1">
+                        {studentDetails.results.map((res: any, idx: number) => (
+                          <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-4">
+                            <div>
+                              <h4 className="text-xs font-bold text-slate-800">{res.quizTitle}</h4>
+                              <p className="text-[9px] text-slate-450 font-semibold mt-1">Completed on: {new Date(res.date).toLocaleString()}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-right mr-2">
+                                <span className="text-[9px] text-slate-400 block font-semibold">Marks Gained</span>
+                                <span className="text-xs text-emerald-650 font-bold">
+                                  {res.score}/{res.total} ({res.grade})
+                                </span>
+                              </div>
+                              <button
+                                onClick={() => triggerPrint("marksheet", res)}
+                                className="py-1.5 px-3 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-[10px] font-bold text-slate-600 transition cursor-pointer"
+                              >
+                                Marksheet
+                              </button>
+                              <button
+                                onClick={() => triggerPrint("certificate", res)}
+                                className="py-1.5 px-3 rounded-lg bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-[10px] font-bold text-white shadow shadow-amber-500/10 transition cursor-pointer"
+                              >
+                                Certificate
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400 text-center py-10 font-semibold">Error rendering student data.</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* PRINT AREA CONTAINER (Hidden on screen, shown in printing) */}
+      <div id="print-area-wrapper" className="hidden print:block">
+        {printTarget?.type === "marksheet" && renderPrintMarksheet(printTarget.data)}
+        {printTarget?.type === "cumulative_marksheet" && renderPrintCumulativeMarksheet(printTarget.data)}
+        {printTarget?.type === "certificate" && renderPrintCertificate(printTarget.data)}
       </div>
 
     </div>

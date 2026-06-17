@@ -45,7 +45,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
     }
 
-    const { title, course, questions } = await request.json();
+    const { title, course, questions, scheduledAt } = await request.json();
 
     if (!title || !course || !questions || !Array.isArray(questions) || questions.length === 0) {
       return NextResponse.json({ error: "Title, course, and questions array are required" }, { status: 400 });
@@ -56,12 +56,16 @@ export async function POST(request: Request) {
       if (!q.questionText || !Array.isArray(q.options) || q.options.length < 2 || typeof q.correctAnswerIndex !== "number") {
         return NextResponse.json({ error: "Each question must have text, at least two options, and a correct answer index" }, { status: 400 });
       }
+      if (q.marks !== undefined && (typeof q.marks !== "number" || q.marks < 0)) {
+        return NextResponse.json({ error: "Question marks must be a positive number" }, { status: 400 });
+      }
     }
 
     const quiz = new Quiz({
       title,
       course,
       questions,
+      scheduledAt: scheduledAt ? new Date(scheduledAt) : new Date(),
     });
 
     await quiz.save();

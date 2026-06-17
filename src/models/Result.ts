@@ -8,6 +8,8 @@ export interface IResult extends Document {
   total: number;
   percentage: number;
   grade: string;
+  correctCount: number;
+  incorrectCount: number;
   date: Date;
 }
 
@@ -19,6 +21,8 @@ const ResultSchema = new Schema<IResult>({
   total: { type: Number, required: true },
   percentage: { type: Number, required: true },
   grade: { type: String, required: true },
+  correctCount: { type: Number, required: true, default: 0 },
+  incorrectCount: { type: Number, required: true, default: 0 },
   date: { type: Date, default: Date.now },
 });
 

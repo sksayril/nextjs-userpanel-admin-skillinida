@@ -64,3 +64,32 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+@media print {
+  @page {
+    margin: 0;
+  }
+  
+  body * {
+    visibility: hidden !important;
+  }
+  
+  #print-area-wrapper, #print-area-wrapper * {
+    visibility: visible !important;
+  }
+  
+  #print-area-wrapper {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
