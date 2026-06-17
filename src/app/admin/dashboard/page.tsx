@@ -23,14 +23,129 @@ import {
   Search,
   Menu,
   BookMarked,
-  Printer
+  Printer,
+  Settings,
+  Palette
 } from "lucide-react";
+
+// ── Sidebar Theme Definitions ────────────────────────────────────────────────
+const SIDEBAR_THEMES = [
+  { id: "sky",      label: "Sky Blue",    bg: "#0ea5e9", dark: "#0284c7", text: "#fff", card: "rgba(255,255,255,0.12)" },
+  { id: "violet",  label: "Violet",      bg: "#7c3aed", dark: "#5b21b6", text: "#fff", card: "rgba(255,255,255,0.12)" },
+  { id: "rose",    label: "Rose",        bg: "#e11d48", dark: "#be123c", text: "#fff", card: "rgba(255,255,255,0.12)" },
+  { id: "emerald", label: "Emerald",     bg: "#059669", dark: "#047857", text: "#fff", card: "rgba(255,255,255,0.12)" },
+  { id: "amber",   label: "Amber",       bg: "#d97706", dark: "#b45309", text: "#fff", card: "rgba(255,255,255,0.12)" },
+  { id: "slate",   label: "Slate Dark",  bg: "#1e293b", dark: "#0f172a", text: "#fff", card: "rgba(255,255,255,0.10)" },
+  { id: "indigo",  label: "Indigo",      bg: "#4338ca", dark: "#312e81", text: "#fff", card: "rgba(255,255,255,0.12)" },
+  { id: "teal",    label: "Teal",        bg: "#0d9488", dark: "#0f766e", text: "#fff", card: "rgba(255,255,255,0.12)" },
+];
+
+// Convert hex color to 'R, G, B' string for use in CSS rgba()
+const hexToRgb = (hex: string): string => {
+  const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return r ? `${parseInt(r[1], 16)}, ${parseInt(r[2], 16)}, ${parseInt(r[3], 16)}` : "14, 165, 233";
+};
 
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<string>("overview");
   const [loading, setLoading] = useState<boolean>(true);
   const [admin, setAdmin] = useState<any>(null);
+
+  // Sidebar theme state
+  const [sidebarThemeId, setSidebarThemeId] = useState<string>("sky");
+  const [showThemePicker, setShowThemePicker] = useState<boolean>(false);
+
+  // Load saved theme from localStorage on mount
+  useEffect(() => {
+    const saved = typeof window !== "undefined" ? localStorage.getItem("smi_sidebar_theme") : null;
+    if (saved && SIDEBAR_THEMES.find(t => t.id === saved)) {
+      setSidebarThemeId(saved);
+    }
+  }, []);
+
+  const handleThemeChange = (id: string) => {
+    setSidebarThemeId(id);
+    if (typeof window !== "undefined") localStorage.setItem("smi_sidebar_theme", id);
+    setShowThemePicker(false);
+  };
+
+  // Inject dynamic theme CSS into document.head whenever theme changes
+  useEffect(() => {
+    const theme = SIDEBAR_THEMES.find(t => t.id === sidebarThemeId) || SIDEBAR_THEMES[0];
+    const bg   = theme.bg;
+    const dark = theme.dark;
+    const rgb  = hexToRgb(bg);
+    const rgbDark = hexToRgb(dark);
+
+    const styleId = "smi-admin-theme-override";
+    let styleEl = document.getElementById(styleId) as HTMLStyleElement | null;
+    if (!styleEl) {
+      styleEl = document.createElement("style");
+      styleEl.id = styleId;
+      document.head.appendChild(styleEl);
+    }
+
+    styleEl.textContent = `
+      /* ── SMI Admin Dynamic Theme ── */
+      :root {
+        --smi-primary:  ${bg};
+        --smi-dark:     ${dark};
+        --smi-rgb:      ${rgb};
+        --smi-dark-rgb: ${rgbDark};
+      }
+
+      /* Background fills */
+      .bg-deepskyblue                       { background-color: ${bg} !important; }
+      .bg-deepskyblue-dark                  { background-color: ${dark} !important; }
+      .bg-deepskyblue\/10                   { background-color: rgba(${rgb},0.10) !important; }
+      .bg-deepskyblue\/8                    { background-color: rgba(${rgb},0.08) !important; }
+      .bg-sky-50                            { background-color: rgba(${rgb},0.06) !important; }
+      .bg-sky-100                           { background-color: rgba(${rgb},0.12) !important; }
+
+      /* Text colours */
+      .text-deepskyblue                     { color: ${bg} !important; }
+      .text-deepskyblue-dark                { color: ${dark} !important; }
+      .text-sky-600                         { color: ${bg} !important; }
+
+      /* Borders */
+      .border-deepskyblue                   { border-color: ${bg} !important; }
+      .border-t-deepskyblue                 { border-top-color: ${bg} !important; }
+      .border-b-2.border-deepskyblue        { border-bottom-color: ${bg} !important; }
+
+      /* Tailwind gradient helper variables */
+      .from-deepskyblue { --tw-gradient-from: ${bg} !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(${rgb},0)) !important; }
+      .via-deepskyblue  { --tw-gradient-stops: var(--tw-gradient-from), ${bg}, var(--tw-gradient-to, rgba(${rgb},0)) !important; }
+      .to-sky-600       { --tw-gradient-to: ${dark} !important; }
+
+      /* Shadows */
+      .shadow-deepskyblue\/20               { box-shadow: 0 4px 14px 0 rgba(${rgb},0.20) !important; }
+      .shadow-deepskyblue\/10               { box-shadow: 0 2px 8px 0 rgba(${rgb},0.10) !important; }
+
+      /* Focus/ring for all inputs, selects, textareas */
+      input:focus, select:focus, textarea:focus {
+        border-color: ${bg} !important;
+        box-shadow: 0 0 0 3px rgba(${rgb},0.15) !important;
+        outline: none !important;
+      }
+
+      /* Loading spinner */
+      .border-t-deepskyblue                 { border-top-color: ${bg} !important; }
+
+      /* Gradient backgrounds (bg-gradient-to-tr / bg-gradient-to-r) */
+      .bg-gradient-to-tr.from-deepskyblue   { background: linear-gradient(to top right, ${bg}, ${dark}) !important; }
+      .bg-gradient-to-r.from-deepskyblue    { background: linear-gradient(to right, ${bg}, ${dark}) !important; }
+
+      /* Page scroll body tint */
+      #admin-scroll-body {
+        background: linear-gradient(180deg, rgba(${rgb},0.04) 0%, rgba(${rgb},0.01) 200px, transparent 400px);
+      }
+    `;
+
+    return () => {
+      if (styleEl) styleEl.textContent = "";
+    };
+  }, [sidebarThemeId]);
 
   // Search input state
   const [searchQuery, setSearchQuery] = useState("");
@@ -50,6 +165,7 @@ export default function AdminDashboardPage() {
   const [quizzesList, setQuizzesList] = useState<any[]>([]);
   const [attendanceList, setAttendanceList] = useState<any[]>([]);
   const [resultsList, setResultsList] = useState<any[]>([]);
+  const [agentsList, setAgentsList] = useState<any[]>([]);
 
   // Messages
   const [successMsg, setSuccessMsg] = useState("");
@@ -196,6 +312,12 @@ export default function AdminDashboardPage() {
       const dataResults = await resResults.json();
       const results = dataResults.results || [];
       setResultsList(results);
+
+      // Fetch Agents
+      const resAgents = await fetch("/api/admin/agents");
+      const dataAgents = await resAgents.json();
+      const agents = dataAgents.agents || [];
+      setAgentsList(agents);
 
       // Update Stats
       setStats({
@@ -546,6 +668,33 @@ export default function AdminDashboardPage() {
       setSelectedStudentId(null);
     } finally {
       setLoadingDetails(false);
+    }
+  };
+
+  const handleAgentStatus = async (agentId: string, status: "approved" | "rejected") => {
+    setErrorMsg("");
+    setSuccessMsg("");
+    try {
+      const res = await fetch(`/api/admin/agents/${agentId}/approve`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSuccessMsg(`Agent status successfully set to ${status}!`);
+        // Refresh agents list
+        const resAgents = await fetch("/api/admin/agents");
+        const dataAgents = await resAgents.json();
+        setAgentsList(dataAgents.agents || []);
+        setTimeout(() => setSuccessMsg(""), 5000);
+      } else {
+        setErrorMsg(data.error || "Failed to update agent status.");
+        setTimeout(() => setErrorMsg(""), 5000);
+      }
+    } catch (err) {
+      setErrorMsg("Network error updating agent status.");
+      setTimeout(() => setErrorMsg(""), 5000);
     }
   };
 
@@ -1039,146 +1188,162 @@ export default function AdminDashboardPage() {
     "#10b981", // Emerald-500
   ];
 
+  // Derived theme object (used for inline styles in JSX)
+  const activeSidebarTheme = SIDEBAR_THEMES.find(t => t.id === sidebarThemeId) || SIDEBAR_THEMES[0];
+  const themeRgb     = hexToRgb(activeSidebarTheme.bg);
+  const themeDarkRgb = hexToRgb(activeSidebarTheme.dark);
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex font-sans select-none overflow-x-hidden">
+    <div
+      id="admin-theme-root"
+      className="h-screen bg-slate-50 text-slate-800 flex font-sans select-none overflow-hidden"
+    >
       
-      {/* 1. SIDEBAR NAVIGATION */}
-      <aside className="w-64 bg-white border-r border-slate-200/80 flex flex-col justify-between py-6 px-4 shrink-0 hidden lg:flex">
-        <div className="space-y-6">
-          <div className="flex items-center gap-3 px-3 pb-5 border-b border-slate-100">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-deepskyblue to-sky-600 flex items-center justify-center shadow-lg shadow-deepskyblue/20">
-              <Shield className="h-5.5 w-5.5 text-white" />
+      {/* 1. SIDEBAR NAVIGATION - Fixed, independently scrollable */}
+      <aside
+        className="w-64 h-full flex flex-col shrink-0 hidden lg:flex overflow-y-auto transition-all duration-500"
+        style={{
+          background: `linear-gradient(160deg, ${activeSidebarTheme.bg} 0%, ${activeSidebarTheme.dark} 100%)`,
+          color: activeSidebarTheme.text,
+        }}
+      >
+        {/* TOP BRAND AREA */}
+        <div className="px-5 pt-7 pb-6 border-b border-white/15 shrink-0">
+          <div className="flex items-center gap-3">
+            <div
+              className="h-10 w-10 rounded-xl flex items-center justify-center shadow-lg"
+              style={{ background: "rgba(255,255,255,0.20)", backdropFilter: "blur(8px)" }}
+            >
+              <Shield className="h-5 w-5 text-white" />
             </div>
-            <span className="font-extrabold tracking-tight text-slate-900 text-sm uppercase">SMI ADMIN</span>
+            <div>
+              <span className="font-extrabold tracking-tight text-white text-sm uppercase block leading-none">SMI ADMIN</span>
+              <span className="text-[9px] font-semibold text-white/60 mt-0.5 block">Management Portal</span>
+            </div>
           </div>
-
-          <div className="px-3 pt-2">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Management Panel</p>
-          </div>
-
-          <nav className="space-y-1">
-            <button
-              onClick={() => setActiveTab("overview")}
-              className={`relative w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer hover:translate-x-1 ${
-                activeTab === "overview"
-                  ? "bg-deepskyblue text-white shadow-md shadow-deepskyblue/20"
-                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-              }`}
-            >
-              {activeTab === "overview" && (
-                <span className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-white rounded-r-md" />
-              )}
-              <TrendingUp className="h-4 w-4" />
-              <span>Overview</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("courses")}
-              className={`relative w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer hover:translate-x-1 ${
-                activeTab === "courses"
-                  ? "bg-deepskyblue text-white shadow-md shadow-deepskyblue/20"
-                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-              }`}
-            >
-              {activeTab === "courses" && (
-                <span className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-white rounded-r-md" />
-              )}
-              <BookOpen className="h-4 w-4" />
-              <span>Manage Courses</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("students")}
-              className={`relative w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer hover:translate-x-1 ${
-                activeTab === "students"
-                  ? "bg-deepskyblue text-white shadow-md shadow-deepskyblue/20"
-                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-              }`}
-            >
-              {activeTab === "students" && (
-                <span className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-white rounded-r-md" />
-              )}
-              <UserPlus className="h-4 w-4" />
-              <span>Register Students</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("attendance")}
-              className={`relative w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer hover:translate-x-1 ${
-                activeTab === "attendance"
-                  ? "bg-deepskyblue text-white shadow-md shadow-deepskyblue/20"
-                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-              }`}
-            >
-              {activeTab === "attendance" && (
-                <span className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-white rounded-r-md" />
-              )}
-              <Calendar className="h-4 w-4" />
-              <span>Manage Attendance</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("papers")}
-              className={`relative w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer hover:translate-x-1 ${
-                activeTab === "papers"
-                  ? "bg-deepskyblue text-white shadow-md shadow-deepskyblue/20"
-                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-              }`}
-            >
-              {activeTab === "papers" && (
-                <span className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-white rounded-r-md" />
-              )}
-              <FileText className="h-4 w-4" />
-              <span>Question Papers</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("quizzes")}
-              className={`relative w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer hover:translate-x-1 ${
-                activeTab === "quizzes"
-                  ? "bg-deepskyblue text-white shadow-md shadow-deepskyblue/20"
-                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-              }`}
-            >
-              {activeTab === "quizzes" && (
-                <span className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-white rounded-r-md" />
-              )}
-              <Award className="h-4 w-4" />
-              <span>Create Exam</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("results")}
-              className={`relative w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer hover:translate-x-1 ${
-                activeTab === "results"
-                  ? "bg-deepskyblue text-white shadow-md shadow-deepskyblue/20"
-                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-              }`}
-            >
-              {activeTab === "results" && (
-                <span className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-white rounded-r-md" />
-              )}
-              <CheckCircle className="h-4 w-4" />
-              <span>Exam Results</span>
-            </button>
-          </nav>
         </div>
 
-        {/* PROFILE SESSION CARD */}
-        <div className="border-t border-slate-200 pt-4 mt-auto space-y-2">
-          <div className="flex items-center gap-3 p-2.5 rounded-2xl bg-slate-50 border border-slate-200">
-            <div className="h-8 w-8 rounded-lg bg-deepskyblue flex items-center justify-center text-xs font-extrabold text-white shadow-sm shadow-deepskyblue/10">
+        {/* NAV SECTION LABEL */}
+        <div className="px-5 pt-5 pb-2 shrink-0">
+          <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">Navigation</p>
+        </div>
+
+        {/* SCROLLABLE NAV LINKS */}
+        <nav className="flex-1 px-3 space-y-0.5 pb-4">
+          {([
+            { id: "overview",   label: "Overview",          Icon: TrendingUp },
+            { id: "courses",    label: "Manage Courses",     Icon: BookOpen },
+            { id: "students",   label: "Register Students",  Icon: UserPlus },
+            { id: "attendance", label: "Manage Attendance",  Icon: Calendar },
+            { id: "papers",     label: "Question Papers",    Icon: FileText },
+            { id: "quizzes",    label: "Create Exam",        Icon: Award },
+            { id: "results",    label: "Exam Results",       Icon: CheckCircle },
+            { id: "agents",     label: "Manage Agents",      Icon: Users },
+          ] as { id: string; label: string; Icon: React.ElementType }[]).map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className="relative w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer hover:translate-x-1"
+              style={{
+                background: activeTab === id ? "rgba(255,255,255,0.20)" : "transparent",
+                color: activeTab === id ? "#fff" : "rgba(255,255,255,0.65)",
+                boxShadow: activeTab === id ? "0 2px 12px rgba(0,0,0,0.15)" : "none",
+              }}
+              onMouseEnter={e => {
+                if (activeTab !== id) (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.10)";
+              }}
+              onMouseLeave={e => {
+                if (activeTab !== id) (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+              }}
+            >
+              {activeTab === id && (
+                <span className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-white rounded-r-full" />
+              )}
+              <Icon className="h-4 w-4 shrink-0" />
+              <span>{label}</span>
+            </button>
+          ))}
+        </nav>
+
+        {/* THEME PICKER PANEL (inline, slides open above footer) */}
+        {showThemePicker && (
+          <div
+            className="mx-3 mb-3 rounded-2xl p-4 border border-white/20 shrink-0"
+            style={{ background: "rgba(0,0,0,0.25)", backdropFilter: "blur(12px)" }}
+          >
+            <p className="text-[9px] font-black text-white/50 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+              <Palette className="h-3 w-3" /> Sidebar Theme
+            </p>
+            <div className="grid grid-cols-4 gap-2">
+              {SIDEBAR_THEMES.map(theme => (
+                <button
+                  key={theme.id}
+                  title={theme.label}
+                  onClick={() => handleThemeChange(theme.id)}
+                  className="relative h-8 w-full rounded-lg transition-all duration-150 hover:scale-110 focus:outline-none"
+                  style={{
+                    background: `linear-gradient(135deg, ${theme.bg}, ${theme.dark})`,
+                    border: sidebarThemeId === theme.id ? "2px solid #fff" : "2px solid transparent",
+                    boxShadow: sidebarThemeId === theme.id ? "0 0 0 3px rgba(255,255,255,0.3)" : "none",
+                  }}
+                >
+                  {sidebarThemeId === theme.id && (
+                    <span className="absolute inset-0 flex items-center justify-center">
+                      <CheckCircle className="h-3.5 w-3.5 text-white" />
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+            <p className="text-[8px] text-white/40 text-center mt-3 font-medium">Theme auto-saved to browser</p>
+          </div>
+        )}
+
+        {/* FOOTER: PROFILE + SETTINGS + SIGN OUT */}
+        <div
+          className="px-3 py-4 border-t border-white/15 shrink-0 space-y-2"
+          style={{ background: "rgba(0,0,0,0.15)" }}
+        >
+          {/* Profile card */}
+          <div
+            className="flex items-center gap-3 p-2.5 rounded-2xl"
+            style={{ background: activeSidebarTheme.card }}
+          >
+            <div
+              className="h-8 w-8 rounded-lg flex items-center justify-center text-xs font-extrabold text-white shadow-sm"
+              style={{ background: "rgba(255,255,255,0.25)" }}
+            >
               {admin?.name ? admin.name[0].toUpperCase() : "A"}
             </div>
             <div className="text-left flex-1 min-w-0">
-              <p className="text-xs font-bold text-slate-855 truncate leading-3">{admin?.name || "Admin User"}</p>
-              <p className="text-[9px] text-slate-400 font-semibold mt-1.5">Logged In</p>
+              <p className="text-xs font-bold text-white truncate leading-tight">{admin?.name || "Admin User"}</p>
+              <p className="text-[9px] text-white/50 font-semibold mt-0.5">Logged In</p>
             </div>
           </div>
 
+          {/* Settings / Theme toggle */}
+          <button
+            onClick={() => setShowThemePicker(p => !p)}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold transition-all text-left cursor-pointer"
+            style={{
+              background: showThemePicker ? "rgba(255,255,255,0.15)" : "transparent",
+              color: "rgba(255,255,255,0.75)",
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.12)")}
+            onMouseLeave={e => (e.currentTarget.style.background = showThemePicker ? "rgba(255,255,255,0.15)" : "transparent")}
+          >
+            <Settings className="h-4 w-4" />
+            <span>Theme Settings</span>
+            <Palette className="h-3.5 w-3.5 ml-auto opacity-60" />
+          </button>
+
+          {/* Sign out */}
           <button
             onClick={handleSignOut}
-            className="w-full flex items-center gap-3 px-3 py-2 border border-transparent rounded-xl text-xs font-bold text-slate-500 hover:text-rose-650 hover:bg-rose-50 transition-all text-left cursor-pointer"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold transition-all text-left cursor-pointer"
+            style={{ color: "rgba(255,255,255,0.65)" }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,50,50,0.20)"; (e.currentTarget as HTMLButtonElement).style.color = "#fff"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.65)"; }}
           >
             <LogOut className="h-4 w-4" />
             <span>Sign Out Session</span>
@@ -1187,10 +1352,10 @@ export default function AdminDashboardPage() {
       </aside>
 
       {/* 2. MAIN DISPLAY CONTENT AREA */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         
-        {/* TOP NAVIGATION BAR */}
-        <header className="h-16 bg-white border-b border-slate-200/80 flex items-center justify-between px-8 z-30">
+        {/* TOP NAVIGATION BAR — fixed/sticky, never scrolls */}
+        <header className="h-16 shrink-0 bg-white border-b border-slate-200/80 flex items-center justify-between px-8 z-40 shadow-sm shadow-slate-100">
           <div className="flex items-center gap-4 flex-1">
             <button className="lg:hidden p-1.5 rounded-xl text-slate-500 hover:bg-slate-50">
               <Menu className="h-5 w-5" />
@@ -1214,12 +1379,18 @@ export default function AdminDashboardPage() {
           <div className="flex items-center gap-4">
             <button className="relative h-8 w-8 rounded-xl bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-550 transition-colors">
               <Bell className="h-4 w-4" />
-              <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-deepskyblue" />
+              <span
+                className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full"
+                style={{ background: activeSidebarTheme.bg }}
+              />
             </button>
 
             {/* Profile Avatar Widget */}
             <div className="flex items-center gap-2.5 pl-3 border-l border-slate-200">
-              <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-deepskyblue to-sky-600 flex items-center justify-center text-xs font-bold text-white shadow-inner">
+              <div
+                className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-inner"
+                style={{ background: `linear-gradient(135deg, ${activeSidebarTheme.bg}, ${activeSidebarTheme.dark})` }}
+              >
                 AD
               </div>
               <div className="hidden sm:block text-left">
@@ -1230,11 +1401,17 @@ export default function AdminDashboardPage() {
           </div>
         </header>
 
-        {/* VIBRANT TOP BANNER SECTION */}
-        <section className="bg-gradient-to-r from-deepskyblue via-deepskyblue to-sky-600 text-white px-8 pt-8 pb-20 relative flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        {/* SCROLLABLE BODY — everything below the header scrolls here */}
+        <div id="admin-scroll-body" className="flex-1 overflow-y-auto">
+
+        {/* VIBRANT TOP BANNER SECTION — themed gradient */}
+        <section
+          className="text-white px-8 pt-8 pb-20 relative flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+          style={{ background: `linear-gradient(135deg, ${activeSidebarTheme.bg} 0%, ${activeSidebarTheme.dark} 100%)` }}
+        >
           <div className="space-y-1">
             <h2 className="text-2xl font-black tracking-tight capitalize">{activeTab} Setup</h2>
-            <p className="text-xs text-sky-50">Configure parameters, inspect course catalogs, and audit student databases</p>
+            <p className="text-xs text-white/70">Configure parameters, inspect course catalogs, and audit student databases</p>
           </div>
           
           <div className="flex items-center gap-3">
@@ -1253,7 +1430,10 @@ export default function AdminDashboardPage() {
               <span className="text-2xl font-black text-slate-900">{stats.studentsCount}</span>
               <p className="text-[10px] text-slate-400 font-medium">Portal verified logs</p>
             </div>
-            <div className="h-10 w-10 rounded-xl bg-deepskyblue/10 flex items-center justify-center text-deepskyblue-dark">
+            <div
+              className="h-10 w-10 rounded-xl flex items-center justify-center"
+              style={{ background: `rgba(${themeRgb},0.12)`, color: activeSidebarTheme.bg }}
+            >
               <Users className="h-5 w-5" />
             </div>
           </div>
@@ -1265,7 +1445,10 @@ export default function AdminDashboardPage() {
               <span className="text-2xl font-black text-slate-900">{stats.coursesCount}</span>
               <p className="text-[10px] text-slate-400 font-medium">Syllabi catalogs loaded</p>
             </div>
-            <div className="h-10 w-10 rounded-xl bg-sky-100 flex items-center justify-center text-sky-600">
+            <div
+              className="h-10 w-10 rounded-xl flex items-center justify-center"
+              style={{ background: `rgba(${themeRgb},0.10)`, color: activeSidebarTheme.bg }}
+            >
               <BookMarked className="h-5 w-5" />
             </div>
           </div>
@@ -1277,7 +1460,10 @@ export default function AdminDashboardPage() {
               <span className="text-2xl font-black text-slate-900">{stats.papersCount}</span>
               <p className="text-[10px] text-slate-400 font-medium">Assigned static files</p>
             </div>
-            <div className="h-10 w-10 rounded-xl bg-sky-50 flex items-center justify-center text-sky-600">
+            <div
+              className="h-10 w-10 rounded-xl flex items-center justify-center"
+              style={{ background: `rgba(${themeRgb},0.08)`, color: activeSidebarTheme.bg }}
+            >
               <FileText className="h-5 w-5" />
             </div>
           </div>
@@ -2576,8 +2762,98 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
+          {/* ================= TAB CONTENT 8: MANAGE AGENTS ================= */}
+          {activeTab === "agents" && (
+            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-5 animate-fade-in">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Registered Agents Ledger</h3>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Approve agent applications, check original passwords, and trace referrals count</p>
+                </div>
+              </div>
+
+              {agentsList.length === 0 ? (
+                <p className="text-xs text-slate-400 py-10 text-center font-medium">No agents registered in the database yet.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] tracking-wider font-bold">
+                        <th className="pb-3 pl-2">Agent Details</th>
+                        <th className="pb-3">Referral Code</th>
+                        <th className="pb-3">Original Password</th>
+                        <th className="pb-3 text-center">Referrals Count</th>
+                        <th className="pb-3 text-center">Status</th>
+                        <th className="pb-3 text-right pr-2">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {agentsList
+                        .filter(agent => {
+                          const query = searchQuery.toLowerCase();
+                          return (
+                            agent.name.toLowerCase().includes(query) ||
+                            agent.email.toLowerCase().includes(query) ||
+                            agent.agentCode.toLowerCase().includes(query)
+                          );
+                        })
+                        .map((agent, idx) => (
+                          <tr key={idx} className="text-slate-700 hover:bg-slate-50/50 hover:text-slate-900 transition-colors">
+                            <td className="py-4 pl-2">
+                              <div className="font-bold text-slate-900">{agent.name}</div>
+                              <div className="text-[10px] text-slate-400 mt-1 flex flex-col space-y-0.5">
+                                <span>{agent.email}</span>
+                                <span>{agent.phone}</span>
+                              </div>
+                            </td>
+                            <td className="py-4 font-mono font-bold text-deepskyblue-dark">
+                              {agent.agentCode}
+                            </td>
+                            <td className="py-4 font-mono text-slate-505 font-semibold select-all">
+                              {agent.originalPassword || "N/A"}
+                            </td>
+                            <td className="py-4 text-center font-extrabold text-slate-900">
+                              {agent.studentCount} Students
+                            </td>
+                            <td className="py-4 text-center">
+                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${
+                                agent.status === "approved" ? "bg-emerald-50 text-emerald-650 border border-emerald-100" :
+                                agent.status === "rejected" ? "bg-rose-50 text-rose-650 border border-rose-100" :
+                                "bg-amber-50 text-amber-650 border border-amber-100"
+                              }`}>
+                                {agent.status}
+                              </span>
+                            </td>
+                            <td className="py-4 text-right pr-2 space-x-2">
+                              {agent.status !== "approved" && (
+                                <button
+                                  onClick={() => handleAgentStatus(agent.id, "approved")}
+                                  className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-[10px] font-bold text-white shadow shadow-emerald-500/10 transition cursor-pointer"
+                                >
+                                  Approve
+                                </button>
+                              )}
+                              {agent.status !== "rejected" && (
+                                <button
+                                  onClick={() => handleAgentStatus(agent.id, "rejected")}
+                                  className="px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-[10px] font-bold text-white shadow shadow-rose-500/10 transition cursor-pointer"
+                                >
+                                  Reject
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
         </main>
-      </div>
+        </div>{/* end scrollable body */}
+      </div>{/* end main column */}
 
       {/* STUDENT DETAILS LOOKUP OVERLAY MODAL */}
       {selectedStudentId && (
@@ -2647,6 +2923,15 @@ export default function AdminDashboardPage() {
                 {/* Tab content 1: Profile Info */}
                 {modalActiveTab === "profile" && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-xs text-slate-700">
+                    {studentDetails.student.profilePicUrl && (
+                      <div className="sm:col-span-2 flex justify-center pb-4">
+                        <img 
+                          src={studentDetails.student.profilePicUrl} 
+                          alt="Student Profile" 
+                          className="h-24 w-24 rounded-full object-cover border-2 border-slate-200 shadow-sm"
+                        />
+                      </div>
+                    )}
                     <div className="py-2.5 border-b border-slate-100 flex justify-between">
                       <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Father&apos;s Name</span>
                       <span className="font-semibold text-slate-800">{studentDetails.student.fatherName}</span>

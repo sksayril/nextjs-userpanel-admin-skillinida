@@ -14,6 +14,8 @@ export interface ICandidate extends Document {
   course: string;
   registrationId: string;
   password?: string;
+  agentCode?: string | null;
+  profilePicUrl?: string | null;
   createdAt: Date;
 }
 
@@ -31,6 +33,8 @@ const CandidateSchema = new Schema<ICandidate>({
   course: { type: String, required: true },
   registrationId: { type: String, required: true, unique: true, index: true },
   password: { type: String, required: true },
+  agentCode: { type: String, default: null, index: true },
+  profilePicUrl: { type: String, default: null },
   createdAt: { type: Date, default: Date.now },
 });
 

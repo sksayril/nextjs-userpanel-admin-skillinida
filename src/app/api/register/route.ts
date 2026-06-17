@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import { Candidate } from "@/models/Candidate";
 import { Otp } from "@/models/Otp";
+import { Agent } from "@/models/Agent";
 import bcrypt from "bcryptjs";
 
 export async function POST(request: Request) {
@@ -23,6 +24,8 @@ export async function POST(request: Request) {
       course,
       otp,
       password,
+      agentCode,
+      profilePicUrl,
     } = data;
 
     // 1. Check required fields
@@ -36,11 +39,12 @@ export async function POST(request: Request) {
       !address ||
       !admitUrl ||
       !qualificationUrl ||
+      !profilePicUrl ||
       !course ||
       !otp ||
       !password
     ) {
-      return NextResponse.json({ error: "Missing required registration fields" }, { status: 400 });
+      return NextResponse.json({ error: "Missing required registration fields (Name, Documents, Profile Picture, etc.)" }, { status: 400 });
     }
 
     if (password.length < 6) {
@@ -55,6 +59,17 @@ export async function POST(request: Request) {
 
     // Remove used OTP code immediately to prevent double submissions
     await Otp.deleteOne({ email });
+
+    // Validate Agent Code if provided
+    if (agentCode) {
+      const agent = await Agent.findOne({ agentCode: agentCode.trim() });
+      if (!agent) {
+        return NextResponse.json({ error: "Invalid agent code entered" }, { status: 400 });
+      }
+      if (agent.status !== "approved") {
+        return NextResponse.json({ error: "Agent associated with this code is not approved yet" }, { status: 400 });
+      }
+    }
 
     // 3. Prevent duplicate email registrations
     const existingCandidate = await Candidate.findOne({ email });
@@ -99,6 +114,8 @@ export async function POST(request: Request) {
       course,
       registrationId,
       password: hashedPassword,
+      agentCode: agentCode ? agentCode.trim() : null,
+      profilePicUrl: profilePicUrl || null,
     });
 
     await candidateDoc.save();

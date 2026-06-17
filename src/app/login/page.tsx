@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Lock, ArrowRight, Sparkles } from "lucide-react";
+import { User, Lock, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState("");
@@ -57,14 +58,27 @@ export default function LoginPage() {
           
           {/* Logo / Heading Section */}
           <div className="flex flex-col items-center mb-8 text-center">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-tr from-deepskyblue to-sky-600 flex items-center justify-center shadow-lg shadow-deepskyblue/25 mb-4 animate-pulse">
-              <Sparkles className="h-6 w-6 text-white" />
+            {/* 3D SMI Logo */}
+            <div className="relative mb-3 animate-float" style={{ filter: "drop-shadow(0 12px 32px rgba(14,165,233,0.30)) drop-shadow(0 4px 12px rgba(0,0,0,0.15))" }}>
+              <Image
+                src="/smi-logo-3d.png"
+                alt="Support Mission India Logo"
+                width={120}
+                height={120}
+                priority
+                className="select-none"
+                style={{ transform: "translateZ(0)" }}
+              />
             </div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 bg-gradient-to-r from-slate-900 via-deepskyblue-dark to-sky-600 bg-clip-text text-transparent">
-              Student Portal Login
+
+            <h1 className="text-xl font-extrabold tracking-tight text-slate-900">
+              Support Mission India
             </h1>
-            <p className="mt-2 text-sm text-slate-500">
-              Support Mission India — Enter credentials to verify session
+            <p className="text-[11px] font-bold mt-0.5" style={{ background: "linear-gradient(90deg,#FF9933,#138808)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              Sabka Saath • Sabka Vikas • Sabka Mission
+            </p>
+            <p className="mt-2 text-xs text-slate-500">
+              Student Portal — Enter credentials to verify session
             </p>
           </div>
 
@@ -90,6 +104,7 @@ export default function LoginPage() {
                   id="identifier"
                   type="text"
                   required
+                  suppressHydrationWarning
                   placeholder="SMI-2026-XXXX or email"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
@@ -111,6 +126,7 @@ export default function LoginPage() {
                   id="password"
                   type="password"
                   required
+                  suppressHydrationWarning
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -123,6 +139,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
+              suppressHydrationWarning
               className="relative w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-sm transition-all duration-200 shadow-md shadow-deepskyblue/15 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none overflow-hidden cursor-pointer"
             >
               {loading ? (

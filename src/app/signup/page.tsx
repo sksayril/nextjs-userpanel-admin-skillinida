@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -18,7 +18,8 @@ import {
   ShieldCheck,
   Printer,
   Sparkles,
-  Download
+  Download,
+  Upload
 } from "lucide-react";
 
 export default function SignupPage() {
@@ -38,15 +39,19 @@ export default function SignupPage() {
     extraQualificationUrl: "",
     otp: "",
     password: "",
+    agentCode: "",
+    profilePicUrl: "",
   });
 
   // Upload progress and loading states
   const [uploadingAdmit, setUploadingAdmit] = useState(false);
   const [uploadingQual, setUploadingQual] = useState(false);
   const [uploadingExtra, setUploadingExtra] = useState(false);
+  const [uploadingProfile, setUploadingProfile] = useState(false);
   const [admitFileName, setAdmitFileName] = useState("");
   const [qualFileName, setQualFileName] = useState("");
   const [extraFileName, setExtraFileName] = useState("");
+  const [profileFileName, setProfileFileName] = useState("");
 
   const [otpSent, setOtpSent] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
@@ -83,7 +88,7 @@ export default function SignupPage() {
   // Handle S3 uploads
   const handleFileUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
-    field: "admitUrl" | "qualificationUrl" | "extraQualificationUrl"
+    field: "admitUrl" | "qualificationUrl" | "extraQualificationUrl" | "profilePicUrl"
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -94,6 +99,9 @@ export default function SignupPage() {
     } else if (field === "qualificationUrl") {
       setUploadingQual(true);
       setQualFileName(file.name);
+    } else if (field === "profilePicUrl") {
+      setUploadingProfile(true);
+      setProfileFileName(file.name);
     } else {
       setUploadingExtra(true);
       setExtraFileName(file.name);
@@ -120,6 +128,7 @@ export default function SignupPage() {
     } finally {
       if (field === "admitUrl") setUploadingAdmit(false);
       else if (field === "qualificationUrl") setUploadingQual(false);
+      else if (field === "profilePicUrl") setUploadingProfile(false);
       else setUploadingExtra(false);
     }
   };
@@ -201,8 +210,8 @@ export default function SignupPage() {
       }
     }
     if (step === 2) {
-      if (!formData.course || !formData.admitUrl || !formData.qualificationUrl) {
-        setErrorMsg("Interested course, Admit card, and Qualification certificate are required");
+      if (!formData.course || !formData.admitUrl || !formData.qualificationUrl || !formData.profilePicUrl) {
+        setErrorMsg("Interested course, Admit card, Profile photo, and Qualification certificate are required");
         return;
       }
     }
@@ -288,7 +297,7 @@ export default function SignupPage() {
                 Candidate Registration
               </h1>
               <p className="mt-1.5 text-sm text-slate-500">
-                Support Mission India — Fill in steps to register your candidate profile
+                Support Mission India â€” Fill in steps to register your candidate profile
               </p>
             </div>
           )}
@@ -321,6 +330,7 @@ export default function SignupPage() {
                     </span>
                     <input
                       id="name"
+                      suppressHydrationWarning
                       type="text"
                       placeholder="Candidate's Name"
                       value={formData.name}
@@ -341,6 +351,7 @@ export default function SignupPage() {
                     </span>
                     <input
                       id="dob"
+                      suppressHydrationWarning
                       type="date"
                       value={formData.dob}
                       onChange={handleChange}
@@ -360,6 +371,7 @@ export default function SignupPage() {
                     </span>
                     <input
                       id="fatherName"
+                      suppressHydrationWarning
                       type="text"
                       placeholder="Father's Full Name"
                       value={formData.fatherName}
@@ -380,6 +392,7 @@ export default function SignupPage() {
                     </span>
                     <input
                       id="motherName"
+                      suppressHydrationWarning
                       type="text"
                       placeholder="Mother's Full Name"
                       value={formData.motherName}
@@ -401,6 +414,7 @@ export default function SignupPage() {
                   </span>
                   <input
                     id="phone"
+                      suppressHydrationWarning
                     type="tel"
                     placeholder="+91 XXXXX XXXXX"
                     value={formData.phone}
@@ -421,6 +435,7 @@ export default function SignupPage() {
                   </span>
                   <textarea
                     id="address"
+                      suppressHydrationWarning
                     rows={3}
                     placeholder="Enter permanent house, block, state, and pincode details"
                     value={formData.address}
@@ -437,6 +452,7 @@ export default function SignupPage() {
                 </Link>
                 <button
                   type="button"
+                      suppressHydrationWarning
                   onClick={nextStep}
                   className="flex items-center gap-2 py-2.5 px-6 rounded-xl bg-deepskyblue hover:bg-deepskyblue-dark font-bold text-white text-sm shadow-md shadow-deepskyblue/15 transition-all active:scale-[0.98] cursor-pointer"
                 >
@@ -461,6 +477,7 @@ export default function SignupPage() {
                   </span>
                   <select
                     id="course"
+                      suppressHydrationWarning
                     value={formData.course}
                     onChange={handleChange}
                     disabled={coursesList.length === 0}
@@ -478,113 +495,241 @@ export default function SignupPage() {
                 </div>
               </div>
 
+              {/* Agent Referral Code */}
+              <div className="space-y-1.5">
+                <label htmlFor="agentCode" className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  Agent Referral Code (Optional)
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
+                    <User className="h-4 w-4" />
+                  </span>
+                  <input
+                    id="agentCode"
+                      suppressHydrationWarning
+                    type="text"
+                    placeholder="Enter Agent referral code if you have one"
+                    value={formData.agentCode}
+                    onChange={handleChange}
+                    className="block w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/10"
+                  />
+                </div>
+              </div>
+
               {/* File Upload fields */}
-              <div className="space-y-4 pt-2">
+              <div className="space-y-6 pt-2">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-deepskyblue-dark border-b border-slate-100 pb-2">
                   Document Attachments
                 </h3>
 
-                {/* Admit Upload */}
-                <div className="space-y-1.5">
+                {/* Profile Photo Upload */}
+                <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
-                      Admit Card
+                      Profile Picture <span className="text-rose-500">*</span>
                     </label>
-                    {formData.admitUrl && (
-                      <span className="text-[11px] text-emerald-600 font-bold">Uploaded Successfully</span>
+                    {formData.profilePicUrl && (
+                      <span className="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full font-bold">Uploaded</span>
                     )}
                   </div>
-                  <div className="relative flex items-center justify-between p-3.5 bg-slate-50/60 border border-slate-200/80 rounded-xl border-dashed hover:bg-deepskyblue-light/20 hover:border-deepskyblue transition-all">
+                  <div className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all p-5 text-center flex flex-col items-center justify-center min-h-[120px] ${
+                    formData.profilePicUrl 
+                      ? "bg-emerald-50/20 border-emerald-500/40 hover:bg-emerald-50/35" 
+                      : "bg-slate-50/60 border-slate-200/80 hover:bg-deepskyblue-light/10 hover:border-deepskyblue"
+                  }`}>
+                    <input
+                      type="file"
+                      id="profile-pic-file"
+                      suppressHydrationWarning
+                      accept=".png,.jpg,.jpeg"
+                      onChange={(e) => handleFileUpload(e, "profilePicUrl")}
+                      className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                    />
+                    
+                    {uploadingProfile ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="h-8 w-8 border-3 border-deepskyblue/30 border-t-deepskyblue rounded-full animate-spin" />
+                        <span className="text-[11px] font-bold text-deepskyblue-dark animate-pulse">Uploading Photo...</span>
+                      </div>
+                    ) : formData.profilePicUrl ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="h-10 w-10 rounded-full overflow-hidden border border-slate-200 shadow-sm flex items-center justify-center">
+                          <img src={formData.profilePicUrl} className="h-full w-full object-cover" alt="Profile Preview" />
+                        </div>
+                        <div className="max-w-full px-2">
+                          <p className="text-xs font-bold text-slate-700 break-all">{profileFileName || "profile_picture"}</p>
+                          <p className="text-[9px] text-slate-400 mt-0.5">Click or drag to replace photo</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="h-10 w-10 rounded-full bg-deepskyblue-light/50 flex items-center justify-center text-deepskyblue-dark">
+                          <User className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-700">Select Profile Picture</p>
+                          <p className="text-[10px] text-slate-400 mt-1">PNG, JPG, JPEG up to 5MB</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Admit Upload */}
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Admit Card <span className="text-rose-500">*</span>
+                    </label>
+                    {formData.admitUrl && (
+                      <span className="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full font-bold">Uploaded</span>
+                    )}
+                  </div>
+                  <div className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all p-5 text-center flex flex-col items-center justify-center min-h-[120px] ${
+                    formData.admitUrl 
+                      ? "bg-emerald-50/20 border-emerald-500/40 hover:bg-emerald-50/35" 
+                      : "bg-slate-50/60 border-slate-200/80 hover:bg-deepskyblue-light/10 hover:border-deepskyblue"
+                  }`}>
                     <input
                       type="file"
                       id="admit-file"
+                      suppressHydrationWarning
                       accept=".pdf,.png,.jpg,.jpeg"
                       onChange={(e) => handleFileUpload(e, "admitUrl")}
-                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      className="absolute inset-0 opacity-0 cursor-pointer z-10"
                     />
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-5 w-5 text-deepskyblue" />
-                      <div className="text-left">
-                        <p className="text-xs font-semibold text-slate-700">
-                          {admitFileName || "Select Admit Card Document"}
-                        </p>
-                        <p className="text-[10px] text-slate-400">PDF, PNG, JPG up to 5MB</p>
-                      </div>
-                    </div>
+                    
                     {uploadingAdmit ? (
-                      <div className="h-5 w-5 border-2 border-deepskyblue/30 border-t-deepskyblue rounded-full animate-spin" />
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="h-8 w-8 border-3 border-deepskyblue/30 border-t-deepskyblue rounded-full animate-spin" />
+                        <span className="text-[11px] font-bold text-deepskyblue-dark animate-pulse">Uploading Document...</span>
+                      </div>
+                    ) : formData.admitUrl ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-inner">
+                          <CheckCircle className="h-5 w-5" />
+                        </div>
+                        <div className="max-w-full px-2">
+                          <p className="text-xs font-bold text-slate-700 break-all">{admitFileName || "admit_card_document"}</p>
+                          <p className="text-[9px] text-slate-400 mt-0.5">Click or drag to replace file</p>
+                        </div>
+                      </div>
                     ) : (
-                      <span className="text-xs text-deepskyblue font-bold hover:underline">Browse</span>
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="h-10 w-10 rounded-full bg-deepskyblue-light/50 flex items-center justify-center text-deepskyblue-dark">
+                          <Upload className="h-5 w-5 animate-bounce" style={{ animationDuration: '2.5s' }} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-700">Select Admit Card Document</p>
+                          <p className="text-[10px] text-slate-400 mt-1">PDF, PNG, JPG up to 5MB</p>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
 
                 {/* Last Qualification certificate upload */}
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
-                      Last Qualification Certificate
+                      Last Qualification Certificate <span className="text-rose-500">*</span>
                     </label>
                     {formData.qualificationUrl && (
-                      <span className="text-[11px] text-emerald-600 font-bold">Uploaded Successfully</span>
+                      <span className="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full font-bold">Uploaded</span>
                     )}
                   </div>
-                  <div className="relative flex items-center justify-between p-3.5 bg-slate-50/60 border border-slate-200/80 rounded-xl border-dashed hover:bg-deepskyblue-light/20 hover:border-deepskyblue transition-all">
+                  <div className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all p-5 text-center flex flex-col items-center justify-center min-h-[120px] ${
+                    formData.qualificationUrl 
+                      ? "bg-emerald-50/20 border-emerald-500/40 hover:bg-emerald-50/35" 
+                      : "bg-slate-50/60 border-slate-200/80 hover:bg-deepskyblue-light/10 hover:border-deepskyblue"
+                  }`}>
                     <input
                       type="file"
                       id="qual-file"
+                      suppressHydrationWarning
                       accept=".pdf,.png,.jpg,.jpeg"
                       onChange={(e) => handleFileUpload(e, "qualificationUrl")}
-                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      className="absolute inset-0 opacity-0 cursor-pointer z-10"
                     />
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-5 w-5 text-deepskyblue" />
-                      <div className="text-left">
-                        <p className="text-xs font-semibold text-slate-700">
-                          {qualFileName || "Select Qualification Document"}
-                        </p>
-                        <p className="text-[10px] text-slate-400">PDF, PNG, JPG up to 5MB</p>
-                      </div>
-                    </div>
+                    
                     {uploadingQual ? (
-                      <div className="h-5 w-5 border-2 border-deepskyblue/30 border-t-deepskyblue rounded-full animate-spin" />
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="h-8 w-8 border-3 border-deepskyblue/30 border-t-deepskyblue rounded-full animate-spin" />
+                        <span className="text-[11px] font-bold text-deepskyblue-dark animate-pulse">Uploading Document...</span>
+                      </div>
+                    ) : formData.qualificationUrl ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-inner">
+                          <CheckCircle className="h-5 w-5" />
+                        </div>
+                        <div className="max-w-full px-2">
+                          <p className="text-xs font-bold text-slate-700 break-all">{qualFileName || "qualification_document"}</p>
+                          <p className="text-[9px] text-slate-400 mt-0.5">Click or drag to replace file</p>
+                        </div>
+                      </div>
                     ) : (
-                      <span className="text-xs text-deepskyblue font-bold hover:underline">Browse</span>
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="h-10 w-10 rounded-full bg-deepskyblue-light/50 flex items-center justify-center text-deepskyblue-dark">
+                          <Upload className="h-5 w-5 animate-bounce" style={{ animationDuration: '2.5s' }} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-700">Select Qualification Document</p>
+                          <p className="text-[10px] text-slate-400 mt-1">PDF, PNG, JPG up to 5MB</p>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
 
                 {/* Extra Qualification Upload */}
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
                       Extra Qualification Certificate (Optional)
                     </label>
                     {formData.extraQualificationUrl && (
-                      <span className="text-[11px] text-emerald-600 font-bold">Uploaded Successfully</span>
+                      <span className="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full font-bold">Uploaded</span>
                     )}
                   </div>
-                  <div className="relative flex items-center justify-between p-3.5 bg-slate-50/60 border border-slate-200/80 rounded-xl border-dashed hover:bg-deepskyblue-light/20 hover:border-deepskyblue transition-all">
+                  <div className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all p-5 text-center flex flex-col items-center justify-center min-h-[120px] ${
+                    formData.extraQualificationUrl 
+                      ? "bg-emerald-50/20 border-emerald-500/40 hover:bg-emerald-50/35" 
+                      : "bg-slate-50/60 border-slate-200/80 hover:bg-deepskyblue-light/10 hover:border-deepskyblue"
+                  }`}>
                     <input
                       type="file"
                       id="extra-file"
+                      suppressHydrationWarning
                       accept=".pdf,.png,.jpg,.jpeg"
                       onChange={(e) => handleFileUpload(e, "extraQualificationUrl")}
-                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      className="absolute inset-0 opacity-0 cursor-pointer z-10"
                     />
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-5 w-5 text-deepskyblue" />
-                      <div className="text-left">
-                        <p className="text-xs font-semibold text-slate-700">
-                          {extraFileName || "Select Extra Document (Optional)"}
-                        </p>
-                        <p className="text-[10px] text-slate-400">PDF, PNG, JPG up to 5MB</p>
-                      </div>
-                    </div>
+                    
                     {uploadingExtra ? (
-                      <div className="h-5 w-5 border-2 border-deepskyblue/30 border-t-deepskyblue rounded-full animate-spin" />
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="h-8 w-8 border-3 border-deepskyblue/30 border-t-deepskyblue rounded-full animate-spin" />
+                        <span className="text-[11px] font-bold text-deepskyblue-dark animate-pulse">Uploading Document...</span>
+                      </div>
+                    ) : formData.extraQualificationUrl ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-inner">
+                          <CheckCircle className="h-5 w-5" />
+                        </div>
+                        <div className="max-w-full px-2">
+                          <p className="text-xs font-bold text-slate-700 break-all">{extraFileName || "extra_qualification_document"}</p>
+                          <p className="text-[9px] text-slate-400 mt-0.5">Click or drag to replace file</p>
+                        </div>
+                      </div>
                     ) : (
-                      <span className="text-xs text-deepskyblue font-bold hover:underline">Browse</span>
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="h-10 w-10 rounded-full bg-deepskyblue-light/50 flex items-center justify-center text-deepskyblue-dark">
+                          <Upload className="h-5 w-5 animate-bounce" style={{ animationDuration: '2.5s' }} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-700">Select Extra Document (Optional)</p>
+                          <p className="text-[10px] text-slate-400 mt-1">PDF, PNG, JPG up to 5MB</p>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -594,6 +739,7 @@ export default function SignupPage() {
               <div className="flex justify-between items-center pt-6 border-t border-slate-100">
                 <button
                   type="button"
+                      suppressHydrationWarning
                   onClick={prevStep}
                   className="flex items-center gap-2 py-2.5 px-5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold text-sm transition-all cursor-pointer"
                 >
@@ -602,6 +748,7 @@ export default function SignupPage() {
                 </button>
                 <button
                   type="button"
+                      suppressHydrationWarning
                   onClick={nextStep}
                   className="flex items-center gap-2 py-2.5 px-6 rounded-xl bg-deepskyblue hover:bg-deepskyblue-dark font-bold text-white text-sm shadow-md shadow-deepskyblue/15 transition-all active:scale-[0.98] cursor-pointer"
                 >
@@ -638,6 +785,7 @@ export default function SignupPage() {
                       </span>
                       <input
                         id="email"
+                      suppressHydrationWarning
                         type="email"
                         required
                         placeholder="candidate@example.com"
@@ -648,6 +796,7 @@ export default function SignupPage() {
                     </div>
                     <button
                       type="button"
+                      suppressHydrationWarning
                       onClick={handleSendOtp}
                       disabled={otpLoading || !formData.email}
                       className="py-2.5 px-4 rounded-xl bg-deepskyblue/10 hover:bg-deepskyblue/25 text-deepskyblue-dark border border-deepskyblue/20 font-bold text-sm transition-all disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98] cursor-pointer"
@@ -667,6 +816,7 @@ export default function SignupPage() {
                     </label>
                     <input
                       id="otp"
+                      suppressHydrationWarning
                       type="text"
                       required
                       placeholder="Enter 6-digit OTP"
@@ -684,6 +834,7 @@ export default function SignupPage() {
                     </label>
                     <input
                       id="password"
+                      suppressHydrationWarning
                       type="password"
                       required
                       placeholder="Minimum 6 characters"
@@ -696,6 +847,7 @@ export default function SignupPage() {
                   {/* Submit Button */}
                   <button
                     type="submit"
+                      suppressHydrationWarning
                     disabled={submitLoading || !formData.otp}
                     className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-sm transition-all duration-200 shadow-md shadow-deepskyblue/15 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2 cursor-pointer"
                   >
@@ -715,6 +867,7 @@ export default function SignupPage() {
               <div className="flex justify-between items-center pt-4 border-t border-slate-100">
                 <button
                   type="button"
+                      suppressHydrationWarning
                   onClick={prevStep}
                   className="flex items-center gap-2 py-2.5 px-5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold text-sm transition-all cursor-pointer"
                 >
@@ -771,13 +924,19 @@ export default function SignupPage() {
 
                 {/* Card Details */}
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-5 relative z-10">
-                  {/* Photo Placeholder */}
+                  {/* Photo Box */}
                   <div className="sm:col-span-3 flex flex-col items-center sm:items-start">
-                    <div className="h-24 w-20 bg-slate-100 border border-slate-250 rounded-xl flex flex-col items-center justify-center text-slate-400 shadow-inner bg-gradient-to-b from-white to-slate-50">
-                      <span className="text-2xl font-black text-slate-500 uppercase">
-                        {registeredCandidate.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
-                      </span>
-                      <span className="text-[8px] text-slate-400 mt-1 uppercase tracking-wider font-semibold">Candidate</span>
+                    <div className="h-24 w-20 bg-slate-100 border border-slate-250 rounded-xl overflow-hidden flex flex-col items-center justify-center text-slate-400 shadow-inner bg-gradient-to-b from-white to-slate-50">
+                      {registeredCandidate.profilePicUrl ? (
+                        <img src={registeredCandidate.profilePicUrl} className="h-full w-full object-cover" alt="Student Photo" />
+                      ) : (
+                        <>
+                          <span className="text-2xl font-black text-slate-500 uppercase">
+                            {registeredCandidate.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
+                          </span>
+                          <span className="text-[8px] text-slate-400 mt-1 uppercase tracking-wider font-semibold">Candidate</span>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -905,6 +1064,8 @@ export default function SignupPage() {
                       extraQualificationUrl: "",
                       otp: "",
                       password: "",
+                      agentCode: "",
+                      profilePicUrl: "",
                     });
                     setOtpSent(false);
                     setRegisteredCandidate(null);
