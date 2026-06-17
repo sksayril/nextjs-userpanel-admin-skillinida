@@ -7,6 +7,7 @@ export interface IQuestionPaper extends Document {
   date: Date;
   status: "solved" | "pending" | "locked";
   score?: string;
+  type: "exam_paper" | "book" | "note";
   createdAt: Date;
 }
 
@@ -17,6 +18,7 @@ const QuestionPaperSchema = new Schema<IQuestionPaper>({
   date: { type: Date, default: Date.now },
   status: { type: String, enum: ["solved", "pending", "locked"], default: "pending" },
   score: { type: String, default: "--" },
+  type: { type: String, enum: ["exam_paper", "book", "note"], default: "exam_paper", required: true },
   createdAt: { type: Date, default: Date.now },
 });
 

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { promises as fs } from "fs";
+import path from "path";
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION || "us-east-1",
@@ -24,22 +26,34 @@ export async function POST(request: Request) {
     // Generate a unique key to avoid overwrites
     const fileExtension = file.name.split(".").pop();
     const uniqueFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExtension}`;
+
+    // Save file locally in public/uploads so that it always loads/opens in browser
+    const uploadDir = path.join(process.cwd(), "public", "uploads");
+    await fs.mkdir(uploadDir, { recursive: true });
+    const filePath = path.join(uploadDir, uniqueFileName);
+    await fs.writeFile(filePath, buffer);
+
     const key = `candidates/${uniqueFileName}`;
 
-    const command = new PutObjectCommand({
-      Bucket: process.env.AWS_S3_BUCKET,
-      Key: key,
-      Body: buffer,
-      ContentType: file.type || "application/octet-stream",
-    });
+    if (process.env.AWS_S3_BUCKET) {
+      try {
+        const command = new PutObjectCommand({
+          Bucket: process.env.AWS_S3_BUCKET,
+          Key: key,
+          Body: buffer,
+          ContentType: file.type || "application/octet-stream",
+        });
+        await s3Client.send(command);
+      } catch (s3Err) {
+        console.error("Non-blocking S3 Upload Error:", s3Err);
+      }
+    }
 
-    await s3Client.send(command);
-
-    const fileUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION || "us-east-1"}.amazonaws.com/${key}`;
+    const fileUrl = `/uploads/${uniqueFileName}`;
 
     return NextResponse.json({ url: fileUrl });
   } catch (error: any) {
-    console.error("S3 Upload Error:", error);
-    return NextResponse.json({ error: error.message || "Failed to upload file to S3" }, { status: 500 });
+    console.error("Upload Error:", error);
+    return NextResponse.json({ error: error.message || "Failed to upload file" }, { status: 500 });
   }
 }

@@ -8,7 +8,6 @@ import {
   BookOpen,
   FileText,
   User,
-  TrendingUp,
   Award,
   ChevronRight,
   LogOut,
@@ -18,7 +17,8 @@ import {
   Clock,
   Printer,
   Sparkles,
-  ChevronDown
+  ChevronDown,
+  BookMarked
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -49,6 +49,62 @@ export default function DashboardPage() {
 
   // Print Target State
   const [printTarget, setPrintTarget] = useState<any>(null);
+
+  // Exam Locker and Countdown States
+  const [pendingQuiz, setPendingQuiz] = useState<any>(null);
+  const [enteredPassword, setEnteredPassword] = useState<string>("");
+  const [passwordError, setPasswordError] = useState<string>("");
+  const [timeRemaining, setTimeRemaining] = useState<number>(0);
+
+  const activeQuizRef = React.useRef(activeQuiz);
+  const selectedAnswersRef = React.useRef(selectedAnswers);
+
+  useEffect(() => {
+    activeQuizRef.current = activeQuiz;
+  }, [activeQuiz]);
+
+  useEffect(() => {
+    selectedAnswersRef.current = selectedAnswers;
+  }, [selectedAnswers]);
+
+  useEffect(() => {
+    if (!activeQuiz) return;
+
+    const interval = setInterval(() => {
+      setTimeRemaining(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          if (activeQuizRef.current) {
+            submitQuizAnswers(selectedAnswersRef.current, true);
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [activeQuiz]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+  };
+
+  const handleVerifyPassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (enteredPassword === pendingQuiz.examPassword) {
+      setActiveQuiz(pendingQuiz);
+      setSelectedAnswers(new Array(pendingQuiz.questions.length).fill(-1));
+      setTimeRemaining(pendingQuiz.duration ? pendingQuiz.duration * 60 : 30 * 60);
+      setPendingQuiz(null);
+      setEnteredPassword("");
+      setPasswordError("");
+    } else {
+      setPasswordError("Incorrect Exam Password. Please request the correct key from your administrator.");
+    }
+  };
 
   // Authenticate session and fetch dashboard data
   useEffect(() => {
@@ -143,8 +199,15 @@ export default function DashboardPage() {
 
   // Start Exam Quiz Handler
   const handleStartQuiz = (quiz: any) => {
-    setActiveQuiz(quiz);
-    setSelectedAnswers(new Array(quiz.questions.length).fill(-1));
+    if (quiz.examPassword && quiz.examPassword.trim() !== "") {
+      setPendingQuiz(quiz);
+      setEnteredPassword("");
+      setPasswordError("");
+    } else {
+      setActiveQuiz(quiz);
+      setSelectedAnswers(new Array(quiz.questions.length).fill(-1));
+      setTimeRemaining(quiz.duration ? quiz.duration * 60 : 30 * 60);
+    }
   };
 
   const handleSelectOption = (questionIndex: number, optionIndex: number) => {
@@ -153,38 +216,47 @@ export default function DashboardPage() {
     setSelectedAnswers(updated);
   };
 
+  const submitQuizAnswers = async (answersToSubmit: number[], isAutoSubmit = false) => {
+    setSubmittingQuiz(true);
+    try {
+      const targetQuiz = activeQuizRef.current || activeQuiz;
+      if (!targetQuiz) return;
+      const res = await fetch("/api/results", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          quizId: targetQuiz._id,
+          answers: answersToSubmit
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        if (isAutoSubmit) {
+          alert(`Time expired! Your exam was automatically submitted. Score: ${data.result.score}/${data.result.total} (${data.result.percentage}%) - Grade: ${data.result.grade}`);
+        } else {
+          alert(`Exam submitted successfully! Score: ${data.result.score}/${data.result.total} (${data.result.percentage}%) - Grade: ${data.result.grade}`);
+        }
+        setActiveQuiz(null);
+        await fetchDashboardData();
+      } else {
+        alert(data.error || "Failed to submit answers.");
+      }
+    } catch (err) {
+      console.error("Exam submission error:", err);
+      alert("Network error submitting answers.");
+    } finally {
+      setSubmittingQuiz(false);
+    }
+  };
+
   const handleSubmitQuiz = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedAnswers.includes(-1)) {
       alert("Please answer all questions before submitting.");
       return;
     }
-
-    setSubmittingQuiz(true);
-    try {
-      const res = await fetch("/api/results", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          quizId: activeQuiz._id,
-          answers: selectedAnswers
-        })
-      });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
-        alert(`Quiz submitted successfully! Score: ${data.result.score}/${data.result.total} (${data.result.percentage}%) - Grade: ${data.result.grade}`);
-        setActiveQuiz(null);
-        await fetchDashboardData();
-      } else {
-        alert(data.error || "Failed to submit quiz answers.");
-      }
-    } catch (err) {
-      console.error("Quiz submission error:", err);
-      alert("Network error submitting quiz answers.");
-    } finally {
-      setSubmittingQuiz(false);
-    }
+    await submitQuizAnswers(selectedAnswers, false);
   };
 
   // Dynamic Results mapping into print Mark Sheet
@@ -386,7 +458,7 @@ export default function DashboardPage() {
               <p className="text-[10px] uppercase font-bold text-deepskyblue-dark tracking-widest mt-1">
                 Sarkari Skill Certification Authority
               </p>
-              <h2 className="text-sm font-bold text-slate-700 mt-3">QUIZ EVALUATION MARKSHEET</h2>
+              <h2 className="text-sm font-bold text-slate-700 mt-3">EXAM EVALUATION MARKSHEET</h2>
             </div>
           </div>
 
@@ -684,11 +756,11 @@ export default function DashboardPage() {
               </button>
 
               <button
-                onClick={() => setActiveTab("growth")}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer ${activeTab === "growth" ? "bg-deepskyblue/10 text-deepskyblue-dark border-l-2 border-deepskyblue" : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"}`}
+                onClick={() => setActiveTab("lectures")}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer ${activeTab === "lectures" ? "bg-deepskyblue/10 text-deepskyblue-dark border-l-2 border-deepskyblue" : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"}`}
               >
-                <TrendingUp className="h-4 w-4" />
-                <span>My Growth Chart</span>
+                <BookMarked className="h-4 w-4" />
+                <span>Lectures & Notes</span>
               </button>
 
               <button
@@ -767,6 +839,83 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+
+              {/* Enrolled Course Static PDFs & Study Material */}
+              <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-sm shadow-slate-100 space-y-4">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-850">Course PDF Study Materials & Textbooks</h3>
+                  <p className="text-[11px] text-slate-450 mt-0.5">Access uploaded books, notes, and static papers assigned to your course program</p>
+                </div>
+
+                {papers.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic py-4">No course textbooks or PDF handouts uploaded yet.</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {/* Books */}
+                    <div className="space-y-2.5">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block border-b border-slate-100 pb-1.5">Books & Syllabi</span>
+                      {papers.filter(p => p.type === "book").length === 0 ? (
+                        <p className="text-[10px] text-slate-400 italic">No textbooks loaded.</p>
+                      ) : (
+                        papers.filter(p => p.type === "book").map((pdf, pIdx) => (
+                          <a
+                            key={pIdx}
+                            href={pdf.fileUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-750 transition"
+                          >
+                            <span className="truncate pr-2">{pdf.title}</span>
+                            <span className="text-deepskyblue-dark shrink-0 text-[10px] font-black hover:underline">Open</span>
+                          </a>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Notes */}
+                    <div className="space-y-2.5">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block border-b border-slate-100 pb-1.5">Lecture Notes</span>
+                      {papers.filter(p => p.type === "note").length === 0 ? (
+                        <p className="text-[10px] text-slate-400 italic">No notes loaded.</p>
+                      ) : (
+                        papers.filter(p => p.type === "note").map((pdf, pIdx) => (
+                          <a
+                            key={pIdx}
+                            href={pdf.fileUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-750 transition"
+                          >
+                            <span className="truncate pr-2">{pdf.title}</span>
+                            <span className="text-deepskyblue-dark shrink-0 text-[10px] font-black hover:underline">Open</span>
+                          </a>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Question Papers */}
+                    <div className="space-y-2.5">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block border-b border-slate-100 pb-1.5">Exam Sheets</span>
+                      {papers.filter(p => !p.type || p.type === "exam_paper").length === 0 ? (
+                        <p className="text-[10px] text-slate-400 italic">No static papers loaded.</p>
+                      ) : (
+                        papers.filter(p => !p.type || p.type === "exam_paper").map((pdf, pIdx) => (
+                          <a
+                            key={pIdx}
+                            href={pdf.fileUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-750 transition"
+                          >
+                            <span className="truncate pr-2">{pdf.title}</span>
+                            <span className="text-deepskyblue-dark shrink-0 text-[10px] font-black hover:underline">Open</span>
+                          </a>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -853,14 +1002,14 @@ export default function DashboardPage() {
                 <div>
                   <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
                     <Award className="h-5 w-5 text-deepskyblue" />
-                    Interactive Online Quiz Exams
+                    Interactive Online Exams
                   </h2>
                   <p className="text-xs text-slate-500 mt-1">Complete online evaluations to update your semester mark sheet</p>
                 </div>
 
                 {quizzes.length === 0 ? (
-                  <p className="text-xs text-slate-500 p-4 rounded-xl bg-white border border-slate-200/80 text-center font-medium shadow-sm shadow-slate-100">
-                    No active online quizzes created for your course syllabus yet.
+                  <p className="text-xs text-slate-550 p-4 rounded-xl bg-white border border-slate-200/80 text-center font-medium shadow-sm shadow-slate-100">
+                    No active online exams created for your course syllabus yet.
                   </p>
                 ) : (
                   <div className="space-y-3">
@@ -876,7 +1025,10 @@ export default function DashboardPage() {
                             </div>
                             <div>
                               <h4 className="text-sm font-bold text-slate-800">{quiz.title}</h4>
-                              <p className="text-xs text-slate-400 mt-0.5 font-semibold">{quiz.questions.length} Objective Questions</p>
+                              <p className="text-xs text-slate-400 mt-0.5 font-semibold">
+                                {quiz.questions.length} Objective Questions
+                                {quiz.duration && ` | Duration: ${quiz.duration} Mins`}
+                              </p>
                             </div>
                           </div>
 
@@ -900,52 +1052,6 @@ export default function DashboardPage() {
                         </div>
                       );
                     })}
-                  </div>
-                )}
-              </div>
-
-              {/* SECTION B: UPLOADED STATIC QUESTION PAPERS */}
-              <div className="space-y-4">
-                <div>
-                  <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-deepskyblue" />
-                    Syllabus Question Papers & Materials
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-1">Download static exam question papers and syllabus packages</p>
-                </div>
-
-                {papers.length === 0 ? (
-                  <p className="text-xs text-slate-500 p-4 rounded-xl bg-white border border-slate-200/80 text-center font-medium shadow-sm shadow-slate-100">
-                    No static syllabus papers uploaded for your course yet.
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {papers.map((paper, i) => (
-                      <div key={i} className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-sm shadow-slate-100">
-                        <div className="flex items-start gap-4">
-                          <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0 border bg-slate-50 border-slate-200 text-slate-450">
-                            <FileText className="h-5 w-5" />
-                          </div>
-                          <div>
-                            <h4 className="text-sm font-bold text-slate-800">{paper.title}</h4>
-                            <div className="flex gap-4 text-xs text-slate-400 mt-1 font-semibold">
-                              <span>Status: {paper.status}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-4 justify-between sm:justify-end">
-                          <a
-                            href={paper.fileUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="py-1.5 px-3 rounded-lg bg-slate-50 text-xs font-bold hover:bg-slate-100 text-slate-600 border border-slate-200 cursor-pointer transition-colors"
-                          >
-                            Download Paper
-                          </a>
-                        </div>
-                      </div>
-                    ))}
                   </div>
                 )}
               </div>
@@ -1087,82 +1193,138 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* TAB CONTENT: MY GROWTH CHART */}
-          {activeTab === "growth" && (
+          {/* TAB CONTENT: LECTURES & NOTES */}
+          {activeTab === "lectures" && (
             <div className="space-y-6 max-w-4xl animate-fade-in">
               <div>
                 <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-deepskyblue" />
-                  My Academic Growth Chart
+                  <BookMarked className="h-5 w-5 text-deepskyblue" />
+                  Course Lectures & Study Materials
                 </h2>
-                <p className="text-xs text-slate-500 mt-1">Visual tracking of monthly assessment scores</p>
+                <p className="text-xs text-slate-500 mt-1">Access lecture class notes, reference books, and handbooks for {candidate.course}</p>
               </div>
 
-              {/* SVG Glowing Line Graph */}
-              <div className="p-6 rounded-2xl bg-white border border-slate-200/80 flex flex-col justify-between shadow-sm shadow-slate-100">
+              {/* SECTION A: STUDY BOOKS & SYLLABUS TEXT */}
+              <div className="space-y-4">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-800 mb-2">Internal Assessment Progression</h3>
-                  <p className="text-xs text-slate-400 font-semibold">Exams conducted from January to June 2026</p>
+                  <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                    <BookOpen className="h-4 w-4 text-deepskyblue" />
+                    Study Books & Syllabus Text
+                  </h3>
+                  <p className="text-xs text-slate-400 font-semibold mt-0.5">Reference books and reading materials assigned by the admin</p>
                 </div>
 
-                <div className="w-full h-64 mt-6 relative">
-                  {/* Grid Lines */}
-                  <div className="absolute inset-y-0 left-0 right-0 flex flex-col justify-between pointer-events-none border-b border-slate-100">
-                    <div className="w-full border-t border-slate-100 h-[1px]" />
-                    <div className="w-full border-t border-slate-100 h-[1px]" />
-                    <div className="w-full border-t border-slate-100 h-[1px]" />
-                    <div className="w-full border-t border-slate-100 h-[1px]" />
+                {papers.filter(p => p.type === "book").length === 0 ? (
+                  <p className="text-xs text-slate-550 p-4 rounded-xl bg-white border border-slate-200/80 text-center font-medium shadow-sm shadow-slate-100">
+                    No study books uploaded for your course yet.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {papers.filter(p => p.type === "book").map((paper, i) => (
+                      <div key={i} className="p-4 rounded-2xl bg-white border border-slate-205 flex items-center justify-between gap-4 shadow-sm shadow-slate-100">
+                        <div className="flex items-center gap-3">
+                          <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-sky-50 border border-sky-100 text-sky-600">
+                            <BookOpen className="h-4.5 w-4.5" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-bold text-slate-800">{paper.title}</h4>
+                            <span className="text-[10px] text-slate-400 font-semibold">Text Material</span>
+                          </div>
+                        </div>
+                        <a
+                          href={paper.fileUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="py-1.5 px-3.5 rounded-lg bg-deepskyblue/10 text-xs font-bold hover:bg-deepskyblue hover:text-white text-deepskyblue-dark cursor-pointer transition-colors"
+                        >
+                          Open Book
+                        </a>
+                      </div>
+                    ))}
                   </div>
+                )}
+              </div>
 
-                  {/* Main SVG Graph */}
-                  <svg className="w-full h-full overflow-visible relative z-10" viewBox="0 0 600 220" preserveAspectRatio="none">
-                    <defs>
-                      <linearGradient id="chart-glow" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#00bfff" stopOpacity="0.3" />
-                        <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.0" />
-                      </linearGradient>
-                    </defs>
-
-                    {/* Gradient Fill under line */}
-                    <path
-                      d="M 10 180 Q 120 160 230 130 T 450 90 T 590 60 L 590 220 L 10 220 Z"
-                      fill="url(#chart-glow)"
-                    />
-
-                    {/* Glowing Stroke line */}
-                    <path
-                      d="M 10 180 Q 120 160 230 130 T 450 90 T 590 60"
-                      fill="none"
-                      stroke="url(#gradient-line)"
-                      strokeWidth="3.5"
-                      strokeLinecap="round"
-                    />
-
-                    <linearGradient id="gradient-line" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="#00bfff" />
-                      <stop offset="50%" stopColor="#0099cc" />
-                      <stop offset="100%" stopColor="#38bdf8" />
-                    </linearGradient>
-
-                    {/* Data Nodes */}
-                    <circle cx="10" cy="180" r="5" className="fill-deepskyblue stroke-white stroke-[2.5]" />
-                    <circle cx="128" cy="164" r="5" className="fill-deepskyblue stroke-white stroke-[2.5]" />
-                    <circle cx="246" cy="132" r="5" className="fill-deepskyblue stroke-white stroke-[2.5]" />
-                    <circle cx="364" cy="115" r="5" className="fill-deepskyblue stroke-white stroke-[2.5]" />
-                    <circle cx="482" cy="85" r="5" className="fill-deepskyblue stroke-white stroke-[2.5]" />
-                    <circle cx="590" cy="60" r="5" className="fill-deepskyblue stroke-white stroke-[2.5]" />
-                  </svg>
+              {/* SECTION B: LECTURE & CLASS NOTES */}
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-deepskyblue" />
+                    Lecture & Class Notes
+                  </h3>
+                  <p className="text-xs text-slate-400 font-semibold mt-0.5">Classroom handouts and slides compiled by your instructor</p>
                 </div>
 
-                {/* X-Axis Labels */}
-                <div className="flex justify-between items-center text-[10px] text-slate-400 px-2 mt-4 font-bold tracking-wider uppercase">
-                  <span>Jan (70)</span>
-                  <span>Feb (75)</span>
-                  <span>Mar (82)</span>
-                  <span>Apr (80)</span>
-                  <span>May (88)</span>
-                  <span>Jun (92)</span>
+                {papers.filter(p => p.type === "note").length === 0 ? (
+                  <p className="text-xs text-slate-555 p-4 rounded-xl bg-white border border-slate-200/80 text-center font-medium shadow-sm shadow-slate-100">
+                    No class notes uploaded for your course yet.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {papers.filter(p => p.type === "note").map((paper, i) => (
+                      <div key={i} className="p-4 rounded-2xl bg-white border border-slate-205 flex items-center justify-between gap-4 shadow-sm shadow-slate-100">
+                        <div className="flex items-center gap-3">
+                          <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-emerald-50 border border-emerald-100 text-emerald-600">
+                            <FileText className="h-4.5 w-4.5" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-bold text-slate-800">{paper.title}</h4>
+                            <span className="text-[10px] text-slate-400 font-semibold">Lecture Note</span>
+                          </div>
+                        </div>
+                        <a
+                          href={paper.fileUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="py-1.5 px-3.5 rounded-lg bg-deepskyblue/10 text-xs font-bold hover:bg-deepskyblue hover:text-white text-deepskyblue-dark cursor-pointer transition-colors"
+                        >
+                          View Note
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* SECTION C: SYLLABUS QUESTION PAPERS */}
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-deepskyblue" />
+                    Syllabus Question Papers
+                  </h3>
+                  <p className="text-xs text-slate-400 font-semibold mt-0.5">Static practice question papers and materials</p>
                 </div>
+
+                {papers.filter(p => !p.type || p.type === "exam_paper").length === 0 ? (
+                  <p className="text-xs text-slate-555 p-4 rounded-xl bg-white border border-slate-200/80 text-center font-medium shadow-sm shadow-slate-100">
+                    No syllabus question papers uploaded for your course yet.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {papers.filter(p => !p.type || p.type === "exam_paper").map((paper, i) => (
+                      <div key={i} className="p-4 rounded-2xl bg-white border border-slate-205 flex items-center justify-between gap-4 shadow-sm shadow-slate-100">
+                        <div className="flex items-center gap-3">
+                          <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-purple-50 border border-purple-100 text-purple-600">
+                            <FileText className="h-4.5 w-4.5" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-bold text-slate-800">{paper.title}</h4>
+                            <span className="text-[10px] text-slate-400 font-semibold">Practice Paper</span>
+                          </div>
+                        </div>
+                        <a
+                          href={paper.fileUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="py-1.5 px-3.5 rounded-lg bg-deepskyblue/10 text-xs font-bold hover:bg-deepskyblue hover:text-white text-deepskyblue-dark cursor-pointer transition-colors"
+                        >
+                          View Paper
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1236,17 +1398,82 @@ export default function DashboardPage() {
         </main>
       </div>
 
-      {/* INTERACTIVE QUIZ MODAL */}
+      {/* EXAM KEY / PASSWORD ENTRY MODAL */}
+      {pendingQuiz && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-5 text-left">
+            <div className="text-center space-y-2">
+              <div className="h-12 w-12 rounded-2xl bg-deepskyblue/10 flex items-center justify-center text-deepskyblue-dark mx-auto">
+                <Clock className="h-6 w-6" />
+              </div>
+              <h3 className="text-lg font-extrabold text-slate-900 uppercase tracking-tight">Exam Entry Locker</h3>
+              <p className="text-xs text-slate-450 font-semibold leading-relaxed">
+                Please enter the authorized passkey to enter the exam room for <span className="text-slate-700 font-bold">{pendingQuiz.title}</span>.
+              </p>
+            </div>
+
+            <form onSubmit={handleVerifyPassword} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Exam Password / Key</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Enter exam password"
+                  value={enteredPassword}
+                  onChange={e => setEnteredPassword(e.target.value)}
+                  className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all font-mono"
+                />
+              </div>
+
+              {passwordError && (
+                <p className="text-[10px] text-rose-600 font-bold leading-normal flex items-start gap-1">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                  <span>{passwordError}</span>
+                </p>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setPendingQuiz(null)}
+                  className="flex-1 py-2 px-4 border border-slate-200 hover:bg-slate-50 text-slate-500 rounded-xl text-xs font-bold transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2 px-4 bg-deepskyblue hover:bg-deepskyblue-dark text-white rounded-xl text-xs font-bold shadow transition cursor-pointer"
+                >
+                  Unlock Exam
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* INTERACTIVE EXAM MODAL */}
       {activeQuiz && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
           <div className="relative w-full max-w-2xl bg-white border border-slate-250 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 my-8 text-left">
             <div className="flex justify-between items-start border-b border-slate-150 pb-4">
               <div>
                 <h3 className="text-lg font-extrabold text-slate-900 uppercase tracking-tight">{activeQuiz.title}</h3>
-                <p className="text-xs text-slate-400 mt-1 font-semibold">Course Cohort: {activeQuiz.course}</p>
+                <div className="flex flex-wrap items-center gap-3 mt-1.5">
+                  <span className="text-xs text-slate-455 font-semibold">Course Cohort: {activeQuiz.course}</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
+                  <span className="flex items-center gap-1 text-xs font-extrabold text-deepskyblue-dark">
+                    <Clock className="h-3.5 w-3.5" />
+                    <span>Time Remaining: {formatTime(timeRemaining)}</span>
+                  </span>
+                </div>
               </div>
               <button
-                onClick={() => setActiveQuiz(null)}
+                onClick={() => {
+                  if (confirm("Are you sure you want to exit the exam? Your progress will not be saved.")) {
+                    setActiveQuiz(null);
+                  }
+                }}
                 className="text-slate-650 hover:text-slate-950 text-xs font-bold bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 cursor-pointer transition-colors"
               >
                 Close Exam
@@ -1312,45 +1539,125 @@ export default function DashboardPage() {
       )}
 
       {/* MOBILE BOTTOM MENU BAR */}
-      <footer className="h-16 border-t border-slate-200/80 backdrop-blur-md bg-white/95 fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around px-2 lg:hidden print:hidden shadow-lg">
-        <button
-          onClick={() => setActiveTab("attendance")}
-          className={`flex flex-col items-center justify-center gap-1 flex-1 py-1.5 transition-colors cursor-pointer ${
-            activeTab === "attendance" ? "text-deepskyblue-dark font-bold animate-pulse" : "text-slate-400 hover:text-slate-650"
-          }`}
-        >
-          <Calendar className="h-5 w-5" />
-          <span className="text-[9px] uppercase tracking-wider font-semibold">Attendance</span>
-        </button>
-
+      <footer className="h-18 border-t border-slate-200/80 backdrop-blur-lg bg-white/90 fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around px-1 lg:hidden print:hidden shadow-[0_-4px_20px_0_rgba(0,0,0,0.05)] transition-all">
+        {/* Courses */}
         <button
           onClick={() => setActiveTab("courses")}
-          className={`flex flex-col items-center justify-center gap-1 flex-1 py-1.5 transition-colors cursor-pointer ${
-            activeTab === "courses" ? "text-deepskyblue-dark font-bold animate-pulse" : "text-slate-400 hover:text-slate-655"
-          }`}
+          className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all duration-300 relative cursor-pointer group"
         >
-          <BookOpen className="h-5 w-5" />
-          <span className="text-[9px] uppercase tracking-wider font-semibold">My Courses</span>
+          <div className={`transition-all duration-300 p-1 rounded-xl ${
+            activeTab === "courses" ? "bg-deepskyblue/10 text-deepskyblue-dark scale-110 -translate-y-1" : "text-slate-400 group-hover:text-slate-600"
+          }`}>
+            <BookOpen className="h-4.5 w-4.5" />
+          </div>
+          <span className={`text-[8.5px] tracking-wider transition-all duration-300 font-bold ${
+            activeTab === "courses" ? "text-deepskyblue-dark font-black scale-105" : "text-slate-400"
+          }`}>
+            Courses
+          </span>
+          {activeTab === "courses" && (
+            <span className="absolute bottom-0 h-1 w-6 bg-deepskyblue rounded-t-full shadow-[0_-2px_6px_#00bfff]" />
+          )}
         </button>
 
+        {/* Papers */}
         <button
           onClick={() => setActiveTab("papers")}
-          className={`flex flex-col items-center justify-center gap-1 flex-1 py-1.5 transition-colors cursor-pointer ${
-            activeTab === "papers" ? "text-deepskyblue-dark font-bold animate-pulse" : "text-slate-400 hover:text-slate-655"
-          }`}
+          className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all duration-300 relative cursor-pointer group"
         >
-          <FileText className="h-5 w-5" />
-          <span className="text-[9px] uppercase tracking-wider font-semibold">Paper</span>
+          <div className={`transition-all duration-300 p-1 rounded-xl ${
+            activeTab === "papers" ? "bg-deepskyblue/10 text-deepskyblue-dark scale-110 -translate-y-1" : "text-slate-400 group-hover:text-slate-600"
+          }`}>
+            <FileText className="h-4.5 w-4.5" />
+          </div>
+          <span className={`text-[8.5px] tracking-wider transition-all duration-300 font-bold ${
+            activeTab === "papers" ? "text-deepskyblue-dark font-black scale-105" : "text-slate-400"
+          }`}>
+            Papers
+          </span>
+          {activeTab === "papers" && (
+            <span className="absolute bottom-0 h-1 w-6 bg-deepskyblue rounded-t-full shadow-[0_-2px_6px_#00bfff]" />
+          )}
         </button>
 
+        {/* Results */}
+        <button
+          onClick={() => setActiveTab("results")}
+          className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all duration-300 relative cursor-pointer group"
+        >
+          <div className={`transition-all duration-300 p-1 rounded-xl ${
+            activeTab === "results" ? "bg-deepskyblue/10 text-deepskyblue-dark scale-110 -translate-y-1" : "text-slate-400 group-hover:text-slate-600"
+          }`}>
+            <Award className="h-4.5 w-4.5" />
+          </div>
+          <span className={`text-[8.5px] tracking-wider transition-all duration-300 font-bold ${
+            activeTab === "results" ? "text-deepskyblue-dark font-black scale-105" : "text-slate-400"
+          }`}>
+            Results
+          </span>
+          {activeTab === "results" && (
+            <span className="absolute bottom-0 h-1 w-6 bg-deepskyblue rounded-t-full shadow-[0_-2px_6px_#00bfff]" />
+          )}
+        </button>
+
+        {/* Lectures */}
+        <button
+          onClick={() => setActiveTab("lectures")}
+          className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all duration-300 relative cursor-pointer group"
+        >
+          <div className={`transition-all duration-300 p-1 rounded-xl ${
+            activeTab === "lectures" ? "bg-deepskyblue/10 text-deepskyblue-dark scale-110 -translate-y-1" : "text-slate-400 group-hover:text-slate-600"
+          }`}>
+            <BookMarked className="h-4.5 w-4.5" />
+          </div>
+          <span className={`text-[8.5px] tracking-wider transition-all duration-300 font-bold ${
+            activeTab === "lectures" ? "text-deepskyblue-dark font-black scale-105" : "text-slate-400"
+          }`}>
+            Lectures
+          </span>
+          {activeTab === "lectures" && (
+            <span className="absolute bottom-0 h-1 w-6 bg-deepskyblue rounded-t-full shadow-[0_-2px_6px_#00bfff]" />
+          )}
+        </button>
+
+        {/* Attendance */}
+        <button
+          onClick={() => setActiveTab("attendance")}
+          className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all duration-300 relative cursor-pointer group"
+        >
+          <div className={`transition-all duration-300 p-1 rounded-xl ${
+            activeTab === "attendance" ? "bg-deepskyblue/10 text-deepskyblue-dark scale-110 -translate-y-1" : "text-slate-400 group-hover:text-slate-600"
+          }`}>
+            <Calendar className="h-4.5 w-4.5" />
+          </div>
+          <span className={`text-[8.5px] tracking-wider transition-all duration-300 font-bold ${
+            activeTab === "attendance" ? "text-deepskyblue-dark font-black scale-105" : "text-slate-400"
+          }`}>
+            Attend
+          </span>
+          {activeTab === "attendance" && (
+            <span className="absolute bottom-0 h-1 w-6 bg-deepskyblue rounded-t-full shadow-[0_-2px_6px_#00bfff]" />
+          )}
+        </button>
+
+        {/* Profile */}
         <button
           onClick={() => setActiveTab("profile")}
-          className={`flex flex-col items-center justify-center gap-1 flex-1 py-1.5 transition-colors cursor-pointer ${
-            activeTab === "profile" ? "text-deepskyblue-dark font-bold animate-pulse" : "text-slate-400 hover:text-slate-655"
-          }`}
+          className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all duration-300 relative cursor-pointer group"
         >
-          <User className="h-5 w-5" />
-          <span className="text-[9px] uppercase tracking-wider font-semibold">Profile</span>
+          <div className={`transition-all duration-300 p-1 rounded-xl ${
+            activeTab === "profile" ? "bg-deepskyblue/10 text-deepskyblue-dark scale-110 -translate-y-1" : "text-slate-400 group-hover:text-slate-600"
+          }`}>
+            <User className="h-4.5 w-4.5" />
+          </div>
+          <span className={`text-[8.5px] tracking-wider transition-all duration-300 font-bold ${
+            activeTab === "profile" ? "text-deepskyblue-dark font-black scale-105" : "text-slate-400"
+          }`}>
+            Profile
+          </span>
+          {activeTab === "profile" && (
+            <span className="absolute bottom-0 h-1 w-6 bg-deepskyblue rounded-t-full shadow-[0_-2px_6px_#00bfff]" />
+          )}
         </button>
       </footer>
 

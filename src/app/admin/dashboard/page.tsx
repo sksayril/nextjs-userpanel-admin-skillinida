@@ -49,6 +49,7 @@ export default function AdminDashboardPage() {
   const [papersList, setPapersList] = useState<any[]>([]);
   const [quizzesList, setQuizzesList] = useState<any[]>([]);
   const [attendanceList, setAttendanceList] = useState<any[]>([]);
+  const [resultsList, setResultsList] = useState<any[]>([]);
 
   // Messages
   const [successMsg, setSuccessMsg] = useState("");
@@ -103,7 +104,8 @@ export default function AdminDashboardPage() {
     course: "",
     fileUrl: "",
     status: "pending",
-    score: "--"
+    score: "--",
+    type: "exam_paper"
   });
   const [uploadingPaper, setUploadingPaper] = useState(false);
 
@@ -112,6 +114,9 @@ export default function AdminDashboardPage() {
     title: "",
     course: "",
     scheduledAt: new Date().toISOString().slice(0, 16),
+    duration: 30,
+    assignedStudents: [] as string[],
+    examPassword: "",
     questions: [
       {
         questionText: "",
@@ -121,6 +126,17 @@ export default function AdminDashboardPage() {
       }
     ]
   });
+
+  // Course-specific PDF upload states
+  const [uploadingForCourse, setUploadingForCourse] = useState<string | null>(null);
+  const [coursePaperForm, setCoursePaperForm] = useState({
+    title: "",
+    type: "book",
+    fileUrl: "",
+    status: "pending",
+    score: "--"
+  });
+  const [uploadingCoursePdf, setUploadingCoursePdf] = useState(false);
 
   // ================= FETCH LOGIC =================
   useEffect(() => {
@@ -174,6 +190,12 @@ export default function AdminDashboardPage() {
       const dataAttendance = await resAttendance.json();
       const attendance = dataAttendance.attendance || [];
       setAttendanceList(attendance);
+
+      // Fetch Results
+      const resResults = await fetch("/api/admin/results");
+      const dataResults = await resResults.json();
+      const results = dataResults.results || [];
+      setResultsList(results);
 
       // Update Stats
       setStats({
@@ -349,7 +371,7 @@ export default function AdminDashboardPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         setSuccessMsg("Question paper added successfully.");
-        setPaperForm({ title: "", course: "", fileUrl: "", status: "pending", score: "--" });
+        setPaperForm({ title: "", course: "", fileUrl: "", status: "pending", score: "--", type: "exam_paper" });
         await fetchAllData();
         setTimeout(() => setSuccessMsg(""), 4000);
       } else {
@@ -357,6 +379,73 @@ export default function AdminDashboardPage() {
       }
     } catch (err) {
       setErrorMsg("Network error adding question paper.");
+    }
+  };
+
+  const handleCoursePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingCoursePdf(true);
+    try {
+      const data = new FormData();
+      data.append("file", file);
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: data
+      });
+
+      const result = await res.json();
+      if (res.ok && result.url) {
+        setCoursePaperForm(prev => ({ ...prev, fileUrl: result.url }));
+        setSuccessMsg(`File uploaded successfully: ${file.name}`);
+        setTimeout(() => setSuccessMsg(""), 3000);
+      } else {
+        setErrorMsg(result.error || "File upload failed.");
+        setTimeout(() => setErrorMsg(""), 4000);
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg("Error uploading file.");
+      setTimeout(() => setErrorMsg(""), 4000);
+    } finally {
+      setUploadingCoursePdf(false);
+    }
+  };
+
+  const handleCreateCoursePaper = async (courseTitle: string, e: React.FormEvent) => {
+    e.preventDefault();
+    if (!coursePaperForm.fileUrl) {
+      setErrorMsg("Please upload a PDF file first.");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/admin/papers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: coursePaperForm.title,
+          course: courseTitle,
+          type: coursePaperForm.type,
+          fileUrl: coursePaperForm.fileUrl,
+          status: coursePaperForm.status,
+          score: coursePaperForm.score
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSuccessMsg("Document PDF uploaded directly to course successfully.");
+        setCoursePaperForm({ title: "", type: "book", fileUrl: "", status: "pending", score: "--" });
+        setUploadingForCourse(null);
+        await fetchAllData();
+        setTimeout(() => setSuccessMsg(""), 4000);
+      } else {
+        setErrorMsg(data.error || "Failed to save course paper.");
+      }
+    } catch (err) {
+      setErrorMsg("Network error saving course paper.");
     }
   };
 
@@ -419,6 +508,9 @@ export default function AdminDashboardPage() {
           title: "",
           course: "",
           scheduledAt: new Date().toISOString().slice(0, 16),
+          duration: 30,
+          assignedStudents: [] as string[],
+          examPassword: "",
           questions: [{ questionText: "", options: ["", "", "", ""], correctAnswerIndex: 0, marks: 1 }]
         });
         await fetchAllData();
@@ -472,7 +564,7 @@ export default function AdminDashboardPage() {
       month: "long",
       day: "numeric",
     });
-    const candidateName = studentDetails?.student?.name || "[Candidate Name]";
+    const candidateName = studentDetails?.student?.name || res.candidateId?.name || "[Candidate Name]";
 
     return (
       <div
@@ -562,7 +654,7 @@ export default function AdminDashboardPage() {
               <div className="h-11 w-11 border border-slate-300 p-0.5 bg-white flex items-center justify-center shrink-0">
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
-                    `https://supportmissionindia.org/verify?reg=${studentDetails?.student?.registrationId || "N/A"}&id=${res._id}`
+                    `https://supportmissionindia.org/verify?reg=${studentDetails?.student?.registrationId || res.candidateId?.registrationId || "N/A"}&id=${res._id}`
                   )}`}
                   className="h-10 w-10 object-contain"
                   alt="QR Code"
@@ -588,9 +680,9 @@ export default function AdminDashboardPage() {
       month: "long",
       day: "numeric",
     });
-    const candidateName = studentDetails?.student?.name || "N/A";
-    const regId = studentDetails?.student?.registrationId || "N/A";
-    const courseName = studentDetails?.student?.course || "N/A";
+    const candidateName = studentDetails?.student?.name || res.candidateId?.name || "N/A";
+    const regId = studentDetails?.student?.registrationId || res.candidateId?.registrationId || "N/A";
+    const courseName = studentDetails?.student?.course || res.candidateId?.course || "N/A";
 
     return (
       <div className="w-[210mm] h-[297mm] border-[6px] border-slate-900 bg-white p-12 flex flex-col justify-between font-sans relative box-border">
@@ -610,7 +702,7 @@ export default function AdminDashboardPage() {
               <p className="text-[10px] uppercase font-bold text-deepskyblue-dark tracking-widest mt-1">
                 Sarkari Skill Certification Authority
               </p>
-              <h2 className="text-sm font-bold text-slate-700 mt-3">QUIZ EVALUATION MARKSHEET</h2>
+              <h2 className="text-sm font-bold text-slate-700 mt-3">EXAM EVALUATION MARKSHEET</h2>
             </div>
           </div>
 
@@ -1052,7 +1144,22 @@ export default function AdminDashboardPage() {
                 <span className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-white rounded-r-md" />
               )}
               <Award className="h-4 w-4" />
-              <span>Create Quiz</span>
+              <span>Create Exam</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab("results")}
+              className={`relative w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer hover:translate-x-1 ${
+                activeTab === "results"
+                  ? "bg-deepskyblue text-white shadow-md shadow-deepskyblue/20"
+                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+              }`}
+            >
+              {activeTab === "results" && (
+                <span className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-white rounded-r-md" />
+              )}
+              <CheckCircle className="h-4 w-4" />
+              <span>Exam Results</span>
             </button>
           </nav>
         </div>
@@ -1175,10 +1282,10 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* Card 4: Quizzes */}
+          {/* Card 4: Exams */}
           <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-md shadow-slate-200/50 flex items-center justify-between">
             <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Assigned Quizzes</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Assigned Exams</span>
               <span className="text-2xl font-black text-slate-900">{stats.quizzesCount}</span>
               <p className="text-[10px] text-slate-400 font-medium">Interactive online exams</p>
             </div>
@@ -1515,19 +1622,134 @@ export default function AdminDashboardPage() {
                   <p className="text-xs text-slate-450 py-8 text-center font-medium">No database programs saved. (Displaying typical defaults).</p>
                 ) : (
                   <div className="grid grid-cols-1 gap-3">
-                    {coursesList.map((course, idx) => (
-                      <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                        <div className="space-y-1">
-                          <span className="text-[9px] font-bold bg-deepskyblue/10 text-deepskyblue-dark px-2 py-0.5 rounded-full uppercase tracking-wider">{course.code}</span>
-                          <h4 className="text-xs font-bold text-slate-800 mt-1">{course.title}</h4>
-                          <p className="text-[10px] text-slate-400 font-semibold">{course.duration} duration</p>
+                    {coursesList.map((course, idx) => {
+                      const coursePdfs = papersList.filter(p => p.course === course.title);
+                      const isUploadingThis = uploadingForCourse === course.title;
+
+                      return (
+                        <div key={idx} className="p-5 rounded-2xl bg-slate-50 border border-slate-200/60 flex flex-col gap-4">
+                          {/* Main course info row */}
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div className="space-y-1">
+                              <span className="text-[9px] font-bold bg-deepskyblue/10 text-deepskyblue-dark px-2 py-0.5 rounded-full uppercase tracking-wider">{course.code}</span>
+                              <h4 className="text-xs font-bold text-slate-800 mt-1">{course.title}</h4>
+                              <p className="text-[10px] text-slate-400 font-semibold">{course.duration} duration</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-xl h-fit">
+                                <BookOpen className="h-3.5 w-3.5 text-deepskyblue" />
+                                <span>{course.modules?.length || 0} Modules</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (isUploadingThis) {
+                                    setUploadingForCourse(null);
+                                  } else {
+                                    setUploadingForCourse(course.title);
+                                    setCoursePaperForm({ title: "", type: "book", fileUrl: "", status: "pending", score: "--" });
+                                  }
+                                }}
+                                className="px-2.5 py-1.5 bg-deepskyblue hover:bg-deepskyblue-dark text-white rounded-xl text-[10px] font-bold cursor-pointer transition"
+                              >
+                                {isUploadingThis ? "Cancel" : "Add PDF"}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Documents list */}
+                          <div className="border-t border-slate-200/60 pt-3 space-y-2">
+                            <span className="text-[9px] font-black text-slate-450 uppercase tracking-widest block">Course Study Materials ({coursePdfs.length})</span>
+                            {coursePdfs.length === 0 ? (
+                              <p className="text-[10px] text-slate-400 italic">No study materials uploaded for this course yet.</p>
+                            ) : (
+                              <div className="max-h-[120px] overflow-y-auto space-y-1.5 pr-1">
+                                {coursePdfs.map((pdf, pIdx) => (
+                                  <div key={pIdx} className="flex justify-between items-center bg-white border border-slate-200 px-3 py-2 rounded-xl text-[10.5px]">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase shrink-0 ${
+                                        pdf.type === "book" ? "bg-sky-50 text-sky-600" :
+                                        pdf.type === "note" ? "bg-emerald-50 text-emerald-600" : "bg-purple-50 text-purple-600"
+                                      }`}>
+                                        {pdf.type === "book" ? "Book" : pdf.type === "note" ? "Note" : "Paper"}
+                                      </span>
+                                      <span className="font-semibold text-slate-700 truncate">{pdf.title}</span>
+                                    </div>
+                                    <a
+                                      href={pdf.fileUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-[9.5px] font-bold text-deepskyblue-dark hover:underline hover:text-deepskyblue shrink-0"
+                                    >
+                                      View
+                                    </a>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Inline upload sub-form */}
+                          {isUploadingThis && (
+                            <form onSubmit={(e) => handleCreateCoursePaper(course.title, e)} className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
+                              <span className="text-[9.5px] font-extrabold text-deepskyblue-dark uppercase block">Upload New PDF to Course</span>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Document Title</label>
+                                  <input
+                                    type="text"
+                                    required
+                                    placeholder="e.g. DCA Lecture Notes Ch 2"
+                                    value={coursePaperForm.title}
+                                    onChange={e => setCoursePaperForm(prev => ({ ...prev, title: e.target.value }))}
+                                    className="block w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-[11px] focus:outline-none focus:border-deepskyblue focus:bg-white"
+                                  />
+                                </div>
+
+                                <div className="space-y-1">
+                                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Material Type</label>
+                                  <select
+                                    value={coursePaperForm.type}
+                                    onChange={e => setCoursePaperForm(prev => ({ ...prev, type: e.target.value }))}
+                                    className="block w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-[11px] focus:outline-none focus:border-deepskyblue"
+                                  >
+                                    <option value="book">Study Book / Syllabus Text</option>
+                                    <option value="note">Course Note / Handout</option>
+                                    <option value="exam_paper">Question Paper / Exam Paper</option>
+                                  </select>
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col sm:flex-row gap-3 items-center pt-1">
+                                {/* PDF File Picker */}
+                                <div className="w-full relative flex-1">
+                                  <input
+                                    type="file"
+                                    required
+                                    accept=".pdf"
+                                    onChange={handleCoursePdfUpload}
+                                    className="absolute inset-0 opacity-0 cursor-pointer"
+                                  />
+                                  <button type="button" className="w-full py-1.5 border border-slate-300 border-dashed rounded-xl text-[10px] font-bold text-slate-500 hover:bg-slate-100 transition-all">
+                                    <Upload className="h-3.5 w-3.5 inline mr-1" />
+                                    <span>{uploadingCoursePdf ? "Uploading..." : coursePaperForm.fileUrl ? "PDF Loaded ✓" : "Choose PDF file"}</span>
+                                  </button>
+                                </div>
+
+                                <button
+                                  type="submit"
+                                  disabled={uploadingCoursePdf || !coursePaperForm.fileUrl}
+                                  className="w-full sm:w-auto py-1.5 px-4 bg-deepskyblue hover:bg-deepskyblue-dark text-white rounded-xl text-[10.5px] font-bold disabled:opacity-50 cursor-pointer transition shadow shadow-deepskyblue/10"
+                                >
+                                  Save Document PDF
+                                </button>
+                              </div>
+                            </form>
+                          )}
+
                         </div>
-                        <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-xl h-fit">
-                          <BookOpen className="h-3.5 w-3.5 text-deepskyblue" />
-                          <span>{course.modules?.length || 0} Modules</span>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -1871,15 +2093,15 @@ export default function AdminDashboardPage() {
               {/* Upload Paper Form */}
               <form onSubmit={handleCreatePaper} className="md:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-4">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-3">
-                  Upload Question Paper
+                  Upload Study Material & Exams
                 </h3>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Exam Paper Title</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Material / Paper Title</label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. ADIT Semester Final paper"
+                    placeholder="e.g. ADIT Study Book or Exam Paper"
                     value={paperForm.title}
                     onChange={e => setPaperForm(prev => ({ ...prev, title: e.target.value }))}
                     className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
@@ -1904,9 +2126,22 @@ export default function AdminDashboardPage() {
                   </select>
                 </div>
 
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Material Type</label>
+                  <select
+                    value={paperForm.type || "exam_paper"}
+                    onChange={e => setPaperForm(prev => ({ ...prev, type: e.target.value }))}
+                    className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                  >
+                    <option value="exam_paper" className="bg-white">Question Paper / Exam Paper</option>
+                    <option value="book" className="bg-white">Study Book / Syllabus Text</option>
+                    <option value="note" className="bg-white">Course Note / Handout</option>
+                  </select>
+                </div>
+
                 {/* S3 File Upload */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Attach Question Paper File</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Attach Document PDF File</label>
                   <div className="relative">
                     <input
                       type="file"
@@ -1916,7 +2151,7 @@ export default function AdminDashboardPage() {
                     />
                     <button type="button" className="w-full flex items-center justify-center gap-1.5 py-3 border border-slate-300 border-dashed rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 transition-all">
                       <Upload className="h-4 w-4" />
-                      <span>{uploadingPaper ? "Uploading to S3..." : paperForm.fileUrl ? "File loaded" : "Browse Paper file"}</span>
+                      <span>{uploadingPaper ? "Uploading to S3..." : paperForm.fileUrl ? "File loaded" : "Browse PDF file"}</span>
                     </button>
                   </div>
                   {paperForm.fileUrl && <p className="text-[9px] text-emerald-600 mt-1 font-semibold truncate">Uploaded to S3</p>}
@@ -1954,7 +2189,7 @@ export default function AdminDashboardPage() {
                   className="w-full flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-xs shadow-md cursor-pointer disabled:opacity-50"
                 >
                   <Plus className="h-4 w-4" />
-                  <span>Upload Question Paper</span>
+                  <span>Upload Study Material</span>
                 </button>
               </form>
 
@@ -1971,7 +2206,12 @@ export default function AdminDashboardPage() {
                     {papersList.map((paper, idx) => (
                       <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200/60 flex justify-between items-center">
                         <div>
-                          <span className="text-[9px] font-bold bg-deepskyblue/10 text-deepskyblue-dark px-2 py-0.5 rounded-full uppercase tracking-wider">{paper.course}</span>
+                          <div className="flex gap-2 items-center flex-wrap">
+                            <span className="text-[9px] font-bold bg-deepskyblue/10 text-deepskyblue-dark px-2 py-0.5 rounded-full uppercase tracking-wider">{paper.course}</span>
+                            <span className="text-[9px] font-bold bg-amber-500/10 text-amber-600 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                              {paper.type === "book" ? "Study Book" : paper.type === "note" ? "Class Note" : "Exam Paper"}
+                            </span>
+                          </div>
                           <h4 className="text-xs font-bold text-slate-800 mt-1.5">{paper.title}</h4>
                           <a href={paper.fileUrl} target="_blank" rel="noreferrer" className="text-[10px] text-deepskyblue-dark hover:text-deepskyblue hover:underline flex items-center gap-0.5 mt-1 font-bold">
                             <span>Open document file</span>
@@ -2001,16 +2241,16 @@ export default function AdminDashboardPage() {
               {/* Left Column: Create Quiz Form */}
               <form onSubmit={handleCreateQuiz} className="md:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-6">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-3">
-                  Interactive Quiz Builder
+                  Interactive Exam Builder
                 </h3>
 
                 <div className="space-y-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Quiz Title</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Exam Title</label>
                     <input
                       type="text"
                       required
-                      placeholder="e.g. PHP Syntax and Basics Quick test"
+                      placeholder="e.g. PHP Syntax and Basics Final Exam"
                       value={quizForm.title}
                       onChange={e => setQuizForm(prev => ({ ...prev, title: e.target.value }))}
                       className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
@@ -2022,7 +2262,10 @@ export default function AdminDashboardPage() {
                     <select
                       required
                       value={quizForm.course}
-                      onChange={e => setQuizForm(prev => ({ ...prev, course: e.target.value }))}
+                      onChange={e => {
+                        const nextCourse = e.target.value;
+                        setQuizForm(prev => ({ ...prev, course: nextCourse, assignedStudents: [] }));
+                      }}
                       disabled={courseOptions.length === 0}
                       className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white disabled:opacity-60"
                     >
@@ -2045,6 +2288,62 @@ export default function AdminDashboardPage() {
                       className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white"
                     />
                   </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Duration (Minutes)</label>
+                      <input
+                        type="number"
+                        required
+                        min={1}
+                        value={quizForm.duration}
+                        onChange={e => setQuizForm(prev => ({ ...prev, duration: parseInt(e.target.value) || 30 }))}
+                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Exam Password</label>
+                      <input
+                        type="text"
+                        placeholder="Optional room key"
+                        value={quizForm.examPassword}
+                        onChange={e => setQuizForm(prev => ({ ...prev, examPassword: e.target.value }))}
+                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  {quizForm.course && (
+                    <div className="space-y-2 border-t border-slate-100 pt-3">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Assign Candidates ({quizForm.assignedStudents.length} selected)</label>
+                      {studentsList.filter(s => s.course === quizForm.course).length === 0 ? (
+                        <p className="text-[10px] text-amber-600 font-bold italic">No candidates enrolled in this course cohort yet.</p>
+                      ) : (
+                        <div className="max-h-[140px] overflow-y-auto border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
+                          {studentsList.filter(s => s.course === quizForm.course).map((student, sIdx) => {
+                            const isChecked = quizForm.assignedStudents.includes(student._id);
+                            return (
+                              <label key={sIdx} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer hover:text-slate-900">
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => {
+                                    const updated = isChecked
+                                      ? quizForm.assignedStudents.filter(id => id !== student._id)
+                                      : [...quizForm.assignedStudents, student._id];
+                                    setQuizForm(prev => ({ ...prev, assignedStudents: updated }));
+                                  }}
+                                  className="accent-deepskyblue rounded border-slate-350 cursor-pointer h-3.5 w-3.5"
+                                />
+                                <span className="truncate">{student.name} ({student.registrationId})</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Questions Array */}
@@ -2147,17 +2446,17 @@ export default function AdminDashboardPage() {
                   className="w-full flex items-center justify-center gap-1.5 py-3 px-4 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-sm shadow-md cursor-pointer"
                 >
                   <Award className="h-4 w-4" />
-                  <span>Build and Assign Quiz</span>
+                  <span>Build and Assign Exam</span>
                 </button>
               </form>
 
-              {/* Right Column: Quizzes List */}
+              {/* Right Column: Exams List */}
               <div className="md:col-span-7 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-4">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-3">
-                  Created Quizzes Directory
+                  Created Exams Directory
                 </h3>
                 {quizzesList.length === 0 ? (
-                  <p className="text-xs text-slate-450 py-8 text-center font-medium">No quizzes created in database yet.</p>
+                  <p className="text-xs text-slate-450 py-8 text-center font-medium">No exams created in database yet.</p>
                 ) : (
                   <div className="grid grid-cols-1 gap-3">
                     {quizzesList.map((quiz, idx) => {
@@ -2169,6 +2468,8 @@ export default function AdminDashboardPage() {
                             <h4 className="text-xs font-bold text-slate-800 mt-1">{quiz.title}</h4>
                             <p className="text-[9px] text-slate-400 font-bold mt-1">
                               Scheduled: {quiz.scheduledAt ? new Date(quiz.scheduledAt).toLocaleString() : "Now"}
+                              {quiz.duration && ` | Duration: ${quiz.duration} Mins`}
+                              {quiz.examPassword && ` | Passkey: ${quiz.examPassword}`}
                             </p>
                           </div>
                           <div className="text-right flex flex-col items-end gap-1.5">
@@ -2185,6 +2486,93 @@ export default function AdminDashboardPage() {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* ================= TAB CONTENT 7: EXAM RESULTS ================= */}
+          {activeTab === "results" && (
+            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-5">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Exam Results Registry</h3>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Master ledger of completed student examinations</p>
+                </div>
+              </div>
+
+              {resultsList.length === 0 ? (
+                <p className="text-xs text-slate-400 py-10 text-center font-medium">No exam results recorded in the database yet.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] tracking-wider font-bold">
+                        <th className="pb-3 pl-2">Student Name</th>
+                        <th className="pb-3">Reg ID</th>
+                        <th className="pb-3">Course Cohort</th>
+                        <th className="pb-3">Exam Title</th>
+                        <th className="pb-3 text-center">Score</th>
+                        <th className="pb-3 text-center">Percentage</th>
+                        <th className="pb-3 text-center">Grade</th>
+                        <th className="pb-3">Date Taken</th>
+                        <th className="pb-3 text-right pr-2">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {resultsList
+                        .filter(res => {
+                          const query = searchQuery.toLowerCase();
+                          const studentName = res.candidateId?.name?.toLowerCase() || "";
+                          const regId = res.candidateId?.registrationId?.toLowerCase() || "";
+                          const course = res.candidateId?.course?.toLowerCase() || "";
+                          const examTitle = res.quizTitle?.toLowerCase() || "";
+                          return studentName.includes(query) || regId.includes(query) || course.includes(query) || examTitle.includes(query);
+                        })
+                        .map((res, idx) => (
+                          <tr key={idx} className="text-slate-700 hover:bg-slate-50/50 hover:text-slate-900 transition-colors">
+                            <td className="py-3.5 pl-2 font-semibold">
+                              {res.candidateId?.name || "Deleted Candidate"}
+                            </td>
+                            <td className="py-3.5 font-bold text-deepskyblue-dark">
+                              {res.candidateId?.registrationId || "N/A"}
+                            </td>
+                            <td className="py-3.5 text-slate-500 font-medium">
+                              {res.candidateId?.course || "N/A"}
+                            </td>
+                            <td className="py-3.5 font-semibold text-slate-800">
+                              {res.quizTitle}
+                            </td>
+                            <td className="py-3.5 text-center font-bold text-slate-700">
+                              {res.score} / {res.total}
+                            </td>
+                            <td className="py-3.5 text-center font-extrabold text-slate-900">
+                              {res.percentage}%
+                            </td>
+                            <td className="py-3.5 text-center font-black text-deepskyblue-dark">
+                              {res.grade}
+                            </td>
+                            <td className="py-3.5 text-slate-400 font-medium">
+                              {new Date(res.date).toLocaleDateString()}
+                            </td>
+                            <td className="py-3.5 text-right pr-2 space-x-2">
+                              <button
+                                onClick={() => triggerPrint("marksheet", res)}
+                                className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-[10px] font-bold text-slate-600 transition cursor-pointer"
+                              >
+                                Marksheet
+                              </button>
+                              <button
+                                onClick={() => triggerPrint("certificate", res)}
+                                className="px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-[10px] font-bold text-white shadow shadow-amber-500/10 transition cursor-pointer"
+                              >
+                                Certificate
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 

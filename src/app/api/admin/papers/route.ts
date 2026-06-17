@@ -45,10 +45,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
     }
 
-    const { title, course, fileUrl, status, score } = await request.json();
+    const { title, course, fileUrl, status, score, type } = await request.json();
 
     if (!title || !course || !fileUrl) {
-      return NextResponse.json({ error: "Title, course, and question paper file URL are required" }, { status: 400 });
+      return NextResponse.json({ error: "Title, course, and file URL are required" }, { status: 400 });
     }
 
     const paper = new QuestionPaper({
@@ -57,6 +57,7 @@ export async function POST(request: Request) {
       fileUrl,
       status: status || "pending",
       score: score || "--",
+      type: type || "exam_paper",
     });
 
     await paper.save();

@@ -45,7 +45,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
     }
 
-    const { title, course, questions, scheduledAt } = await request.json();
+    const { title, course, questions, scheduledAt, duration, assignedStudents, examPassword } = await request.json();
 
     if (!title || !course || !questions || !Array.isArray(questions) || questions.length === 0) {
       return NextResponse.json({ error: "Title, course, and questions array are required" }, { status: 400 });
@@ -66,6 +66,9 @@ export async function POST(request: Request) {
       course,
       questions,
       scheduledAt: scheduledAt ? new Date(scheduledAt) : new Date(),
+      duration: duration || 30,
+      assignedStudents: assignedStudents || [],
+      examPassword: examPassword || "",
     });
 
     await quiz.save();

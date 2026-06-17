@@ -12,6 +12,9 @@ export interface IQuiz extends Document {
   course: string;
   questions: IQuizQuestion[];
   scheduledAt: Date;
+  duration: number; // in minutes
+  assignedStudents: mongoose.Types.ObjectId[];
+  examPassword?: string;
   createdAt: Date;
 }
 
@@ -27,6 +30,9 @@ const QuizSchema = new Schema<IQuiz>({
   course: { type: String, required: true, index: true },
   questions: [QuizQuestionSchema],
   scheduledAt: { type: Date, default: Date.now },
+  duration: { type: Number, required: true, default: 30 },
+  assignedStudents: [{ type: Schema.Types.ObjectId, ref: "Candidate" }],
+  examPassword: { type: String },
   createdAt: { type: Date, default: Date.now },
 });
 

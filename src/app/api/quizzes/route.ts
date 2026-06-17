@@ -35,8 +35,11 @@ export async function GET() {
       return NextResponse.json({ error: "Student not found" }, { status: 404 });
     }
 
-    // Fetch quizzes belonging to student's course
-    const quizzes = await Quiz.find({ course: student.course }).sort({ createdAt: -1 });
+    // Fetch quizzes belonging to student's course and assigned to this candidate
+    const quizzes = await Quiz.find({
+      course: student.course,
+      assignedStudents: student._id
+    }).sort({ createdAt: -1 });
 
     return NextResponse.json({
       success: true,
