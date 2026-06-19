@@ -92,15 +92,31 @@ export default function DashboardPage() {
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
-  const handleVerifyPassword = (e: React.FormEvent) => {
+  const startQuizWithQuestions = async (quizId: string) => {
+    try {
+      const res = await fetch(`/api/quizzes/${quizId}`);
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const fullQuiz = data.quiz;
+        setActiveQuiz(fullQuiz);
+        setSelectedAnswers(new Array(fullQuiz.questions.length).fill(-1));
+        setTimeRemaining(fullQuiz.duration ? fullQuiz.duration * 60 : 30 * 60);
+        setPendingQuiz(null);
+        setEnteredPassword("");
+        setPasswordError("");
+      } else {
+        alert(data.error || "Failed to load exam questions. Make sure it has started.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Network error starting exam.");
+    }
+  };
+
+  const handleVerifyPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (enteredPassword === pendingQuiz.examPassword) {
-      setActiveQuiz(pendingQuiz);
-      setSelectedAnswers(new Array(pendingQuiz.questions.length).fill(-1));
-      setTimeRemaining(pendingQuiz.duration ? pendingQuiz.duration * 60 : 30 * 60);
-      setPendingQuiz(null);
-      setEnteredPassword("");
-      setPasswordError("");
+      await startQuizWithQuestions(pendingQuiz._id);
     } else {
       setPasswordError("Incorrect Exam Password. Please request the correct key from your administrator.");
     }
@@ -190,7 +206,7 @@ export default function DashboardPage() {
     window.print();
   };
 
-  const triggerPrint = (type: "marksheet" | "certificate" | "cumulative_marksheet", data: any) => {
+  const triggerPrint = (type: "marksheet" | "certificate" | "cumulative_marksheet" | "admitcard", data: any) => {
     setPrintTarget({ type, data });
     setTimeout(() => {
       window.print();
@@ -198,15 +214,18 @@ export default function DashboardPage() {
   };
 
   // Start Exam Quiz Handler
-  const handleStartQuiz = (quiz: any) => {
+  const handleStartQuiz = async (quiz: any) => {
+    if (quiz.scheduledAt && new Date(quiz.scheduledAt) > new Date()) {
+      alert("This exam has not started yet. Please wait until the scheduled start time.");
+      return;
+    }
+
     if (quiz.examPassword && quiz.examPassword.trim() !== "") {
       setPendingQuiz(quiz);
       setEnteredPassword("");
       setPasswordError("");
     } else {
-      setActiveQuiz(quiz);
-      setSelectedAnswers(new Array(quiz.questions.length).fill(-1));
-      setTimeRemaining(quiz.duration ? quiz.duration * 60 : 30 * 60);
+      await startQuizWithQuestions(quiz._id);
     }
   };
 
@@ -312,6 +331,336 @@ export default function DashboardPage() {
   const avatarInitials = candidate.name
     ? candidate.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
     : "ST";
+
+
+  const renderPrintAdmitCard = (student: any) => {
+    if (!student) return null;
+    
+    // Extract ID details dynamically
+    const regId = student.registrationId || "AGR/INSTR/2026/120033";
+    const match = regId.match(/\d+$/);
+    const lastDigits = match ? match[0] : "000000";
+    const appId = regId;
+    const rollNumber = `INSTR2026/${lastDigits}`;
+    const acSuffix = lastDigits.length >= 3 ? lastDigits.slice(-3) : lastDigits;
+    const admitCardNo = `AGR/INSTR/2026/AC000${acSuffix}`;
+    
+    const formattedDob = student.dob 
+      ? new Date(student.dob).toLocaleDateString("en-GB").replace(/\//g, "-") 
+      : "14-02-1997";
+      
+    const examDate = student.examDate 
+      ? new Date(student.examDate).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) 
+      : "25 June 2025 (Thursday)";
+    const loginTime = student.loginTime || "09:30AM";
+    const startTime = student.startTime || "10:00AM";
+    
+    // Fallback QR code data
+    const verifyUrl = `https://supportmissionindia.org/verify?reg=${student.registrationId || "N/A"}`;
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(verifyUrl)}`;
+
+    return (
+      <div
+        className="w-[297mm] h-[210mm] bg-white relative overflow-hidden box-border text-slate-800 p-[7mm] flex flex-col justify-between font-sans border-[6px] border-double border-[#0c3e8a]"
+        style={{
+          WebkitPrintColorAdjust: "exact",
+          printColorAdjust: "exact"
+        }}
+      >
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Pacifico&family=Inter:wght@400;600;700;900&display=swap');
+          @page {
+            size: landscape;
+            margin: 0;
+          }
+          #print-area-wrapper {
+            background-color: white !important;
+          }
+        `}</style>
+
+        {/* Top Header Section */}
+        <div className="flex justify-between items-start pb-2 border-b border-slate-300">
+          {/* Left: SMI circular logo & Subtitle */}
+          <div className="flex flex-col items-center w-[22%] text-center">
+            <img src="/smi-logo.png" className="h-16 w-16 object-contain" alt="SMI Logo" />
+            <span className="text-[7px] font-bold text-emerald-700 italic mt-1 leading-tight block">Sabka Saath, Sabka Vikas, Sabka Mission.</span>
+          </div>
+
+          {/* Center: Main Titles & Partner Logos */}
+          <div className="flex flex-col items-center w-[53%] text-center">
+            <h1 className="text-xl font-black tracking-tight text-[#0c3e8a] font-serif uppercase leading-none">SUPPORT MISSION INDIA</h1>
+            <span className="text-[9px] font-bold text-slate-500 italic mt-0.5">(A National Development Initiative)</span>
+            
+            {/* Partnership divider */}
+            <div className="w-full flex items-center justify-center gap-2 my-1">
+              <div className="h-[1px] bg-slate-300 flex-1"></div>
+              <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider">IN partnership with</span>
+              <div className="h-[1px] bg-slate-300 flex-1"></div>
+            </div>
+
+            {/* Partner Logos side by side */}
+            <div className="flex items-center gap-6 mt-1">
+              <div className="flex flex-col items-center">
+                <img 
+                  src="https://vidyanjali.education.gov.in/assets/public/logo.png" 
+                  className="h-9 object-contain" 
+                  alt="Vidyanjali Logo"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "/smi-logo.png";
+                  }}
+                />
+                <span className="text-[6px] font-bold text-slate-500 mt-0.5">(A School Volunteer Programme)</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <img 
+                  src="https://pmshrischools.education.gov.in/assets/logo192.png" 
+                  className="h-9 object-contain" 
+                  alt="PM SHRI Logo"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "/smi-logo.png";
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Identifiers Table & QR Code */}
+          <div className="w-[25%] flex flex-col items-end gap-1.5 pl-3">
+            {/* Identifiers Table */}
+            <table className="w-full text-[8.5px] border-collapse border border-slate-300 bg-white">
+              <tbody>
+                <tr>
+                  <td className="border border-slate-300 px-1.5 py-0.5 font-bold text-slate-500 uppercase tracking-wider text-[6.5px]">Admit Card No.</td>
+                  <td className="border border-slate-300 px-1.5 py-0.5 font-mono font-bold text-rose-600">{admitCardNo}</td>
+                </tr>
+                <tr>
+                  <td className="border border-slate-300 px-1.5 py-0.5 font-bold text-slate-500 uppercase tracking-wider text-[6.5px]">Application ID</td>
+                  <td className="border border-slate-300 px-1.5 py-0.5 font-mono font-bold text-slate-700">{appId}</td>
+                </tr>
+                <tr>
+                  <td className="border border-slate-300 px-1.5 py-0.5 font-bold text-slate-500 uppercase tracking-wider text-[6.5px]">Roll Number</td>
+                  <td className="border border-slate-300 px-1.5 py-0.5 font-mono font-bold text-slate-700">{rollNumber}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* QR code and text */}
+            <div className="flex items-center gap-2 border border-slate-200 p-1 rounded bg-white w-full">
+              <img src={qrCodeUrl} className="h-11 w-11 object-contain shrink-0" alt="Verification QR" />
+              <div className="text-left leading-normal">
+                <span className="text-[7.5px] font-black text-[#0c3e8a] block uppercase tracking-wide">Scan QR Code</span>
+                <span className="text-[6.5px] text-slate-400 font-semibold block leading-tight">to verify candidate details</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Title Banner Section */}
+        <div className="flex flex-col items-center my-1 text-center">
+          <div className="bg-[#0c3e8a] text-white text-[9px] font-extrabold px-3 py-0.5 rounded-sm uppercase tracking-wider shadow-sm">
+            AGRAGAMI - 52 WEEK INTEGRATED SKILL DEVELOPMENT PROGRAMME
+          </div>
+          <h2 className="text-lg font-black text-[#0c3e8a] tracking-tight uppercase mt-0.5">
+            INSTRUCTOR ADMIT CARD
+          </h2>
+          <div className="bg-[#0c3e8a] text-white text-[7.5px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider mt-0.5">
+            (ONLINE INTERVIEW / ASSESSMENT)
+          </div>
+        </div>
+
+        {/* Main Content Sections (Candidate Details, Photo, Exam details) */}
+        <div className="grid grid-cols-12 gap-3 items-stretch my-1.5 text-left">
+          {/* Left Column (Candidate details, photo and login info) (span 9) */}
+          <div className="col-span-9 flex flex-col justify-between gap-3 border-r border-slate-250 pr-3">
+            
+            {/* Top row of Left Column (Candidate Info & Photo) */}
+            <div className="grid grid-cols-12 gap-3 items-stretch">
+              {/* Candidate Info (Col span 8) */}
+              <div className="col-span-8 flex flex-col">
+                <div className="bg-[#0c3e8a] text-white text-[8.5px] font-bold px-2 py-0.5 uppercase tracking-wide rounded-sm mb-1.5">
+                  CANDIDATE DETAILS
+                </div>
+                <table className="w-full text-[9.5px] leading-relaxed">
+                  <tbody>
+                    <tr>
+                      <td className="text-slate-400 font-bold uppercase tracking-wider text-[7px] py-0.5 w-[35%]">Candidate Name</td>
+                      <td className="font-extrabold text-[#0c3e8a] py-0.5 w-[65%]">{student.name}</td>
+                    </tr>
+                    <tr>
+                      <td className="text-slate-400 font-bold uppercase tracking-wider text-[7px] py-0.5">Father's / Guardian's Name</td>
+                      <td className="font-semibold text-slate-700 py-0.5">{student.fatherName}</td>
+                    </tr>
+                    <tr>
+                      <td className="text-slate-400 font-bold uppercase tracking-wider text-[7px] py-0.5">Date of Birth</td>
+                      <td className="font-semibold text-slate-700 py-0.5">{formattedDob}</td>
+                    </tr>
+                    <tr>
+                      <td className="text-slate-400 font-bold uppercase tracking-wider text-[7px] py-0.5">Gender</td>
+                      <td className="font-semibold text-slate-700 py-0.5">{student.gender || "FEMALE"}</td>
+                    </tr>
+                    <tr>
+                      <td className="text-slate-400 font-bold uppercase tracking-wider text-[7px] py-0.5">Category</td>
+                      <td className="font-semibold text-slate-700 py-0.5">{student.category || "ST"}</td>
+                    </tr>
+                    <tr>
+                      <td className="text-slate-400 font-bold uppercase tracking-wider text-[7px] py-0.5">Mobile Number</td>
+                      <td className="font-semibold text-slate-700 py-0.5">{student.phone}</td>
+                    </tr>
+                    <tr>
+                      <td className="text-slate-400 font-bold uppercase tracking-wider text-[7px] py-0.5">Email ID</td>
+                      <td className="font-semibold text-slate-700 py-0.5 truncate max-w-[170px]">{student.email}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Photo & Signature (Col span 4) */}
+              <div className="col-span-4 flex flex-col items-center justify-between border border-slate-200 p-2 rounded bg-white text-center">
+                {/* Photo container */}
+                <div className="h-[75px] w-[60px] border border-slate-300 rounded overflow-hidden flex items-center justify-center bg-slate-50 shadow-inner">
+                  {student.profilePicUrl ? (
+                    <img src={student.profilePicUrl} className="h-full w-full object-cover" alt="Candidate Photo" />
+                  ) : (
+                    <span className="text-[7px] text-slate-400 text-center font-bold">PASTE PHOTO</span>
+                  )}
+                </div>
+                {/* Signature line */}
+                <div className="w-full text-center border-t border-slate-200 mt-2 pt-1">
+                  <div style={{ fontFamily: "'Dancing Script', 'Pacifico', 'Brush Script MT', cursive", fontSize: "14px", color: "#1e3a8a" }} className="h-5 flex items-center justify-center font-extrabold select-none italic">
+                    {student.name}
+                  </div>
+                  <div className="h-[1px] bg-slate-400 w-[85%] mx-auto mt-0.5"></div>
+                  <span className="text-[7px] font-black uppercase text-slate-400 tracking-wider block mt-0.5">Candidate Signature</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Exam Details (Middle section) */}
+            <div className="flex flex-col">
+              <div className="bg-[#0c3e8a] text-white text-[8.5px] font-bold px-2 py-0.5 uppercase tracking-wide rounded-sm mb-1.5">
+                EXAMINATION / INTERVIEW DETAILS
+              </div>
+              <table className="w-full text-[9px] leading-relaxed">
+                <tbody>
+                  <tr className="grid grid-cols-12 w-full gap-x-2">
+                    <td className="col-span-4"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Post Applied For</span><span className="font-extrabold text-[#0c3e8a]">{student.course || "Instructor"}</span></td>
+                    <td className="col-span-4"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Examination Mode</span><span className="font-semibold text-slate-700">Online (Remote Proctored)</span></td>
+                    <td className="col-span-4"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Exam Date</span><span className="font-semibold text-slate-700">{examDate}</span></td>
+                  </tr>
+                  <tr className="grid grid-cols-12 w-full gap-x-2 mt-1">
+                    <td className="col-span-3"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Login Time</span><span className="font-semibold text-slate-700">{loginTime}</span></td>
+                    <td className="col-span-3"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Interview Start Time</span><span className="font-semibold text-slate-700">{startTime}</span></td>
+                    <td className="col-span-2"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Duration</span><span className="font-semibold text-slate-700">Asper Schedule</span></td>
+                    <td className="col-span-4"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Platform / Portal</span><span className="font-semibold text-slate-700">Support Mission India Assessment Portal</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Bottom Row grid: Login Info, Requirements, Documents */}
+            <div className="grid grid-cols-3 gap-3">
+              {/* Login Information */}
+              <div className="flex flex-col">
+                <div className="bg-[#0c3e8a] text-white text-[8.5px] font-bold px-2 py-0.5 uppercase tracking-wide rounded-sm mb-1">
+                  LOGIN INFORMATION
+                </div>
+                <div className="border border-slate-200 p-1.5 rounded bg-slate-50/50 text-[8.5px] space-y-1 flex-1">
+                  <p className="font-bold text-slate-600">User ID/ Registration No. : <span className="font-mono font-extrabold text-[#0c3e8a] block">{student.registrationId}</span></p>
+                  <p className="font-bold text-slate-500">Password : <span className="text-[#b89047] italic">Will besent onyour registered email& mobile before exam</span></p>
+                </div>
+              </div>
+
+              {/* Technical Requirements */}
+              <div className="flex flex-col">
+                <div className="bg-[#0c3e8a] text-white text-[8.5px] font-bold px-2 py-0.5 uppercase tracking-wide rounded-sm mb-1">
+                  TECHNICAL REQUIREMENTS
+                </div>
+                <div className="border border-slate-200 p-1.5 rounded bg-slate-50/50 text-[7.5px] leading-tight space-y-0.5 text-slate-500 font-semibold flex-1">
+                  <p>• Laptop/Desktop/Smartphone stable net</p>
+                  <p>• Working Webcam (front facing)</p>
+                  <p>• Working Microphone & clear audio</p>
+                  <p>• Quiet and well-lit environment</p>
+                  <p>• Latest Chrome / Firefox / Edge</p>
+                  <p>• Do not use any VPN or proxy</p>
+                </div>
+              </div>
+
+              {/* Documents Required */}
+              <div className="flex flex-col">
+                <div className="bg-[#0c3e8a] text-white text-[8.5px] font-bold px-2 py-0.5 uppercase tracking-wide rounded-sm mb-1">
+                  DOCUMENTS REQUIRED
+                </div>
+                <div className="border border-slate-200 p-1.5 rounded bg-slate-50/50 text-[7px] leading-tight space-y-0.5 text-slate-500 font-semibold flex-1">
+                  <p>• Aadhaar Card / Valid Photo ID (Original)</p>
+                  <p>• Admit Card (Soft Copy or Print)</p>
+                  <p>• Recent Passport Size Photograph</p>
+                  <p className="text-slate-400 mt-0.5 leading-none">Note: Show original ID on camera for verification.</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Right Column (span 3) - Instructions and Authorised Signatory */}
+          <div className="col-span-3 flex flex-col justify-between pl-1">
+            <div className="flex flex-col flex-1">
+              <div className="bg-[#0c3e8a] text-white text-[8.5px] font-bold px-2 py-0.5 uppercase tracking-wide rounded-sm mb-1.5 text-center">
+                IMPORTANT INSTRUCTIONS
+              </div>
+              <div className="text-[7.5px] leading-snug space-y-1.5 text-slate-600 font-medium">
+                <p>1. Please login at least 15 minutes before the scheduled time.</p>
+                <p>2. Keep your webcam and microphone ON throughout the session.</p>
+                <p>3. No other person is allowed in the room during the interview.</p>
+                <p>4. Do not use mobile phone, smartwatch, or any other electronic device.</p>
+                <p>5. Do not take screenshots, screen recordings or share the interview link.</p>
+                <p>6. Ensure stable internet connection. In case of disconnection, re-login immediately.</p>
+                <p>7. Any misconduct or use of unfair means will lead to disqualification.</p>
+                <p>8. The decision of the panel willbe final and binding.</p>
+              </div>
+            </div>
+
+            {/* Authorised Signatory Signature stamp */}
+            <div className="text-center mt-2 border-t border-slate-200 pt-1.5 flex flex-col items-center">
+              <div className="h-6 flex items-center justify-center">
+                <span style={{ fontFamily: "'Dancing Script', 'Pacifico', 'Brush Script MT', cursive", fontSize: "16px", color: "#1e3a8a" }} className="font-extrabold">
+                  Manish Sinha
+                </span>
+              </div>
+              <div className="h-[1px] bg-slate-400 w-[80%] my-0.5"></div>
+              <span className="text-[6.5px] font-extrabold text-slate-500 leading-tight uppercase block">Authorised Signatory</span>
+              <span className="text-[6px] font-bold text-slate-400 leading-none block">Programme Coordinator</span>
+              <span className="text-[6px] font-bold text-slate-400 leading-none block">Support Mission India</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Area */}
+        <div className="border-t border-[#0c3e8a] pt-1 flex justify-between items-end text-[7.5px] text-slate-400 font-semibold font-mono shrink-0">
+          <div className="text-left">
+            <p className="font-extrabold text-slate-600">HELPDESK SUPPORT: +91 9878543210 | info@smi.in.net | www.smi.in.net</p>
+          </div>
+          
+          <div className="text-center flex flex-col items-center">
+            <span className="text-[7.5px] font-extrabold text-slate-500 uppercase leading-none block">PROGRAMME IMPLEMENTED BY</span>
+            <span className="text-[10px] font-black text-[#0c3e8a] tracking-tight leading-none uppercase mt-0.5 border-b border-[#0c3e8a]">SUPPORT MISSION INDIA</span>
+            <span className="text-[6px] text-slate-400 font-bold mt-0.5 block">Empowering India, Enriching Lives</span>
+          </div>
+
+          <div className="text-right flex flex-col items-end gap-0.5">
+            <span className="text-[7px] font-bold text-rose-600 border border-rose-200 px-1.5 py-0.5 rounded bg-rose-50/50">
+              * This Admit Card is valid only for the above mentioned date and time.
+            </span>
+          </div>
+        </div>
+
+        {/* Computer generated disclaimer at the very bottom */}
+        <div className="text-[7px] text-slate-400 text-center w-full mt-0.5 leading-none">
+          This is a computer generated document and does not require any physical signature.
+        </div>
+
+      </div>
+    );
+  };
 
   const renderPrintCertificate = (res: any) => {
     if (!res) return null;
@@ -800,9 +1149,20 @@ export default function DashboardPage() {
               {/* Course Title Card */}
               <div className="p-6 rounded-2xl bg-gradient-to-br from-deepskyblue/12 to-sky-50/20 border border-deepskyblue/20 shadow-sm relative overflow-hidden">
                 <div className="absolute right-0 top-0 h-40 w-40 bg-deepskyblue/5 blur-2xl rounded-full" />
-                <span className="text-[9px] uppercase font-bold bg-deepskyblue/10 text-deepskyblue-dark border border-deepskyblue/20 px-2 py-0.5 rounded-full">
-                  Primary Program
-                </span>
+                <div className="flex flex-wrap gap-2 items-center">
+                  <span className="text-[9px] uppercase font-bold bg-deepskyblue/10 text-deepskyblue-dark border border-deepskyblue/20 px-2 py-0.5 rounded-full">
+                    Primary Program
+                  </span>
+                  {courseData && (
+                    <span className={`text-[9px] uppercase font-bold border px-2 py-0.5 rounded-full ${
+                      courseData.isPaid 
+                        ? "bg-amber-500/10 text-amber-600 border-amber-500/20" 
+                        : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                    }`}>
+                      {courseData.isPaid ? `Paid (₹${courseData.price})` : "Free Course"}
+                    </span>
+                  )}
+                </div>
                 <h3 className="text-lg font-bold text-slate-900 mt-3">{candidate.course}</h3>
                 <p className="text-xs text-slate-500 mt-1 font-semibold">Registered Student ID: {candidate.registrationId}</p>
 
@@ -1015,19 +1375,29 @@ export default function DashboardPage() {
                   <div className="space-y-3">
                     {quizzes.map((quiz, i) => {
                       const result = results.find(r => r.quizId === quiz._id);
+                      const isNotStarted = quiz.scheduledAt && new Date(quiz.scheduledAt) > new Date();
                       return (
                         <div key={i} className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-sm shadow-slate-100">
                           <div className="flex items-start gap-4">
                             <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 border ${
-                              result ? "bg-emerald-50 border-emerald-150 text-emerald-600" : "bg-deepskyblue/10 border-deepskyblue/20 text-deepskyblue animate-pulse"
+                              result 
+                                ? "bg-emerald-50 border-emerald-150 text-emerald-600" 
+                                : isNotStarted 
+                                  ? "bg-slate-50 border-slate-150 text-slate-400"
+                                  : "bg-deepskyblue/10 border-deepskyblue/20 text-deepskyblue animate-pulse"
                             }`}>
                               <Award className="h-5 w-5" />
                             </div>
                             <div>
                               <h4 className="text-sm font-bold text-slate-800">{quiz.title}</h4>
-                              <p className="text-xs text-slate-400 mt-0.5 font-semibold">
-                                {quiz.questions.length} Objective Questions
-                                {quiz.duration && ` | Duration: ${quiz.duration} Mins`}
+                              <p className="text-xs text-slate-400 mt-0.5 font-semibold flex flex-wrap gap-x-2 gap-y-1">
+                                <span>{quiz.questions?.length || 0} Objective Questions</span>
+                                {quiz.duration && <span>| Duration: {quiz.duration} Mins</span>}
+                                {quiz.scheduledAt && (
+                                  <span className={isNotStarted ? "text-amber-600 font-bold" : "text-emerald-600 font-bold"}>
+                                    | Scheduled: {new Date(quiz.scheduledAt).toLocaleString()}
+                                  </span>
+                                )}
                               </p>
                             </div>
                           </div>
@@ -1040,6 +1410,13 @@ export default function DashboardPage() {
                                   Score: {result.score}/{result.total} ({result.grade})
                                 </span>
                               </div>
+                            ) : isNotStarted ? (
+                              <button
+                                disabled
+                                className="py-1.5 px-4 rounded-lg bg-slate-100 border border-slate-200 text-xs font-bold text-slate-450 cursor-not-allowed shadow-none"
+                              >
+                                Not Started
+                              </button>
                             ) : (
                               <button
                                 onClick={() => handleStartQuiz(quiz)}
@@ -1350,9 +1727,18 @@ export default function DashboardPage() {
                   <div className="text-center sm:text-left">
                     <h3 className="text-lg font-bold text-slate-800">{candidate.name}</h3>
                     <p className="text-xs text-slate-450 mt-1 font-semibold">Student UID: {candidate.registrationId}</p>
-                    <span className="inline-block mt-3 text-[10px] uppercase font-bold bg-deepskyblue/10 text-deepskyblue-dark border border-deepskyblue/20 px-2 py-0.5 rounded-full">
-                      Admission Active
-                    </span>
+                    <div className="flex flex-wrap gap-2 items-center mt-3 justify-center sm:justify-start">
+                      <span className="inline-block text-[10px] uppercase font-bold bg-deepskyblue/10 text-deepskyblue-dark border border-deepskyblue/20 px-2 py-0.5 rounded-full">
+                        Admission Active
+                      </span>
+                      <button
+                        onClick={() => triggerPrint("admitcard", candidate)}
+                        className="inline-flex items-center gap-1.5 py-1 px-3 bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 text-[10px] font-bold text-white rounded-xl shadow-md cursor-pointer transition active:scale-95"
+                      >
+                        <Printer className="h-3.5 w-3.5" />
+                        <span>Print Admit Card</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -1666,6 +2052,7 @@ export default function DashboardPage() {
         {printTarget?.type === "marksheet" && renderPrintMarksheet(printTarget.data)}
         {printTarget?.type === "cumulative_marksheet" && renderPrintCumulativeMarksheet(printTarget.data)}
         {printTarget?.type === "certificate" && renderPrintCertificate(printTarget.data)}
+        {printTarget?.type === "admitcard" && renderPrintAdmitCard(printTarget.data)}
       </div>
 
     </div>

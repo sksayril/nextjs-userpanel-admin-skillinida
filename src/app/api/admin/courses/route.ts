@@ -40,7 +40,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
     }
 
-    const { title, description, duration, code, modules } = await request.json();
+    const { title, description, duration, code, modules, isPaid, price } = await request.json();
 
     if (!title || !description || !duration || !code) {
       return NextResponse.json({ error: "Title, description, duration, and code are required" }, { status: 400 });
@@ -58,6 +58,8 @@ export async function POST(request: Request) {
       duration,
       code: code.toUpperCase().trim(),
       modules: modules || [],
+      isPaid: !!isPaid,
+      price: price ? Number(price) : 0,
     });
 
     await newCourse.save();

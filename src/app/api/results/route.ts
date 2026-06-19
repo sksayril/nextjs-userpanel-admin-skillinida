@@ -57,6 +57,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
     }
 
+    // Validate student assignment/eligibility
+    const isAssigned = quiz.assignedStudents.some(
+      (id: any) => id.toString() === student.id.toString()
+    );
+    if (!isAssigned) {
+      return NextResponse.json({ error: "You are not assigned/eligible for this exam" }, { status: 403 });
+    }
+
+    // Validate start time
+    if (quiz.scheduledAt && new Date(quiz.scheduledAt) > new Date()) {
+      return NextResponse.json({ error: "This exam has not started yet" }, { status: 403 });
+    }
+
     // Calculate score based on custom marks
     let score = 0;
     let correctCount = 0;

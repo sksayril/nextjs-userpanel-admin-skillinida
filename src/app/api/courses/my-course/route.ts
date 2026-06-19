@@ -50,6 +50,8 @@ export async function GET() {
         description: "Standard Syllabus Program details.",
         duration: "1 Year",
         code: "GEN-2026",
+        isPaid: false,
+        price: 0,
         modules: [
           { title: "Module 1: Foundations", topics: "Core Concepts & Fundamentals", progress: 95, color: "from-emerald-500 to-teal-500" },
           { title: "Module 2: Advanced Applications", topics: "Practical Labs & Integration Projects", progress: 60, color: "from-indigo-500 to-purple-500" },

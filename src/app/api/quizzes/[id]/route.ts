@@ -22,7 +22,10 @@ async function verifyStudent() {
   return null;
 }
 
-export async function GET() {
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     await dbConnect();
     const studentDecoded = await verifyStudent();
@@ -32,32 +35,32 @@ export async function GET() {
 
     const student = await Candidate.findById(studentDecoded.id);
     if (!student) {
-      return NextResponse.json({ error: "Student not found" }, { status: 404 });
+      return NextResponse.json({ error: "Student profile not found" }, { status: 404 });
     }
 
-    // Fetch quizzes belonging to student's course and assigned to this candidate
-    const quizzes = await Quiz.find({
+    const { id } = await params;
+
+    const quiz = await Quiz.findOne({
+      _id: id,
       course: student.course,
       assignedStudents: student._id
-    }).sort({ createdAt: -1 }).lean();
+    }).lean();
+
+    if (!quiz) {
+      return NextResponse.json({ error: "Exam not found or you are not assigned to it" }, { status: 404 });
+    }
 
     const now = new Date();
-    const sanitizedQuizzes = quizzes.map((quiz: any) => {
-      if (quiz.scheduledAt && new Date(quiz.scheduledAt) > now) {
-        return {
-          ...quiz,
-          questions: []
-        };
-      }
-      return quiz;
-    });
+    if (quiz.scheduledAt && new Date(quiz.scheduledAt) > now) {
+      return NextResponse.json({ error: "This exam has not started yet" }, { status: 403 });
+    }
 
     return NextResponse.json({
       success: true,
-      quizzes: sanitizedQuizzes,
+      quiz,
     });
   } catch (error: any) {
-    console.error("Student Quizzes Fetch Error:", error);
-    return NextResponse.json({ error: error.message || "Failed to fetch quizzes" }, { status: 500 });
+    console.error("Fetch Single Quiz Error:", error);
+    return NextResponse.json({ error: error.message || "Failed to fetch exam details" }, { status: 500 });
   }
 }

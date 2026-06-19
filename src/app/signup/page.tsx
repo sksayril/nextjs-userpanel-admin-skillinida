@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -488,7 +488,7 @@ export default function SignupPage() {
                     </option>
                     {coursesList.map((courseOption, index) => (
                       <option key={index} value={courseOption.title} className="bg-white text-slate-850">
-                        {courseOption.title} ({courseOption.code})
+                        {courseOption.title} ({courseOption.code}) — {courseOption.isPaid ? `Paid (₹${courseOption.price})` : "Free"}
                       </option>
                     ))}
                   </select>
