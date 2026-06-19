@@ -42,17 +42,32 @@ export async function POST(request: Request) {
         await transporter.sendMail({
           from: `"Support Mission India" <${user}>`,
           to: email,
-          subject: "Your OTP Verification Code",
+          subject: `${otpCode} is your Support Mission India Verification Code`,
           text: `Your OTP code is ${otpCode}. It is valid for 5 minutes.`,
           html: `
-            <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e4e4e7; border-radius: 12px;">
-              <h2 style="color: #6366f1; text-align: center;">Support Mission India</h2>
-              <p>Hello,</p>
-              <p>Your verification OTP code is:</p>
-              <div style="font-size: 32px; font-weight: bold; text-align: center; letter-spacing: 4px; padding: 15px; margin: 20px 0; background-color: #f4f4f5; border-radius: 8px; color: #18181b;">
-                ${otpCode}
+            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 550px; margin: 0 auto; padding: 0; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+              <div style="background-color: #0c3e8a; padding: 25px 20px; text-align: center; border-bottom: 3px solid #b89047;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">Support Mission India</h1>
+                <span style="color: #b89047; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; display: block; margin-top: 5px;">A National Development Initiative</span>
               </div>
-              <p style="color: #71717a; font-size: 14px;">This code is valid for 5 minutes. Please do not share it with anyone.</p>
+              
+              <div style="padding: 30px 25px; color: #334155; line-height: 1.6;">
+                <h2 style="color: #0c3e8a; margin-top: 0; font-size: 18px; font-weight: 700; text-align: center;">OTP Verification Code</h2>
+                <p style="font-size: 14px; color: #475569;">Dear Candidate,</p>
+                <p style="font-size: 14px; color: #475569;">You are receiving this email to verify your registration on the <strong>Support Mission India Assessment Portal</strong>. Please use the following One-Time Password (OTP) to complete your verification process:</p>
+                
+                <div style="font-size: 34px; font-weight: 900; font-family: 'Courier New', Courier, monospace; text-align: center; letter-spacing: 6px; padding: 18px; margin: 25px 0; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; color: #0c3e8a;">
+                  ${otpCode}
+                </div>
+                
+                <p style="color: #ef4444; font-size: 12px; font-weight: 600; text-align: center; margin-top: 10px;">• This verification code is valid for exactly 5 minutes.</p>
+                <p style="color: #64748b; font-size: 12px; text-align: center; margin-top: 5px;">For security reasons, please do not share this OTP with anyone.</p>
+              </div>
+              
+              <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+                <p style="color: #94a3b8; font-size: 11px; margin: 0;">Support Mission India Program Team</p>
+                <p style="color: #94a3b8; font-size: 10px; margin: 5px 0 0 0;">This is an automated system email. Please do not reply to this message.</p>
+              </div>
             </div>
           `,
         });

@@ -211,7 +211,7 @@ export default function SignupPage() {
     }
     if (step === 2) {
       if (!formData.course || !formData.admitUrl || !formData.qualificationUrl || !formData.profilePicUrl) {
-        setErrorMsg("Interested course, Admit card, Profile photo, and Qualification certificate are required");
+        setErrorMsg("Interested course, Admin/Intermediate Admit Card, Profile photo, and Qualification certificate are required");
         return;
       }
     }
@@ -579,7 +579,7 @@ export default function SignupPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
-                      Admit Card <span className="text-rose-500">*</span>
+                      Admin/Intermediate Admit Card <span className="text-rose-500">*</span>
                     </label>
                     {formData.admitUrl && (
                       <span className="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full font-bold">Uploaded</span>
@@ -620,7 +620,7 @@ export default function SignupPage() {
                           <Upload className="h-5 w-5 animate-bounce" style={{ animationDuration: '2.5s' }} />
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-slate-700">Select Admit Card Document</p>
+                          <p className="text-xs font-bold text-slate-700">Select Admin/Intermediate Admit Card Document</p>
                           <p className="text-[10px] text-slate-400 mt-1">PDF, PNG, JPG up to 5MB</p>
                         </div>
                       </div>

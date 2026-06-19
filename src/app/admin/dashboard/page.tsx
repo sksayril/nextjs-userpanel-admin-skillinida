@@ -30,14 +30,14 @@ import {
 
 // ── Sidebar Theme Definitions ────────────────────────────────────────────────
 const SIDEBAR_THEMES = [
-  { id: "sky",      label: "Sky Blue",    bg: "#0ea5e9", dark: "#0284c7", text: "#fff", card: "rgba(255,255,255,0.12)" },
-  { id: "violet",  label: "Violet",      bg: "#7c3aed", dark: "#5b21b6", text: "#fff", card: "rgba(255,255,255,0.12)" },
-  { id: "rose",    label: "Rose",        bg: "#e11d48", dark: "#be123c", text: "#fff", card: "rgba(255,255,255,0.12)" },
-  { id: "emerald", label: "Emerald",     bg: "#059669", dark: "#047857", text: "#fff", card: "rgba(255,255,255,0.12)" },
-  { id: "amber",   label: "Amber",       bg: "#d97706", dark: "#b45309", text: "#fff", card: "rgba(255,255,255,0.12)" },
-  { id: "slate",   label: "Slate Dark",  bg: "#1e293b", dark: "#0f172a", text: "#fff", card: "rgba(255,255,255,0.10)" },
-  { id: "indigo",  label: "Indigo",      bg: "#4338ca", dark: "#312e81", text: "#fff", card: "rgba(255,255,255,0.12)" },
-  { id: "teal",    label: "Teal",        bg: "#0d9488", dark: "#0f766e", text: "#fff", card: "rgba(255,255,255,0.12)" },
+  { id: "sky", label: "Sky Blue", bg: "#0ea5e9", dark: "#0284c7", text: "#fff", card: "rgba(255,255,255,0.12)" },
+  { id: "violet", label: "Violet", bg: "#7c3aed", dark: "#5b21b6", text: "#fff", card: "rgba(255,255,255,0.12)" },
+  { id: "rose", label: "Rose", bg: "#e11d48", dark: "#be123c", text: "#fff", card: "rgba(255,255,255,0.12)" },
+  { id: "emerald", label: "Emerald", bg: "#059669", dark: "#047857", text: "#fff", card: "rgba(255,255,255,0.12)" },
+  { id: "amber", label: "Amber", bg: "#d97706", dark: "#b45309", text: "#fff", card: "rgba(255,255,255,0.12)" },
+  { id: "slate", label: "Slate Dark", bg: "#1e293b", dark: "#0f172a", text: "#fff", card: "rgba(255,255,255,0.10)" },
+  { id: "indigo", label: "Indigo", bg: "#4338ca", dark: "#312e81", text: "#fff", card: "rgba(255,255,255,0.12)" },
+  { id: "teal", label: "Teal", bg: "#0d9488", dark: "#0f766e", text: "#fff", card: "rgba(255,255,255,0.12)" },
 ];
 
 // Convert hex color to 'R, G, B' string for use in CSS rgba()
@@ -73,9 +73,9 @@ export default function AdminDashboardPage() {
   // Inject dynamic theme CSS into document.head whenever theme changes
   useEffect(() => {
     const theme = SIDEBAR_THEMES.find(t => t.id === sidebarThemeId) || SIDEBAR_THEMES[0];
-    const bg   = theme.bg;
+    const bg = theme.bg;
     const dark = theme.dark;
-    const rgb  = hexToRgb(bg);
+    const rgb = hexToRgb(bg);
     const rgbDark = hexToRgb(dark);
 
     const styleId = "smi-admin-theme-override";
@@ -711,7 +711,7 @@ export default function AdminDashboardPage() {
 
   const renderPrintAdmitCard = (student: any) => {
     if (!student) return null;
-    
+
     // Extract ID details dynamically
     const regId = student.registrationId || "AGR/INSTR/2026/120033";
     const match = regId.match(/\d+$/);
@@ -720,17 +720,17 @@ export default function AdminDashboardPage() {
     const rollNumber = `INSTR2026/${lastDigits}`;
     const acSuffix = lastDigits.length >= 3 ? lastDigits.slice(-3) : lastDigits;
     const admitCardNo = `AGR/INSTR/2026/AC000${acSuffix}`;
-    
-    const formattedDob = student.dob 
-      ? new Date(student.dob).toLocaleDateString("en-GB").replace(/\//g, "-") 
+
+    const formattedDob = student.dob
+      ? new Date(student.dob).toLocaleDateString("en-GB").replace(/\//g, "-")
       : "14-02-1997";
-      
-    const examDate = student.examDate 
-      ? new Date(student.examDate).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) 
+
+    const examDate = student.examDate
+      ? new Date(student.examDate).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
       : "25 June 2025 (Thursday)";
     const loginTime = student.loginTime || "09:30AM";
     const startTime = student.startTime || "10:00AM";
-    
+
     // Fallback QR code data
     const verifyUrl = `https://supportmissionindia.org/verify?reg=${student.registrationId || "N/A"}`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(verifyUrl)}`;
@@ -766,7 +766,7 @@ export default function AdminDashboardPage() {
           <div className="flex flex-col items-center w-[53%] text-center">
             <h1 className="text-xl font-black tracking-tight text-[#0c3e8a] font-serif uppercase leading-none">SUPPORT MISSION INDIA</h1>
             <span className="text-[9px] font-bold text-slate-500 italic mt-0.5">(A National Development Initiative)</span>
-            
+
             {/* Partnership divider */}
             <div className="w-full flex items-center justify-center gap-2 my-1">
               <div className="h-[1px] bg-slate-300 flex-1"></div>
@@ -777,9 +777,9 @@ export default function AdminDashboardPage() {
             {/* Partner Logos side by side */}
             <div className="flex items-center gap-6 mt-1">
               <div className="flex flex-col items-center">
-                <img 
-                  src="https://vidyanjali.education.gov.in/assets/public/logo.png" 
-                  className="h-9 object-contain" 
+                <img
+                  src="https://vidyanjali.education.gov.in/assets/public/logo.png"
+                  className="h-9 object-contain"
                   alt="Vidyanjali Logo"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = "/smi-logo.png";
@@ -788,9 +788,9 @@ export default function AdminDashboardPage() {
                 <span className="text-[6px] font-bold text-slate-500 mt-0.5">(A School Volunteer Programme)</span>
               </div>
               <div className="flex flex-col items-center">
-                <img 
-                  src="https://pmshrischools.education.gov.in/assets/logo192.png" 
-                  className="h-9 object-contain" 
+                <img
+                  src="https://pmshrischools.education.gov.in/assets/logo192.png"
+                  className="h-9 object-contain"
                   alt="PM SHRI Logo"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = "/smi-logo.png";
@@ -848,7 +848,7 @@ export default function AdminDashboardPage() {
         <div className="grid grid-cols-12 gap-3 items-stretch my-1.5 text-left">
           {/* Left Column (Candidate details, photo and login info) (span 9) */}
           <div className="col-span-9 flex flex-col justify-between gap-3 border-r border-slate-250 pr-3">
-            
+
             {/* Top row of Left Column (Candidate Info & Photo) */}
             <div className="grid grid-cols-12 gap-3 items-stretch">
               {/* Candidate Info (Col span 8) */}
@@ -1015,7 +1015,7 @@ export default function AdminDashboardPage() {
           <div className="text-left">
             <p className="font-extrabold text-slate-600">HELPDESK SUPPORT: +91 9878543210 | info@smi.in.net | www.smi.in.net</p>
           </div>
-          
+
           <div className="text-center flex flex-col items-center">
             <span className="text-[7.5px] font-extrabold text-slate-500 uppercase leading-none block">PROGRAMME IMPLEMENTED BY</span>
             <span className="text-[10px] font-black text-[#0c3e8a] tracking-tight leading-none uppercase mt-0.5 border-b border-[#0c3e8a]">SUPPORT MISSION INDIA</span>
@@ -1425,7 +1425,7 @@ export default function AdminDashboardPage() {
   const courseOptions = coursesList.map(c => c.title);
 
   // Filter students based on search query
-  const filteredStudents = studentsList.filter(s => 
+  const filteredStudents = studentsList.filter(s =>
     s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     s.registrationId.toLowerCase().includes(searchQuery.toLowerCase()) ||
     s.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1523,7 +1523,7 @@ export default function AdminDashboardPage() {
 
   // Derived theme object (used for inline styles in JSX)
   const activeSidebarTheme = SIDEBAR_THEMES.find(t => t.id === sidebarThemeId) || SIDEBAR_THEMES[0];
-  const themeRgb     = hexToRgb(activeSidebarTheme.bg);
+  const themeRgb = hexToRgb(activeSidebarTheme.bg);
   const themeDarkRgb = hexToRgb(activeSidebarTheme.dark);
 
   return (
@@ -1531,7 +1531,7 @@ export default function AdminDashboardPage() {
       id="admin-theme-root"
       className="h-screen bg-slate-50 text-slate-800 flex font-sans select-none overflow-hidden"
     >
-      
+
       {/* 1. SIDEBAR NAVIGATION - Fixed, independently scrollable */}
       <aside
         className="w-64 h-full flex flex-col shrink-0 hidden lg:flex overflow-y-auto transition-all duration-500"
@@ -1564,14 +1564,14 @@ export default function AdminDashboardPage() {
         {/* SCROLLABLE NAV LINKS */}
         <nav className="flex-1 px-3 space-y-0.5 pb-4">
           {([
-            { id: "overview",   label: "Overview",          Icon: TrendingUp },
-            { id: "courses",    label: "Manage Courses",     Icon: BookOpen },
-            { id: "students",   label: "Register Students",  Icon: UserPlus },
-            { id: "attendance", label: "Manage Attendance",  Icon: Calendar },
-            { id: "papers",     label: "Question Papers",    Icon: FileText },
-            { id: "quizzes",    label: "Create Exam",        Icon: Award },
-            { id: "results",    label: "Exam Results",       Icon: CheckCircle },
-            { id: "agents",     label: "Manage Agents",      Icon: Users },
+            { id: "overview", label: "Overview", Icon: TrendingUp },
+            { id: "courses", label: "Manage Courses", Icon: BookOpen },
+            { id: "students", label: "Register Students", Icon: UserPlus },
+            { id: "attendance", label: "Manage Attendance", Icon: Calendar },
+            { id: "papers", label: "Question Papers", Icon: FileText },
+            { id: "quizzes", label: "Create Exam", Icon: Award },
+            { id: "results", label: "Exam Results", Icon: CheckCircle },
+            { id: "agents", label: "Manage Agents", Icon: Users },
           ] as { id: string; label: string; Icon: React.ElementType }[]).map(({ id, label, Icon }) => (
             <button
               key={id}
@@ -1686,14 +1686,14 @@ export default function AdminDashboardPage() {
 
       {/* 2. MAIN DISPLAY CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        
+
         {/* TOP NAVIGATION BAR — fixed/sticky, never scrolls */}
         <header className="h-16 shrink-0 bg-white border-b border-slate-200/80 flex items-center justify-between px-8 z-40 shadow-sm shadow-slate-100">
           <div className="flex items-center gap-4 flex-1">
             <button className="lg:hidden p-1.5 rounded-xl text-slate-500 hover:bg-slate-50">
               <Menu className="h-5 w-5" />
             </button>
-            
+
             {/* Search Input Box */}
             <div className="relative w-64 max-w-xs">
               <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -1737,1096 +1737,941 @@ export default function AdminDashboardPage() {
         {/* SCROLLABLE BODY — everything below the header scrolls here */}
         <div id="admin-scroll-body" className="flex-1 overflow-y-auto">
 
-        {/* VIBRANT TOP BANNER SECTION — themed gradient */}
-        <section
-          className="text-white px-8 pt-8 pb-20 relative flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
-          style={{ background: `linear-gradient(135deg, ${activeSidebarTheme.bg} 0%, ${activeSidebarTheme.dark} 100%)` }}
-        >
-          <div className="space-y-1">
-            <h2 className="text-2xl font-black tracking-tight capitalize">{activeTab} Setup</h2>
-            <p className="text-xs text-white/70">Configure parameters, inspect course catalogs, and audit student databases</p>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <span className="text-[10px] uppercase font-bold bg-white/20 border border-white/30 px-3 py-1 rounded-full text-white select-none">
-              Portal Mode: Active
-            </span>
-          </div>
-        </section>
-
-        {/* OVERLAPPING METRICS CARDS */}
-        <section className="relative -mt-12 z-10 grid grid-cols-1 sm:grid-cols-4 gap-6 px-8 max-w-7xl w-full mx-auto">
-          {/* Card 1: Students */}
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-md shadow-slate-200/50 flex items-center justify-between">
+          {/* VIBRANT TOP BANNER SECTION — themed gradient */}
+          <section
+            className="text-white px-8 pt-8 pb-20 relative flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+            style={{ background: `linear-gradient(135deg, ${activeSidebarTheme.bg} 0%, ${activeSidebarTheme.dark} 100%)` }}
+          >
             <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Students Enrolled</span>
-              <span className="text-2xl font-black text-slate-900">{stats.studentsCount}</span>
-              <p className="text-[10px] text-slate-400 font-medium">Portal verified logs</p>
+              <h2 className="text-2xl font-black tracking-tight capitalize">{activeTab} Setup</h2>
+              <p className="text-xs text-white/70">Configure parameters, inspect course catalogs, and audit student databases</p>
             </div>
-            <div
-              className="h-10 w-10 rounded-xl flex items-center justify-center"
-              style={{ background: `rgba(${themeRgb},0.12)`, color: activeSidebarTheme.bg }}
-            >
-              <Users className="h-5 w-5" />
+
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] uppercase font-bold bg-white/20 border border-white/30 px-3 py-1 rounded-full text-white select-none">
+                Portal Mode: Active
+              </span>
             </div>
-          </div>
+          </section>
 
-          {/* Card 2: Courses */}
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-md shadow-slate-200/50 flex items-center justify-between">
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Active Tasks / Courses</span>
-              <span className="text-2xl font-black text-slate-900">{stats.coursesCount}</span>
-              <p className="text-[10px] text-slate-400 font-medium">Syllabi catalogs loaded</p>
+          {/* OVERLAPPING METRICS CARDS */}
+          <section className="relative -mt-12 z-10 grid grid-cols-1 sm:grid-cols-4 gap-6 px-8 max-w-7xl w-full mx-auto">
+            {/* Card 1: Students */}
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-md shadow-slate-200/50 flex items-center justify-between">
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Students Enrolled</span>
+                <span className="text-2xl font-black text-slate-900">{stats.studentsCount}</span>
+                <p className="text-[10px] text-slate-400 font-medium">Portal verified logs</p>
+              </div>
+              <div
+                className="h-10 w-10 rounded-xl flex items-center justify-center"
+                style={{ background: `rgba(${themeRgb},0.12)`, color: activeSidebarTheme.bg }}
+              >
+                <Users className="h-5 w-5" />
+              </div>
             </div>
-            <div
-              className="h-10 w-10 rounded-xl flex items-center justify-center"
-              style={{ background: `rgba(${themeRgb},0.10)`, color: activeSidebarTheme.bg }}
-            >
-              <BookMarked className="h-5 w-5" />
+
+            {/* Card 2: Courses */}
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-md shadow-slate-200/50 flex items-center justify-between">
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Active Tasks / Courses</span>
+                <span className="text-2xl font-black text-slate-900">{stats.coursesCount}</span>
+                <p className="text-[10px] text-slate-400 font-medium">Syllabi catalogs loaded</p>
+              </div>
+              <div
+                className="h-10 w-10 rounded-xl flex items-center justify-center"
+                style={{ background: `rgba(${themeRgb},0.10)`, color: activeSidebarTheme.bg }}
+              >
+                <BookMarked className="h-5 w-5" />
+              </div>
             </div>
-          </div>
 
-          {/* Card 3: Papers */}
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-md shadow-slate-200/50 flex items-center justify-between">
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Question Papers</span>
-              <span className="text-2xl font-black text-slate-900">{stats.papersCount}</span>
-              <p className="text-[10px] text-slate-400 font-medium">Assigned static files</p>
+            {/* Card 3: Papers */}
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-md shadow-slate-200/50 flex items-center justify-between">
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Question Papers</span>
+                <span className="text-2xl font-black text-slate-900">{stats.papersCount}</span>
+                <p className="text-[10px] text-slate-400 font-medium">Assigned static files</p>
+              </div>
+              <div
+                className="h-10 w-10 rounded-xl flex items-center justify-center"
+                style={{ background: `rgba(${themeRgb},0.08)`, color: activeSidebarTheme.bg }}
+              >
+                <FileText className="h-5 w-5" />
+              </div>
             </div>
-            <div
-              className="h-10 w-10 rounded-xl flex items-center justify-center"
-              style={{ background: `rgba(${themeRgb},0.08)`, color: activeSidebarTheme.bg }}
-            >
-              <FileText className="h-5 w-5" />
+
+            {/* Card 4: Exams */}
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-md shadow-slate-200/50 flex items-center justify-between">
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Assigned Exams</span>
+                <span className="text-2xl font-black text-slate-900">{stats.quizzesCount}</span>
+                <p className="text-[10px] text-slate-400 font-medium">Interactive online exams</p>
+              </div>
+              <div className="h-10 w-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+                <Award className="h-5 w-5" />
+              </div>
             </div>
-          </div>
+          </section>
 
-          {/* Card 4: Exams */}
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-md shadow-slate-200/50 flex items-center justify-between">
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Assigned Exams</span>
-              <span className="text-2xl font-black text-slate-900">{stats.quizzesCount}</span>
-              <p className="text-[10px] text-slate-400 font-medium">Interactive online exams</p>
-            </div>
-            <div className="h-10 w-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-              <Award className="h-5 w-5" />
-            </div>
-          </div>
-        </section>
+          {/* MAIN CONTAINER AREA */}
+          <main className="p-8 max-w-7xl w-full mx-auto flex-1 flex flex-col gap-6">
 
-        {/* MAIN CONTAINER AREA */}
-        <main className="p-8 max-w-7xl w-full mx-auto flex-1 flex flex-col gap-6">
-          
-          {/* Notification Messages */}
-          {successMsg && (
-            <div className="p-4 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-2xl text-xs font-semibold flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 flex-shrink-0" />
-              <span>{successMsg}</span>
-            </div>
-          )}
+            {/* Notification Messages */}
+            {successMsg && (
+              <div className="p-4 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-2xl text-xs font-semibold flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                <span>{successMsg}</span>
+              </div>
+            )}
 
-          {errorMsg && (
-            <div className="p-4 bg-rose-50 border border-rose-100 text-rose-600 rounded-2xl text-xs font-semibold flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 flex-shrink-0" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
+            {errorMsg && (
+              <div className="p-4 bg-rose-50 border border-rose-100 text-rose-600 rounded-2xl text-xs font-semibold flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
 
-          {/* ================= TAB CONTENT 1: OVERVIEW ================= */}
-          {activeTab === "overview" && (
-            <div className="space-y-6">
-              
-              {/* CHARTS CONTAINER GRID */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                
-                {/* 1. Monthly Registration Trend */}
-                <div className="md:col-span-7 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 flex flex-col justify-between">
-                  <div className="border-b border-slate-100 pb-3 mb-4">
-                    <h3 className="text-xs font-black uppercase tracking-widest text-slate-900">Monthly Registration Trend</h3>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Audit trail of new candidate registrations over the last 6 months</p>
-                  </div>
-                  
-                  {/* SVG Line Chart */}
-                  <div className="relative w-full h-48">
-                    <svg className="w-full h-full" viewBox={`0 0 ${trendSvgWidth} ${trendSvgHeight}`} preserveAspectRatio="none">
-                      <defs>
-                        <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#00bfff" stopOpacity="0.2" />
-                          <stop offset="100%" stopColor="#00bfff" stopOpacity="0.0" />
-                        </linearGradient>
-                      </defs>
-                      
-                      {/* Grid lines */}
-                      {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
-                        const y = trendPaddingY + ratio * trendChartHeight;
-                        const countLabel = Math.round(maxTrendVal - ratio * maxTrendVal);
-                        return (
-                          <g key={i} className="opacity-40">
-                            <line
-                              x1={trendPaddingX}
-                              y1={y}
-                              x2={trendPaddingX + trendChartWidth}
-                              y2={y}
-                              className="stroke-slate-200"
-                              strokeWidth="1"
-                              strokeDasharray="4 4"
-                            />
-                            <text
-                              x={trendPaddingX - 10}
-                              y={y + 3}
-                              className="text-[9px] fill-slate-400 font-bold text-right font-sans"
-                              textAnchor="end"
-                            >
-                              {countLabel}
-                            </text>
-                          </g>
-                        );
-                      })}
+            {/* ================= TAB CONTENT 1: OVERVIEW ================= */}
+            {activeTab === "overview" && (
+              <div className="space-y-6">
 
-                      {/* Area fill */}
-                      {trendAreaPath && (
-                        <path
-                          d={trendAreaPath}
-                          fill="url(#trendGradient)"
-                        />
-                      )}
+                {/* CHARTS CONTAINER GRID */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
 
-                      {/* Line path */}
-                      {trendLinePath && (
-                        <path
-                          d={trendLinePath}
-                          fill="none"
-                          stroke="#00bfff"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      )}
-
-                      {/* Data points & labels */}
-                      {trendPoints.map((p, i) => (
-                        <g key={i} className="group cursor-pointer">
-                          <circle
-                            cx={p.x}
-                            cy={p.y}
-                            r="4.5"
-                            className="fill-white stroke-deepskyblue transition-all duration-200 hover:r-6"
-                            strokeWidth="3.5"
-                          />
-                          <text
-                            x={p.x}
-                            y={p.y - 12}
-                            className="text-[10px] font-extrabold fill-deepskyblue-dark font-sans"
-                            textAnchor="middle"
-                          >
-                            {p.count}
-                          </text>
-                          <text
-                            x={p.x}
-                            y={trendPaddingY + trendChartHeight + 15}
-                            className="text-[9px] fill-slate-400 font-black uppercase font-sans"
-                            textAnchor="middle"
-                          >
-                            {p.label}
-                          </text>
-                        </g>
-                      ))}
-                    </svg>
-                  </div>
-                </div>
-
-                {/* 2. Program Distribution / Course Share */}
-                <div className="md:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 flex flex-col justify-between">
-                  <div className="border-b border-slate-100 pb-3 mb-4">
-                    <h3 className="text-xs font-black uppercase tracking-widest text-slate-900">Program Distribution</h3>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Enrolled student percentage share by course catalog</p>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row items-center gap-6 mt-2">
-                    {/* Donut Chart */}
-                    <div className="relative flex items-center justify-center shrink-0">
-                      <svg className="w-36 h-36 transform -rotate-90" viewBox="0 0 120 120">
-                        <circle
-                          cx="60"
-                          cy="60"
-                          r="50"
-                          className="fill-none stroke-slate-50"
-                          strokeWidth="12"
-                        />
-                        {(() => {
-                          let accumulatedPercent = 0;
-                          return courseDistribution.slices.slice(0, 6).map((slice, i) => {
-                            const percent = slice.val / courseDistribution.totalVal;
-                            const strokeDasharray = `${percent * donutCirc} ${donutCirc}`;
-                            const strokeDashoffset = -accumulatedPercent * donutCirc;
-                            accumulatedPercent += percent;
-                            const strokeColor = donutColors[i % donutColors.length];
-                            return (
-                              <circle
-                                key={i}
-                                cx="60"
-                                cy="60"
-                                r="50"
-                                className="fill-none transition-all duration-300"
-                                stroke={strokeColor}
-                                strokeWidth="12"
-                                strokeDasharray={strokeDasharray}
-                                strokeDashoffset={strokeDashoffset}
-                                strokeLinecap="butt"
-                              />
-                            );
-                          });
-                        })()}
-                      </svg>
-                      <div className="absolute flex flex-col items-center justify-center">
-                        <span className="text-xl font-black text-slate-900">{courseDistribution.totalVal}</span>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Students</span>
-                      </div>
+                  {/* 1. Monthly Registration Trend */}
+                  <div className="md:col-span-7 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 flex flex-col justify-between">
+                    <div className="border-b border-slate-100 pb-3 mb-4">
+                      <h3 className="text-xs font-black uppercase tracking-widest text-slate-900">Monthly Registration Trend</h3>
+                      <p className="text-[10px] text-slate-400 mt-0.5">Audit trail of new candidate registrations over the last 6 months</p>
                     </div>
 
-                    {/* Legend */}
-                    <div className="flex flex-col justify-center gap-2 flex-1 min-w-0">
-                      {courseDistribution.slices.slice(0, 5).map((slice, i) => {
-                        const percent = ((slice.val / courseDistribution.totalVal) * 100).toFixed(0);
-                        const strokeColor = donutColors[i % donutColors.length];
+                    {/* SVG Line Chart */}
+                    <div className="relative w-full h-48">
+                      <svg className="w-full h-full" viewBox={`0 0 ${trendSvgWidth} ${trendSvgHeight}`} preserveAspectRatio="none">
+                        <defs>
+                          <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#00bfff" stopOpacity="0.2" />
+                            <stop offset="100%" stopColor="#00bfff" stopOpacity="0.0" />
+                          </linearGradient>
+                        </defs>
+
+                        {/* Grid lines */}
+                        {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
+                          const y = trendPaddingY + ratio * trendChartHeight;
+                          const countLabel = Math.round(maxTrendVal - ratio * maxTrendVal);
+                          return (
+                            <g key={i} className="opacity-40">
+                              <line
+                                x1={trendPaddingX}
+                                y1={y}
+                                x2={trendPaddingX + trendChartWidth}
+                                y2={y}
+                                className="stroke-slate-200"
+                                strokeWidth="1"
+                                strokeDasharray="4 4"
+                              />
+                              <text
+                                x={trendPaddingX - 10}
+                                y={y + 3}
+                                className="text-[9px] fill-slate-400 font-bold text-right font-sans"
+                                textAnchor="end"
+                              >
+                                {countLabel}
+                              </text>
+                            </g>
+                          );
+                        })}
+
+                        {/* Area fill */}
+                        {trendAreaPath && (
+                          <path
+                            d={trendAreaPath}
+                            fill="url(#trendGradient)"
+                          />
+                        )}
+
+                        {/* Line path */}
+                        {trendLinePath && (
+                          <path
+                            d={trendLinePath}
+                            fill="none"
+                            stroke="#00bfff"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        )}
+
+                        {/* Data points & labels */}
+                        {trendPoints.map((p, i) => (
+                          <g key={i} className="group cursor-pointer">
+                            <circle
+                              cx={p.x}
+                              cy={p.y}
+                              r="4.5"
+                              className="fill-white stroke-deepskyblue transition-all duration-200 hover:r-6"
+                              strokeWidth="3.5"
+                            />
+                            <text
+                              x={p.x}
+                              y={p.y - 12}
+                              className="text-[10px] font-extrabold fill-deepskyblue-dark font-sans"
+                              textAnchor="middle"
+                            >
+                              {p.count}
+                            </text>
+                            <text
+                              x={p.x}
+                              y={trendPaddingY + trendChartHeight + 15}
+                              className="text-[9px] fill-slate-400 font-black uppercase font-sans"
+                              textAnchor="middle"
+                            >
+                              {p.label}
+                            </text>
+                          </g>
+                        ))}
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* 2. Program Distribution / Course Share */}
+                  <div className="md:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 flex flex-col justify-between">
+                    <div className="border-b border-slate-100 pb-3 mb-4">
+                      <h3 className="text-xs font-black uppercase tracking-widest text-slate-900">Program Distribution</h3>
+                      <p className="text-[10px] text-slate-400 mt-0.5">Enrolled student percentage share by course catalog</p>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-center gap-6 mt-2">
+                      {/* Donut Chart */}
+                      <div className="relative flex items-center justify-center shrink-0">
+                        <svg className="w-36 h-36 transform -rotate-90" viewBox="0 0 120 120">
+                          <circle
+                            cx="60"
+                            cy="60"
+                            r="50"
+                            className="fill-none stroke-slate-50"
+                            strokeWidth="12"
+                          />
+                          {(() => {
+                            let accumulatedPercent = 0;
+                            return courseDistribution.slices.slice(0, 6).map((slice, i) => {
+                              const percent = slice.val / courseDistribution.totalVal;
+                              const strokeDasharray = `${percent * donutCirc} ${donutCirc}`;
+                              const strokeDashoffset = -accumulatedPercent * donutCirc;
+                              accumulatedPercent += percent;
+                              const strokeColor = donutColors[i % donutColors.length];
+                              return (
+                                <circle
+                                  key={i}
+                                  cx="60"
+                                  cy="60"
+                                  r="50"
+                                  className="fill-none transition-all duration-300"
+                                  stroke={strokeColor}
+                                  strokeWidth="12"
+                                  strokeDasharray={strokeDasharray}
+                                  strokeDashoffset={strokeDashoffset}
+                                  strokeLinecap="butt"
+                                />
+                              );
+                            });
+                          })()}
+                        </svg>
+                        <div className="absolute flex flex-col items-center justify-center">
+                          <span className="text-xl font-black text-slate-900">{courseDistribution.totalVal}</span>
+                          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Students</span>
+                        </div>
+                      </div>
+
+                      {/* Legend */}
+                      <div className="flex flex-col justify-center gap-2 flex-1 min-w-0">
+                        {courseDistribution.slices.slice(0, 5).map((slice, i) => {
+                          const percent = ((slice.val / courseDistribution.totalVal) * 100).toFixed(0);
+                          const strokeColor = donutColors[i % donutColors.length];
+                          return (
+                            <div key={i} className="flex items-center gap-2 text-xs">
+                              <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: strokeColor }} />
+                              <span className="text-slate-600 font-medium truncate flex-1 leading-none">{slice.name}</span>
+                              <span className="text-slate-900 font-bold ml-auto">{percent}%</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* ACTIVE STUDENTS DATABASE */}
+                <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-5">
+                  <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900">Active Students Database</h3>
+                      <p className="text-[10px] text-slate-400 mt-0.5">Listing of portal verified registrations</p>
+                    </div>
+                  </div>
+
+                  {filteredStudents.length === 0 ? (
+                    <p className="text-xs text-slate-400 py-10 text-center font-medium">No candidate accounts found matching search.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] tracking-wider font-bold">
+                            <th className="pb-3 pl-2">Reg ID</th>
+                            <th className="pb-3">Candidate Name</th>
+                            <th className="pb-3">Enrolled Program</th>
+                            <th className="pb-3">Email ID</th>
+                            <th className="pb-3">Date Created</th>
+                            <th className="pb-3 text-right pr-2">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {filteredStudents.map((stud, idx) => (
+                            <tr key={idx} className="text-slate-700 hover:bg-slate-50/50 hover:text-slate-900 transition-colors">
+                              <td className="py-3.5 pl-2 font-bold text-deepskyblue-dark">{stud.registrationId}</td>
+                              <td className="py-3.5 font-semibold">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="h-7 w-7 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-deepskyblue-dark select-none animate-pulse">
+                                    {stud.name[0].toUpperCase()}
+                                  </div>
+                                  <span>{stud.name}</span>
+                                </div>
+                              </td>
+                              <td className="py-3.5 text-slate-500 font-medium">{stud.course}</td>
+                              <td className="py-3.5 text-slate-500 font-mono">{stud.email}</td>
+                              <td className="py-3.5 text-slate-400 font-medium">
+                                {new Date(stud.createdAt).toLocaleDateString()}
+                              </td>
+                              <td className="py-3.5 text-right pr-2">
+                                <button
+                                  onClick={() => handleViewStudentDetails(stud._id)}
+                                  className="px-3 py-1.5 rounded-xl bg-deepskyblue/10 text-deepskyblue-dark text-[10px] font-extrabold hover:bg-deepskyblue hover:text-white transition cursor-pointer"
+                                >
+                                  View Details
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            )}
+
+            {/* ================= TAB CONTENT 2: MANAGE COURSES ================= */}
+            {activeTab === "courses" && (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+                {/* Left Side: Create Form */}
+                <form onSubmit={handleCreateCourse} className="md:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-3">
+                    Create Course Program
+                  </h3>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Course Code</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. ADIT-2026"
+                      value={courseForm.code}
+                      onChange={e => setCourseForm(prev => ({ ...prev, code: e.target.value }))}
+                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Course Title</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Advanced Diploma in IT"
+                      value={courseForm.title}
+                      onChange={e => setCourseForm(prev => ({ ...prev, title: e.target.value }))}
+                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Program Duration</label>
+                    <select
+                      value={courseForm.duration}
+                      onChange={e => setCourseForm(prev => ({ ...prev, duration: e.target.value }))}
+                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                    >
+                      <option value="3 Months">3 Months</option>
+                      <option value="6 Months">6 Months</option>
+                      <option value="1 Year">1 Year</option>
+                      <option value="2 Years">2 Years</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Course Pricing</label>
+                      <select
+                        value={courseForm.isPaid ? "paid" : "free"}
+                        onChange={e => setCourseForm(prev => ({
+                          ...prev,
+                          isPaid: e.target.value === "paid",
+                          price: e.target.value === "paid" ? prev.price || 0 : 0
+                        }))}
+                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                      >
+                        <option value="free">Free</option>
+                        <option value="paid">Paid</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Price (INR)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        disabled={!courseForm.isPaid}
+                        placeholder="0"
+                        value={courseForm.price || ""}
+                        onChange={e => setCourseForm(prev => ({ ...prev, price: Math.max(0, parseInt(e.target.value) || 0) }))}
+                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all disabled:opacity-50 disabled:bg-slate-100"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Syllabus Overview</label>
+                    <textarea
+                      required
+                      rows={3}
+                      placeholder="Describe program syllabus description..."
+                      value={courseForm.description}
+                      onChange={e => setCourseForm(prev => ({ ...prev, description: e.target.value }))}
+                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all resize-none"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-xs shadow-md cursor-pointer"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Configure Course</span>
+                  </button>
+                </form>
+
+                {/* Right Side: Catalogue List */}
+                <div className="md:col-span-7 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-3">
+                    Course Catalogue
+                  </h3>
+
+                  {coursesList.length === 0 ? (
+                    <p className="text-xs text-slate-450 py-8 text-center font-medium">No database programs saved. (Displaying typical defaults).</p>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-3">
+                      {coursesList.map((course, idx) => {
+                        const coursePdfs = papersList.filter(p => p.course === course.title);
+                        const isUploadingThis = uploadingForCourse === course.title;
+
                         return (
-                          <div key={i} className="flex items-center gap-2 text-xs">
-                            <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: strokeColor }} />
-                            <span className="text-slate-600 font-medium truncate flex-1 leading-none">{slice.name}</span>
-                            <span className="text-slate-900 font-bold ml-auto">{percent}%</span>
+                          <div key={idx} className="p-5 rounded-2xl bg-slate-50 border border-slate-200/60 flex flex-col gap-4">
+                            {/* Main course info row */}
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                              <div className="space-y-1">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <span className="text-[9px] font-bold bg-deepskyblue/10 text-deepskyblue-dark px-2 py-0.5 rounded-full uppercase tracking-wider">{course.code}</span>
+                                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${course.isPaid
+                                      ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                                      : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                                    }`}>
+                                    {course.isPaid ? `Paid (₹${course.price})` : "Free"}
+                                  </span>
+                                </div>
+                                <h4 className="text-xs font-bold text-slate-800 mt-1">{course.title}</h4>
+                                <p className="text-[10px] text-slate-400 font-semibold">{course.duration} duration</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-xl h-fit">
+                                  <BookOpen className="h-3.5 w-3.5 text-deepskyblue" />
+                                  <span>{course.modules?.length || 0} Modules</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (isUploadingThis) {
+                                      setUploadingForCourse(null);
+                                    } else {
+                                      setUploadingForCourse(course.title);
+                                      setCoursePaperForm({ title: "", type: "book", fileUrl: "", status: "pending", score: "--" });
+                                    }
+                                  }}
+                                  className="px-2.5 py-1.5 bg-deepskyblue hover:bg-deepskyblue-dark text-white rounded-xl text-[10px] font-bold cursor-pointer transition"
+                                >
+                                  {isUploadingThis ? "Cancel" : "Add PDF"}
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Documents list */}
+                            <div className="border-t border-slate-200/60 pt-3 space-y-2">
+                              <span className="text-[9px] font-black text-slate-450 uppercase tracking-widest block">Course Study Materials ({coursePdfs.length})</span>
+                              {coursePdfs.length === 0 ? (
+                                <p className="text-[10px] text-slate-400 italic">No study materials uploaded for this course yet.</p>
+                              ) : (
+                                <div className="max-h-[120px] overflow-y-auto space-y-1.5 pr-1">
+                                  {coursePdfs.map((pdf, pIdx) => (
+                                    <div key={pIdx} className="flex justify-between items-center bg-white border border-slate-200 px-3 py-2 rounded-xl text-[10.5px]">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase shrink-0 ${pdf.type === "book" ? "bg-sky-50 text-sky-600" :
+                                            pdf.type === "note" ? "bg-emerald-50 text-emerald-600" : "bg-purple-50 text-purple-600"
+                                          }`}>
+                                          {pdf.type === "book" ? "Book" : pdf.type === "note" ? "Note" : "Paper"}
+                                        </span>
+                                        <span className="font-semibold text-slate-700 truncate">{pdf.title}</span>
+                                      </div>
+                                      <a
+                                        href={pdf.fileUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-[9.5px] font-bold text-deepskyblue-dark hover:underline hover:text-deepskyblue shrink-0"
+                                      >
+                                        View
+                                      </a>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Inline upload sub-form */}
+                            {isUploadingThis && (
+                              <form onSubmit={(e) => handleCreateCoursePaper(course.title, e)} className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
+                                <span className="text-[9.5px] font-extrabold text-deepskyblue-dark uppercase block">Upload New PDF to Course</span>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  <div className="space-y-1">
+                                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Document Title</label>
+                                    <input
+                                      type="text"
+                                      required
+                                      placeholder="e.g. DCA Lecture Notes Ch 2"
+                                      value={coursePaperForm.title}
+                                      onChange={e => setCoursePaperForm(prev => ({ ...prev, title: e.target.value }))}
+                                      className="block w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-[11px] focus:outline-none focus:border-deepskyblue focus:bg-white"
+                                    />
+                                  </div>
+
+                                  <div className="space-y-1">
+                                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Material Type</label>
+                                    <select
+                                      value={coursePaperForm.type}
+                                      onChange={e => setCoursePaperForm(prev => ({ ...prev, type: e.target.value }))}
+                                      className="block w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-[11px] focus:outline-none focus:border-deepskyblue"
+                                    >
+                                      <option value="book">Study Book / Syllabus Text</option>
+                                      <option value="note">Course Note / Handout</option>
+                                      <option value="exam_paper">Question Paper / Exam Paper</option>
+                                    </select>
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row gap-3 items-center pt-1">
+                                  {/* PDF File Picker */}
+                                  <div className="w-full relative flex-1">
+                                    <input
+                                      type="file"
+                                      required
+                                      accept=".pdf"
+                                      onChange={handleCoursePdfUpload}
+                                      className="absolute inset-0 opacity-0 cursor-pointer"
+                                    />
+                                    <button type="button" className="w-full py-1.5 border border-slate-300 border-dashed rounded-xl text-[10px] font-bold text-slate-500 hover:bg-slate-100 transition-all">
+                                      <Upload className="h-3.5 w-3.5 inline mr-1" />
+                                      <span>{uploadingCoursePdf ? "Uploading..." : coursePaperForm.fileUrl ? "PDF Loaded ✓" : "Choose PDF file"}</span>
+                                    </button>
+                                  </div>
+
+                                  <button
+                                    type="submit"
+                                    disabled={uploadingCoursePdf || !coursePaperForm.fileUrl}
+                                    className="w-full sm:w-auto py-1.5 px-4 bg-deepskyblue hover:bg-deepskyblue-dark text-white rounded-xl text-[10.5px] font-bold disabled:opacity-50 cursor-pointer transition shadow shadow-deepskyblue/10"
+                                  >
+                                    Save Document PDF
+                                  </button>
+                                </div>
+                              </form>
+                            )}
+
                           </div>
                         );
                       })}
                     </div>
-                  </div>
+                  )}
                 </div>
-
               </div>
+            )}
 
-              {/* ACTIVE STUDENTS DATABASE */}
-              <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-5">
-                <div className="flex justify-between items-center border-b border-slate-100 pb-4">
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900">Active Students Database</h3>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Listing of portal verified registrations</p>
-                  </div>
-                </div>
-
-                {filteredStudents.length === 0 ? (
-                  <p className="text-xs text-slate-400 py-10 text-center font-medium">No candidate accounts found matching search.</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs border-collapse">
-                      <thead>
-                        <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] tracking-wider font-bold">
-                          <th className="pb-3 pl-2">Reg ID</th>
-                          <th className="pb-3">Candidate Name</th>
-                          <th className="pb-3">Enrolled Program</th>
-                          <th className="pb-3">Email ID</th>
-                          <th className="pb-3">Date Created</th>
-                          <th className="pb-3 text-right pr-2">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {filteredStudents.map((stud, idx) => (
-                          <tr key={idx} className="text-slate-700 hover:bg-slate-50/50 hover:text-slate-900 transition-colors">
-                            <td className="py-3.5 pl-2 font-bold text-deepskyblue-dark">{stud.registrationId}</td>
-                            <td className="py-3.5 font-semibold">
-                              <div className="flex items-center gap-2.5">
-                                <div className="h-7 w-7 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-deepskyblue-dark select-none animate-pulse">
-                                  {stud.name[0].toUpperCase()}
-                                </div>
-                                <span>{stud.name}</span>
-                              </div>
-                            </td>
-                            <td className="py-3.5 text-slate-500 font-medium">{stud.course}</td>
-                            <td className="py-3.5 text-slate-500 font-mono">{stud.email}</td>
-                            <td className="py-3.5 text-slate-400 font-medium">
-                              {new Date(stud.createdAt).toLocaleDateString()}
-                            </td>
-                            <td className="py-3.5 text-right pr-2">
-                              <button
-                                onClick={() => handleViewStudentDetails(stud._id)}
-                                className="px-3 py-1.5 rounded-xl bg-deepskyblue/10 text-deepskyblue-dark text-[10px] font-extrabold hover:bg-deepskyblue hover:text-white transition cursor-pointer"
-                              >
-                                View Details
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-            </div>
-          )}
-
-          {/* ================= TAB CONTENT 2: MANAGE COURSES ================= */}
-          {activeTab === "courses" && (
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-              {/* Left Side: Create Form */}
-              <form onSubmit={handleCreateCourse} className="md:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-4">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-3">
-                  Create Course Program
+            {/* ================= TAB CONTENT 3: REGISTER STUDENTS ================= */}
+            {activeTab === "students" && (
+              <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-md shadow-slate-200/40">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-4 mb-6">
+                  Direct Candidate Enrollment
                 </h3>
-                
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Course Code</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. ADIT-2026"
-                    value={courseForm.code}
-                    onChange={e => setCourseForm(prev => ({ ...prev, code: e.target.value }))}
-                    className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
-                  />
-                </div>
 
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Course Title</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Advanced Diploma in IT"
-                    value={courseForm.title}
-                    onChange={e => setCourseForm(prev => ({ ...prev, title: e.target.value }))}
-                    className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
-                  />
-                </div>
+                <form onSubmit={handleRegisterStudent} className="space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
 
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Program Duration</label>
-                  <select
-                    value={courseForm.duration}
-                    onChange={e => setCourseForm(prev => ({ ...prev, duration: e.target.value }))}
-                    className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
-                  >
-                    <option value="3 Months">3 Months</option>
-                    <option value="6 Months">6 Months</option>
-                    <option value="1 Year">1 Year</option>
-                    <option value="2 Years">2 Years</option>
-                  </select>
-                </div>
+                    {/* Name */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Candidate Name</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Full Name"
+                        value={studentForm.name}
+                        onChange={e => setStudentForm(prev => ({ ...prev, name: e.target.value }))}
+                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                      />
+                    </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                    {/* DOB */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date of Birth</label>
+                      <input
+                        type="date"
+                        required
+                        value={studentForm.dob}
+                        onChange={e => setStudentForm(prev => ({ ...prev, dob: e.target.value }))}
+                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                      />
+                    </div>
+
+                    {/* Father Name */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Father&apos;s Name</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Father's Full Name"
+                        value={studentForm.fatherName}
+                        onChange={e => setStudentForm(prev => ({ ...prev, fatherName: e.target.value }))}
+                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                      />
+                    </div>
+
+                    {/* Mother Name */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mother&apos;s Name</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Mother's Full Name"
+                        value={studentForm.motherName}
+                        onChange={e => setStudentForm(prev => ({ ...prev, motherName: e.target.value }))}
+                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                      />
+                    </div>
+
+                    {/* Phone */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phone Number</label>
+                      <input
+                        type="tel"
+                        required
+                        placeholder="+91 XXXXX XXXXX"
+                        value={studentForm.phone}
+                        onChange={e => setStudentForm(prev => ({ ...prev, phone: e.target.value }))}
+                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                      />
+                    </div>
+
+                    {/* Email */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email Address</label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="candidate@example.com"
+                        value={studentForm.email}
+                        onChange={e => setStudentForm(prev => ({ ...prev, email: e.target.value }))}
+                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Course Pricing</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Complete Address</label>
+                    <textarea
+                      required
+                      rows={2}
+                      placeholder="Candidate house, block, state, and pincode details..."
+                      value={studentForm.address}
+                      onChange={e => setStudentForm(prev => ({ ...prev, address: e.target.value }))}
+                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all resize-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {/* Select Course */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Course Program</label>
+                      <select
+                        required
+                        value={studentForm.course}
+                        onChange={e => setStudentForm(prev => ({ ...prev, course: e.target.value }))}
+                        disabled={courseOptions.length === 0}
+                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all disabled:opacity-60"
+                      >
+                        <option value="" disabled>
+                          {courseOptions.length === 0 ? "No courses created yet. Go to Courses tab to add one." : "Select Enrolled Course"}
+                        </option>
+                        {courseOptions.map((co, idx) => (
+                          <option key={idx} value={co} className="bg-white">{co}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Assign Password */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Assign Portal Password</label>
+                      <input
+                        type="password"
+                        required
+                        placeholder="Minimum 6 characters"
+                        value={studentForm.password}
+                        onChange={e => setStudentForm(prev => ({ ...prev, password: e.target.value }))}
+                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* S3 Document Slots */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Attachment Documents (PDF / Image)</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {/* Admit Url */}
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between">
+                        <span className="text-[10px] font-black text-slate-550 block">Intermediate Admit Card</span>
+                        <div className="relative mt-3">
+                          <input
+                            type="file"
+                            accept=".pdf,.png,.jpg,.jpeg"
+                            onChange={e => handleFileUpload(e, "admitUrl")}
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                          />
+                          <button type="button" className="w-full flex items-center justify-center gap-1.5 py-2 border border-slate-350 border-dashed rounded-xl text-[10px] font-bold text-slate-500 hover:bg-slate-100 transition-colors">
+                            <Upload className="h-3.5 w-3.5" />
+                            <span>{uploadingAdmit ? "Uploading..." : studentForm.admitUrl ? "Ready" : "Browse file"}</span>
+                          </button>
+                        </div>
+                        {studentForm.admitUrl && <p className="text-[9px] text-emerald-600 mt-1 font-semibold truncate">Uploaded to S3</p>}
+                      </div>
+
+                      {/* Qualification Url */}
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between">
+                        <span className="text-[10px] font-black text-slate-550 block">Last Qualification</span>
+                        <div className="relative mt-3">
+                          <input
+                            type="file"
+                            accept=".pdf,.png,.jpg,.jpeg"
+                            onChange={e => handleFileUpload(e, "qualificationUrl")}
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                          />
+                          <button type="button" className="w-full flex items-center justify-center gap-1.5 py-2 border border-slate-350 border-dashed rounded-xl text-[10px] font-bold text-slate-500 hover:bg-slate-100 transition-colors">
+                            <Upload className="h-3.5 w-3.5" />
+                            <span>{uploadingQual ? "Uploading..." : studentForm.qualificationUrl ? "Ready" : "Browse file"}</span>
+                          </button>
+                        </div>
+                        {studentForm.qualificationUrl && <p className="text-[9px] text-emerald-600 mt-1 font-semibold truncate">Uploaded to S3</p>}
+                      </div>
+
+                      {/* Extra Url */}
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between">
+                        <span className="text-[10px] font-black text-slate-550 block">Extra Certificate (Optional)</span>
+                        <div className="relative mt-3">
+                          <input
+                            type="file"
+                            accept=".pdf,.png,.jpg,.jpeg"
+                            onChange={e => handleFileUpload(e, "extraQualificationUrl")}
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                          />
+                          <button type="button" className="w-full flex items-center justify-center gap-1.5 py-2 border border-slate-350 border-dashed rounded-xl text-[10px] font-bold text-slate-500 hover:bg-slate-100 transition-colors">
+                            <Upload className="h-3.5 w-3.5" />
+                            <span>{uploadingExtra ? "Uploading..." : studentForm.extraQualificationUrl ? "Ready" : "Browse file"}</span>
+                          </button>
+                        </div>
+                        {studentForm.extraQualificationUrl && <p className="text-[9px] text-emerald-600 mt-1 font-semibold truncate">Uploaded to S3</p>}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={uploadingAdmit || uploadingQual || uploadingExtra}
+                    className="w-full flex items-center justify-center gap-1.5 py-3 px-4 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-xs shadow-md cursor-pointer disabled:opacity-50"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Enrol Candidate Student</span>
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* ================= TAB CONTENT 4: MANAGE ATTENDANCE ================= */}
+            {activeTab === "attendance" && (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start animate-fade-in">
+                {/* Log Attendance Form */}
+                <form onSubmit={handleLogAttendance} className="md:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-3">
+                    Log Student Attendance
+                  </h3>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Candidate</label>
                     <select
-                      value={courseForm.isPaid ? "paid" : "free"}
-                      onChange={e => setCourseForm(prev => ({ 
-                        ...prev, 
-                        isPaid: e.target.value === "paid",
-                        price: e.target.value === "paid" ? prev.price || 0 : 0
-                      }))}
+                      required
+                      value={attendanceForm.candidateId}
+                      onChange={e => setAttendanceForm(prev => ({ ...prev, candidateId: e.target.value }))}
                       className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
                     >
-                      <option value="free">Free</option>
-                      <option value="paid">Paid</option>
+                      <option value="" disabled>Select Enrolled Student</option>
+                      {studentsList.map((stud, idx) => (
+                        <option key={idx} value={stud._id} className="bg-white">
+                          {stud.name} ({stud.registrationId})
+                        </option>
+                      ))}
                     </select>
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Price (INR)</label>
-                    <input
-                      type="number"
-                      min={0}
-                      disabled={!courseForm.isPaid}
-                      placeholder="0"
-                      value={courseForm.price || ""}
-                      onChange={e => setCourseForm(prev => ({ ...prev, price: Math.max(0, parseInt(e.target.value) || 0) }))}
-                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all disabled:opacity-50 disabled:bg-slate-100"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Syllabus Overview</label>
-                  <textarea
-                    required
-                    rows={3}
-                    placeholder="Describe program syllabus description..."
-                    value={courseForm.description}
-                    onChange={e => setCourseForm(prev => ({ ...prev, description: e.target.value }))}
-                    className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all resize-none"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-xs shadow-md cursor-pointer"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Configure Course</span>
-                </button>
-              </form>
-
-              {/* Right Side: Catalogue List */}
-              <div className="md:col-span-7 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-4">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-3">
-                  Course Catalogue
-                </h3>
-
-                {coursesList.length === 0 ? (
-                  <p className="text-xs text-slate-450 py-8 text-center font-medium">No database programs saved. (Displaying typical defaults).</p>
-                ) : (
-                  <div className="grid grid-cols-1 gap-3">
-                    {coursesList.map((course, idx) => {
-                      const coursePdfs = papersList.filter(p => p.course === course.title);
-                      const isUploadingThis = uploadingForCourse === course.title;
-
-                      return (
-                        <div key={idx} className="p-5 rounded-2xl bg-slate-50 border border-slate-200/60 flex flex-col gap-4">
-                          {/* Main course info row */}
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                            <div className="space-y-1">
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                <span className="text-[9px] font-bold bg-deepskyblue/10 text-deepskyblue-dark px-2 py-0.5 rounded-full uppercase tracking-wider">{course.code}</span>
-                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${
-                                  course.isPaid 
-                                    ? "bg-amber-500/10 text-amber-600 border-amber-500/20" 
-                                    : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                                }`}>
-                                  {course.isPaid ? `Paid (₹${course.price})` : "Free"}
-                                </span>
-                              </div>
-                              <h4 className="text-xs font-bold text-slate-800 mt-1">{course.title}</h4>
-                              <p className="text-[10px] text-slate-400 font-semibold">{course.duration} duration</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-xl h-fit">
-                                <BookOpen className="h-3.5 w-3.5 text-deepskyblue" />
-                                <span>{course.modules?.length || 0} Modules</span>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (isUploadingThis) {
-                                    setUploadingForCourse(null);
-                                  } else {
-                                    setUploadingForCourse(course.title);
-                                    setCoursePaperForm({ title: "", type: "book", fileUrl: "", status: "pending", score: "--" });
-                                  }
-                                }}
-                                className="px-2.5 py-1.5 bg-deepskyblue hover:bg-deepskyblue-dark text-white rounded-xl text-[10px] font-bold cursor-pointer transition"
-                              >
-                                {isUploadingThis ? "Cancel" : "Add PDF"}
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Documents list */}
-                          <div className="border-t border-slate-200/60 pt-3 space-y-2">
-                            <span className="text-[9px] font-black text-slate-450 uppercase tracking-widest block">Course Study Materials ({coursePdfs.length})</span>
-                            {coursePdfs.length === 0 ? (
-                              <p className="text-[10px] text-slate-400 italic">No study materials uploaded for this course yet.</p>
-                            ) : (
-                              <div className="max-h-[120px] overflow-y-auto space-y-1.5 pr-1">
-                                {coursePdfs.map((pdf, pIdx) => (
-                                  <div key={pIdx} className="flex justify-between items-center bg-white border border-slate-200 px-3 py-2 rounded-xl text-[10.5px]">
-                                    <div className="flex items-center gap-2 min-w-0">
-                                      <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase shrink-0 ${
-                                        pdf.type === "book" ? "bg-sky-50 text-sky-600" :
-                                        pdf.type === "note" ? "bg-emerald-50 text-emerald-600" : "bg-purple-50 text-purple-600"
-                                      }`}>
-                                        {pdf.type === "book" ? "Book" : pdf.type === "note" ? "Note" : "Paper"}
-                                      </span>
-                                      <span className="font-semibold text-slate-700 truncate">{pdf.title}</span>
-                                    </div>
-                                    <a
-                                      href={pdf.fileUrl}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="text-[9.5px] font-bold text-deepskyblue-dark hover:underline hover:text-deepskyblue shrink-0"
-                                    >
-                                      View
-                                    </a>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Inline upload sub-form */}
-                          {isUploadingThis && (
-                            <form onSubmit={(e) => handleCreateCoursePaper(course.title, e)} className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
-                              <span className="text-[9.5px] font-extrabold text-deepskyblue-dark uppercase block">Upload New PDF to Course</span>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div className="space-y-1">
-                                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Document Title</label>
-                                  <input
-                                    type="text"
-                                    required
-                                    placeholder="e.g. DCA Lecture Notes Ch 2"
-                                    value={coursePaperForm.title}
-                                    onChange={e => setCoursePaperForm(prev => ({ ...prev, title: e.target.value }))}
-                                    className="block w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-[11px] focus:outline-none focus:border-deepskyblue focus:bg-white"
-                                  />
-                                </div>
-
-                                <div className="space-y-1">
-                                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Material Type</label>
-                                  <select
-                                    value={coursePaperForm.type}
-                                    onChange={e => setCoursePaperForm(prev => ({ ...prev, type: e.target.value }))}
-                                    className="block w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-[11px] focus:outline-none focus:border-deepskyblue"
-                                  >
-                                    <option value="book">Study Book / Syllabus Text</option>
-                                    <option value="note">Course Note / Handout</option>
-                                    <option value="exam_paper">Question Paper / Exam Paper</option>
-                                  </select>
-                                </div>
-                              </div>
-
-                              <div className="flex flex-col sm:flex-row gap-3 items-center pt-1">
-                                {/* PDF File Picker */}
-                                <div className="w-full relative flex-1">
-                                  <input
-                                    type="file"
-                                    required
-                                    accept=".pdf"
-                                    onChange={handleCoursePdfUpload}
-                                    className="absolute inset-0 opacity-0 cursor-pointer"
-                                  />
-                                  <button type="button" className="w-full py-1.5 border border-slate-300 border-dashed rounded-xl text-[10px] font-bold text-slate-500 hover:bg-slate-100 transition-all">
-                                    <Upload className="h-3.5 w-3.5 inline mr-1" />
-                                    <span>{uploadingCoursePdf ? "Uploading..." : coursePaperForm.fileUrl ? "PDF Loaded ✓" : "Choose PDF file"}</span>
-                                  </button>
-                                </div>
-
-                                <button
-                                  type="submit"
-                                  disabled={uploadingCoursePdf || !coursePaperForm.fileUrl}
-                                  className="w-full sm:w-auto py-1.5 px-4 bg-deepskyblue hover:bg-deepskyblue-dark text-white rounded-xl text-[10.5px] font-bold disabled:opacity-50 cursor-pointer transition shadow shadow-deepskyblue/10"
-                                >
-                                  Save Document PDF
-                                </button>
-                              </div>
-                            </form>
-                          )}
-
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ================= TAB CONTENT 3: REGISTER STUDENTS ================= */}
-          {activeTab === "students" && (
-            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-md shadow-slate-200/40">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-4 mb-6">
-                Direct Candidate Enrollment
-              </h3>
-
-              <form onSubmit={handleRegisterStudent} className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                  
-                  {/* Name */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Candidate Name</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Full Name"
-                      value={studentForm.name}
-                      onChange={e => setStudentForm(prev => ({ ...prev, name: e.target.value }))}
-                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
-                    />
-                  </div>
-
-                  {/* DOB */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date of Birth</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lecture Date</label>
                     <input
                       type="date"
                       required
-                      value={studentForm.dob}
-                      onChange={e => setStudentForm(prev => ({ ...prev, dob: e.target.value }))}
+                      value={attendanceForm.date}
+                      onChange={e => setAttendanceForm(prev => ({ ...prev, date: e.target.value }))}
                       className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
                     />
                   </div>
 
-                  {/* Father Name */}
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Father&apos;s Name</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Attendance Status</label>
+                    <select
+                      value={attendanceForm.status}
+                      onChange={e => setAttendanceForm(prev => ({ ...prev, status: e.target.value }))}
+                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                    >
+                      <option value="present" className="bg-white">Present</option>
+                      <option value="absent" className="bg-white">Absent</option>
+                      <option value="leave" className="bg-white">Leave Approved</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                      <LinkIcon className="h-3 w-3 text-slate-450" />
+                      Google Meet Link (Optional)
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://meet.google.com/abc-defg-hij"
+                      value={attendanceForm.googleMeetLink}
+                      onChange={e => setAttendanceForm(prev => ({ ...prev, googleMeetLink: e.target.value }))}
+                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-xs shadow-md cursor-pointer"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Log Attendance</span>
+                  </button>
+                </form>
+
+                {/* Attendance Sheet Logs */}
+                <div className="md:col-span-7 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-3">
+                    Attendance History Sheet
+                  </h3>
+
+                  {attendanceList.length === 0 ? (
+                    <p className="text-xs text-slate-450 py-8 text-center font-medium">No presence logs logged in database.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead>
+                          <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] tracking-wider font-bold">
+                            <th className="pb-3 pl-1">Date</th>
+                            <th className="pb-3">Student</th>
+                            <th className="pb-3">Status</th>
+                            <th className="pb-3 text-right pr-1">Google Meet</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {attendanceList.map((att, idx) => (
+                            <tr key={idx} className="text-slate-700 hover:bg-slate-50/50 transition-colors">
+                              <td className="py-3 pl-1 font-semibold text-slate-500">{new Date(att.date).toLocaleDateString()}</td>
+                              <td className="py-3">
+                                <p className="font-bold text-slate-800">{att.candidateId?.name || "N/A"}</p>
+                                <span className="text-[9px] text-slate-400 font-mono">{att.candidateId?.registrationId}</span>
+                              </td>
+                              <td className="py-3">
+                                <span className={`px-2.5 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${att.status === "present" ? "bg-emerald-50 text-emerald-600" :
+                                    att.status === "absent" ? "bg-rose-55 text-rose-600" : "bg-amber-50 text-amber-600"
+                                  }`}>
+                                  {att.status}
+                                </span>
+                              </td>
+                              <td className="py-3 text-right pr-1">
+                                {att.googleMeetLink ? (
+                                  <a href={att.googleMeetLink} target="_blank" rel="noreferrer" className="text-deepskyblue-dark hover:text-deepskyblue hover:underline inline-flex items-center gap-0.5 font-bold text-[10px]">
+                                    <span>Join class</span>
+                                  </a>
+                                ) : <span className="text-slate-300 font-bold">—</span>}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ================= TAB CONTENT 5: QUESTION PAPERS ================= */}
+            {activeTab === "papers" && (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start animate-fade-in">
+                {/* Upload Paper Form */}
+                <form onSubmit={handleCreatePaper} className="md:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-3">
+                    Upload Study Material & Exams
+                  </h3>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Material / Paper Title</label>
                     <input
                       type="text"
                       required
-                      placeholder="Father's Full Name"
-                      value={studentForm.fatherName}
-                      onChange={e => setStudentForm(prev => ({ ...prev, fatherName: e.target.value }))}
+                      placeholder="e.g. ADIT Study Book or Exam Paper"
+                      value={paperForm.title}
+                      onChange={e => setPaperForm(prev => ({ ...prev, title: e.target.value }))}
                       className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
                     />
                   </div>
 
-                  {/* Mother Name */}
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mother&apos;s Name</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Mother's Full Name"
-                      value={studentForm.motherName}
-                      onChange={e => setStudentForm(prev => ({ ...prev, motherName: e.target.value }))}
-                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
-                    />
-                  </div>
-
-                  {/* Phone */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phone Number</label>
-                    <input
-                      type="tel"
-                      required
-                      placeholder="+91 XXXXX XXXXX"
-                      value={studentForm.phone}
-                      onChange={e => setStudentForm(prev => ({ ...prev, phone: e.target.value }))}
-                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
-                    />
-                  </div>
-
-                  {/* Email */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email Address</label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="candidate@example.com"
-                      value={studentForm.email}
-                      onChange={e => setStudentForm(prev => ({ ...prev, email: e.target.value }))}
-                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Complete Address</label>
-                  <textarea
-                    required
-                    rows={2}
-                    placeholder="Candidate house, block, state, and pincode details..."
-                    value={studentForm.address}
-                    onChange={e => setStudentForm(prev => ({ ...prev, address: e.target.value }))}
-                    className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all resize-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {/* Select Course */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Course Program</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Assign Course cohort</label>
                     <select
                       required
-                      value={studentForm.course}
-                      onChange={e => setStudentForm(prev => ({ ...prev, course: e.target.value }))}
+                      value={paperForm.course}
+                      onChange={e => setPaperForm(prev => ({ ...prev, course: e.target.value }))}
                       disabled={courseOptions.length === 0}
                       className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all disabled:opacity-60"
-                    >
-                      <option value="" disabled>
-                        {courseOptions.length === 0 ? "No courses created yet. Go to Courses tab to add one." : "Select Enrolled Course"}
-                      </option>
-                      {courseOptions.map((co, idx) => (
-                        <option key={idx} value={co} className="bg-white">{co}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Assign Password */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Assign Portal Password</label>
-                    <input
-                      type="password"
-                      required
-                      placeholder="Minimum 6 characters"
-                      value={studentForm.password}
-                      onChange={e => setStudentForm(prev => ({ ...prev, password: e.target.value }))}
-                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
-                    />
-                  </div>
-                </div>
-
-                {/* S3 Document Slots */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Attachment Documents (PDF / Image)</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {/* Admit Url */}
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between">
-                      <span className="text-[10px] font-black text-slate-550 block">Admit Card</span>
-                      <div className="relative mt-3">
-                        <input
-                          type="file"
-                          accept=".pdf,.png,.jpg,.jpeg"
-                          onChange={e => handleFileUpload(e, "admitUrl")}
-                          className="absolute inset-0 opacity-0 cursor-pointer"
-                        />
-                        <button type="button" className="w-full flex items-center justify-center gap-1.5 py-2 border border-slate-350 border-dashed rounded-xl text-[10px] font-bold text-slate-500 hover:bg-slate-100 transition-colors">
-                          <Upload className="h-3.5 w-3.5" />
-                          <span>{uploadingAdmit ? "Uploading..." : studentForm.admitUrl ? "Ready" : "Browse file"}</span>
-                        </button>
-                      </div>
-                      {studentForm.admitUrl && <p className="text-[9px] text-emerald-600 mt-1 font-semibold truncate">Uploaded to S3</p>}
-                    </div>
-
-                    {/* Qualification Url */}
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between">
-                      <span className="text-[10px] font-black text-slate-550 block">Last Qualification</span>
-                      <div className="relative mt-3">
-                        <input
-                          type="file"
-                          accept=".pdf,.png,.jpg,.jpeg"
-                          onChange={e => handleFileUpload(e, "qualificationUrl")}
-                          className="absolute inset-0 opacity-0 cursor-pointer"
-                        />
-                        <button type="button" className="w-full flex items-center justify-center gap-1.5 py-2 border border-slate-350 border-dashed rounded-xl text-[10px] font-bold text-slate-500 hover:bg-slate-100 transition-colors">
-                          <Upload className="h-3.5 w-3.5" />
-                          <span>{uploadingQual ? "Uploading..." : studentForm.qualificationUrl ? "Ready" : "Browse file"}</span>
-                        </button>
-                      </div>
-                      {studentForm.qualificationUrl && <p className="text-[9px] text-emerald-600 mt-1 font-semibold truncate">Uploaded to S3</p>}
-                    </div>
-
-                    {/* Extra Url */}
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between">
-                      <span className="text-[10px] font-black text-slate-550 block">Extra Certificate (Optional)</span>
-                      <div className="relative mt-3">
-                        <input
-                          type="file"
-                          accept=".pdf,.png,.jpg,.jpeg"
-                          onChange={e => handleFileUpload(e, "extraQualificationUrl")}
-                          className="absolute inset-0 opacity-0 cursor-pointer"
-                        />
-                        <button type="button" className="w-full flex items-center justify-center gap-1.5 py-2 border border-slate-350 border-dashed rounded-xl text-[10px] font-bold text-slate-500 hover:bg-slate-100 transition-colors">
-                          <Upload className="h-3.5 w-3.5" />
-                          <span>{uploadingExtra ? "Uploading..." : studentForm.extraQualificationUrl ? "Ready" : "Browse file"}</span>
-                        </button>
-                      </div>
-                      {studentForm.extraQualificationUrl && <p className="text-[9px] text-emerald-600 mt-1 font-semibold truncate">Uploaded to S3</p>}
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={uploadingAdmit || uploadingQual || uploadingExtra}
-                  className="w-full flex items-center justify-center gap-1.5 py-3 px-4 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-xs shadow-md cursor-pointer disabled:opacity-50"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Enrol Candidate Student</span>
-                </button>
-              </form>
-            </div>
-          )}
-
-          {/* ================= TAB CONTENT 4: MANAGE ATTENDANCE ================= */}
-          {activeTab === "attendance" && (
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start animate-fade-in">
-              {/* Log Attendance Form */}
-              <form onSubmit={handleLogAttendance} className="md:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-4">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-3">
-                  Log Student Attendance
-                </h3>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Candidate</label>
-                  <select
-                    required
-                    value={attendanceForm.candidateId}
-                    onChange={e => setAttendanceForm(prev => ({ ...prev, candidateId: e.target.value }))}
-                    className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
-                  >
-                    <option value="" disabled>Select Enrolled Student</option>
-                    {studentsList.map((stud, idx) => (
-                      <option key={idx} value={stud._id} className="bg-white">
-                        {stud.name} ({stud.registrationId})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lecture Date</label>
-                  <input
-                    type="date"
-                    required
-                    value={attendanceForm.date}
-                    onChange={e => setAttendanceForm(prev => ({ ...prev, date: e.target.value }))}
-                    className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Attendance Status</label>
-                  <select
-                    value={attendanceForm.status}
-                    onChange={e => setAttendanceForm(prev => ({ ...prev, status: e.target.value }))}
-                    className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
-                  >
-                    <option value="present" className="bg-white">Present</option>
-                    <option value="absent" className="bg-white">Absent</option>
-                    <option value="leave" className="bg-white">Leave Approved</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                    <LinkIcon className="h-3 w-3 text-slate-450" />
-                    Google Meet Link (Optional)
-                  </label>
-                  <input
-                    type="url"
-                    placeholder="https://meet.google.com/abc-defg-hij"
-                    value={attendanceForm.googleMeetLink}
-                    onChange={e => setAttendanceForm(prev => ({ ...prev, googleMeetLink: e.target.value }))}
-                    className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-xs shadow-md cursor-pointer"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Log Attendance</span>
-                </button>
-              </form>
-
-              {/* Attendance Sheet Logs */}
-              <div className="md:col-span-7 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-4">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-3">
-                  Attendance History Sheet
-                </h3>
-
-                {attendanceList.length === 0 ? (
-                  <p className="text-xs text-slate-450 py-8 text-center font-medium">No presence logs logged in database.</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
-                      <thead>
-                        <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] tracking-wider font-bold">
-                          <th className="pb-3 pl-1">Date</th>
-                          <th className="pb-3">Student</th>
-                          <th className="pb-3">Status</th>
-                          <th className="pb-3 text-right pr-1">Google Meet</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {attendanceList.map((att, idx) => (
-                          <tr key={idx} className="text-slate-700 hover:bg-slate-50/50 transition-colors">
-                            <td className="py-3 pl-1 font-semibold text-slate-500">{new Date(att.date).toLocaleDateString()}</td>
-                            <td className="py-3">
-                              <p className="font-bold text-slate-800">{att.candidateId?.name || "N/A"}</p>
-                              <span className="text-[9px] text-slate-400 font-mono">{att.candidateId?.registrationId}</span>
-                            </td>
-                            <td className="py-3">
-                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${
-                                att.status === "present" ? "bg-emerald-50 text-emerald-600" :
-                                att.status === "absent" ? "bg-rose-55 text-rose-600" : "bg-amber-50 text-amber-600"
-                              }`}>
-                                {att.status}
-                              </span>
-                            </td>
-                            <td className="py-3 text-right pr-1">
-                              {att.googleMeetLink ? (
-                                <a href={att.googleMeetLink} target="_blank" rel="noreferrer" className="text-deepskyblue-dark hover:text-deepskyblue hover:underline inline-flex items-center gap-0.5 font-bold text-[10px]">
-                                  <span>Join class</span>
-                                </a>
-                              ) : <span className="text-slate-300 font-bold">—</span>}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ================= TAB CONTENT 5: QUESTION PAPERS ================= */}
-          {activeTab === "papers" && (
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start animate-fade-in">
-              {/* Upload Paper Form */}
-              <form onSubmit={handleCreatePaper} className="md:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-4">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-3">
-                  Upload Study Material & Exams
-                </h3>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Material / Paper Title</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. ADIT Study Book or Exam Paper"
-                    value={paperForm.title}
-                    onChange={e => setPaperForm(prev => ({ ...prev, title: e.target.value }))}
-                    className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Assign Course cohort</label>
-                  <select
-                    required
-                    value={paperForm.course}
-                    onChange={e => setPaperForm(prev => ({ ...prev, course: e.target.value }))}
-                    disabled={courseOptions.length === 0}
-                    className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all disabled:opacity-60"
-                  >
-                    <option value="" disabled>
-                      {courseOptions.length === 0 ? "No courses created yet. Go to Courses tab to add one." : "Select Target Course"}
-                    </option>
-                    {courseOptions.map((co, idx) => (
-                      <option key={idx} value={co} className="bg-white">{co}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Material Type</label>
-                  <select
-                    value={paperForm.type || "exam_paper"}
-                    onChange={e => setPaperForm(prev => ({ ...prev, type: e.target.value }))}
-                    className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
-                  >
-                    <option value="exam_paper" className="bg-white">Question Paper / Exam Paper</option>
-                    <option value="book" className="bg-white">Study Book / Syllabus Text</option>
-                    <option value="note" className="bg-white">Course Note / Handout</option>
-                  </select>
-                </div>
-
-                {/* S3 File Upload */}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Attach Document PDF File</label>
-                  <div className="relative">
-                    <input
-                      type="file"
-                      accept=".pdf,.png,.jpg,.jpeg,.zip"
-                      onChange={e => handleFileUpload(e, "paperUrl")}
-                      className="absolute inset-0 opacity-0 cursor-pointer"
-                    />
-                    <button type="button" className="w-full flex items-center justify-center gap-1.5 py-3 border border-slate-300 border-dashed rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 transition-all">
-                      <Upload className="h-4 w-4" />
-                      <span>{uploadingPaper ? "Uploading to S3..." : paperForm.fileUrl ? "File loaded" : "Browse PDF file"}</span>
-                    </button>
-                  </div>
-                  {paperForm.fileUrl && <p className="text-[9px] text-emerald-600 mt-1 font-semibold truncate">Uploaded to S3</p>}
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Paper Status</label>
-                    <select
-                      value={paperForm.status}
-                      onChange={e => setPaperForm(prev => ({ ...prev, status: e.target.value as any }))}
-                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
-                    >
-                      <option value="pending" className="bg-white">Pending</option>
-                      <option value="solved" className="bg-white">Solved</option>
-                      <option value="locked" className="bg-white">Locked</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Default Score</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. -- or 85/100"
-                      value={paperForm.score}
-                      onChange={e => setPaperForm(prev => ({ ...prev, score: e.target.value }))}
-                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={uploadingPaper || !paperForm.fileUrl}
-                  className="w-full flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-xs shadow-md cursor-pointer disabled:opacity-50"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Upload Study Material</span>
-                </button>
-              </form>
-
-              {/* List of uploaded papers */}
-              <div className="md:col-span-7 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-4">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-3">
-                  Uploaded Exam Papers History
-                </h3>
-
-                {papersList.length === 0 ? (
-                  <p className="text-xs text-slate-450 py-8 text-center font-medium">No static syllabus papers uploaded yet.</p>
-                ) : (
-                  <div className="grid grid-cols-1 gap-3">
-                    {papersList.map((paper, idx) => (
-                      <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200/60 flex justify-between items-center">
-                        <div>
-                          <div className="flex gap-2 items-center flex-wrap">
-                            <span className="text-[9px] font-bold bg-deepskyblue/10 text-deepskyblue-dark px-2 py-0.5 rounded-full uppercase tracking-wider">{paper.course}</span>
-                            <span className="text-[9px] font-bold bg-amber-500/10 text-amber-600 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                              {paper.type === "book" ? "Study Book" : paper.type === "note" ? "Class Note" : "Exam Paper"}
-                            </span>
-                          </div>
-                          <h4 className="text-xs font-bold text-slate-800 mt-1.5">{paper.title}</h4>
-                          <a href={paper.fileUrl} target="_blank" rel="noreferrer" className="text-[10px] text-deepskyblue-dark hover:text-deepskyblue hover:underline flex items-center gap-0.5 mt-1 font-bold">
-                            <span>Open document file</span>
-                          </a>
-                        </div>
-
-                        <div className="text-right flex flex-col items-end gap-2">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${
-                            paper.status === "solved" ? "bg-emerald-50 text-emerald-600" :
-                            paper.status === "pending" ? "bg-deepskyblue/10 text-deepskyblue-dark" : "bg-slate-200 text-slate-500"
-                          }`}>
-                            {paper.status}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-bold">Score: {paper.score}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ================= TAB CONTENT 6: CREATE QUIZ ================= */}
-          {activeTab === "quizzes" && (
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start animate-fade-in">
-              {/* Left Column: Create Quiz Form */}
-              <form onSubmit={handleCreateQuiz} className="md:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-6">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-3">
-                  Interactive Exam Builder
-                </h3>
-
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Exam Title</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. PHP Syntax and Basics Final Exam"
-                      value={quizForm.title}
-                      onChange={e => setQuizForm(prev => ({ ...prev, title: e.target.value }))}
-                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Target Program</label>
-                    <select
-                      required
-                      value={quizForm.course}
-                      onChange={e => {
-                        const nextCourse = e.target.value;
-                        setQuizForm(prev => ({ ...prev, course: nextCourse, assignedStudents: [] }));
-                      }}
-                      disabled={courseOptions.length === 0}
-                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white disabled:opacity-60"
                     >
                       <option value="" disabled>
                         {courseOptions.length === 0 ? "No courses created yet. Go to Courses tab to add one." : "Select Target Course"}
@@ -2838,427 +2683,577 @@ export default function AdminDashboardPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Start Date & Time</label>
-                    <input
-                      type="datetime-local"
-                      required
-                      value={quizForm.scheduledAt}
-                      onChange={e => setQuizForm(prev => ({ ...prev, scheduledAt: e.target.value }))}
-                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white"
-                    />
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Material Type</label>
+                    <select
+                      value={paperForm.type || "exam_paper"}
+                      onChange={e => setPaperForm(prev => ({ ...prev, type: e.target.value }))}
+                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                    >
+                      <option value="exam_paper" className="bg-white">Question Paper / Exam Paper</option>
+                      <option value="book" className="bg-white">Study Book / Syllabus Text</option>
+                      <option value="note" className="bg-white">Course Note / Handout</option>
+                    </select>
+                  </div>
+
+                  {/* S3 File Upload */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Attach Document PDF File</label>
+                    <div className="relative">
+                      <input
+                        type="file"
+                        accept=".pdf,.png,.jpg,.jpeg,.zip"
+                        onChange={e => handleFileUpload(e, "paperUrl")}
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                      />
+                      <button type="button" className="w-full flex items-center justify-center gap-1.5 py-3 border border-slate-300 border-dashed rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 transition-all">
+                        <Upload className="h-4 w-4" />
+                        <span>{uploadingPaper ? "Uploading to S3..." : paperForm.fileUrl ? "File loaded" : "Browse PDF file"}</span>
+                      </button>
+                    </div>
+                    {paperForm.fileUrl && <p className="text-[9px] text-emerald-600 mt-1 font-semibold truncate">Uploaded to S3</p>}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Duration (Minutes)</label>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Paper Status</label>
+                      <select
+                        value={paperForm.status}
+                        onChange={e => setPaperForm(prev => ({ ...prev, status: e.target.value as any }))}
+                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                      >
+                        <option value="pending" className="bg-white">Pending</option>
+                        <option value="solved" className="bg-white">Solved</option>
+                        <option value="locked" className="bg-white">Locked</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Default Score</label>
                       <input
-                        type="number"
+                        type="text"
+                        placeholder="e.g. -- or 85/100"
+                        value={paperForm.score}
+                        onChange={e => setPaperForm(prev => ({ ...prev, score: e.target.value }))}
+                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={uploadingPaper || !paperForm.fileUrl}
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-xs shadow-md cursor-pointer disabled:opacity-50"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Upload Study Material</span>
+                  </button>
+                </form>
+
+                {/* List of uploaded papers */}
+                <div className="md:col-span-7 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-3">
+                    Uploaded Exam Papers History
+                  </h3>
+
+                  {papersList.length === 0 ? (
+                    <p className="text-xs text-slate-450 py-8 text-center font-medium">No static syllabus papers uploaded yet.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-3">
+                      {papersList.map((paper, idx) => (
+                        <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200/60 flex justify-between items-center">
+                          <div>
+                            <div className="flex gap-2 items-center flex-wrap">
+                              <span className="text-[9px] font-bold bg-deepskyblue/10 text-deepskyblue-dark px-2 py-0.5 rounded-full uppercase tracking-wider">{paper.course}</span>
+                              <span className="text-[9px] font-bold bg-amber-500/10 text-amber-600 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                {paper.type === "book" ? "Study Book" : paper.type === "note" ? "Class Note" : "Exam Paper"}
+                              </span>
+                            </div>
+                            <h4 className="text-xs font-bold text-slate-800 mt-1.5">{paper.title}</h4>
+                            <a href={paper.fileUrl} target="_blank" rel="noreferrer" className="text-[10px] text-deepskyblue-dark hover:text-deepskyblue hover:underline flex items-center gap-0.5 mt-1 font-bold">
+                              <span>Open document file</span>
+                            </a>
+                          </div>
+
+                          <div className="text-right flex flex-col items-end gap-2">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${paper.status === "solved" ? "bg-emerald-50 text-emerald-600" :
+                                paper.status === "pending" ? "bg-deepskyblue/10 text-deepskyblue-dark" : "bg-slate-200 text-slate-500"
+                              }`}>
+                              {paper.status}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-bold">Score: {paper.score}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ================= TAB CONTENT 6: CREATE QUIZ ================= */}
+            {activeTab === "quizzes" && (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start animate-fade-in">
+                {/* Left Column: Create Quiz Form */}
+                <form onSubmit={handleCreateQuiz} className="md:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-6">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-3">
+                    Interactive Exam Builder
+                  </h3>
+
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Exam Title</label>
+                      <input
+                        type="text"
                         required
-                        min={1}
-                        value={quizForm.duration}
-                        onChange={e => setQuizForm(prev => ({ ...prev, duration: parseInt(e.target.value) || 30 }))}
-                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white"
+                        placeholder="e.g. PHP Syntax and Basics Final Exam"
+                        value={quizForm.title}
+                        onChange={e => setQuizForm(prev => ({ ...prev, title: e.target.value }))}
+                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Exam Password</label>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Target Program</label>
+                      <select
+                        required
+                        value={quizForm.course}
+                        onChange={e => {
+                          const nextCourse = e.target.value;
+                          setQuizForm(prev => ({ ...prev, course: nextCourse, assignedStudents: [] }));
+                        }}
+                        disabled={courseOptions.length === 0}
+                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white disabled:opacity-60"
+                      >
+                        <option value="" disabled>
+                          {courseOptions.length === 0 ? "No courses created yet. Go to Courses tab to add one." : "Select Target Course"}
+                        </option>
+                        {courseOptions.map((co, idx) => (
+                          <option key={idx} value={co} className="bg-white">{co}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Start Date & Time</label>
                       <input
-                        type="text"
-                        placeholder="Optional room key"
-                        value={quizForm.examPassword}
-                        onChange={e => setQuizForm(prev => ({ ...prev, examPassword: e.target.value }))}
+                        type="datetime-local"
+                        required
+                        value={quizForm.scheduledAt}
+                        onChange={e => setQuizForm(prev => ({ ...prev, scheduledAt: e.target.value }))}
                         className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white"
                       />
                     </div>
-                  </div>
 
-                  {quizForm.course && (
-                    <div className="space-y-2 border-t border-slate-100 pt-3">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                          Assign Candidates ({quizForm.assignedStudents.length} selected)
-                        </label>
-                        <div className="relative w-full sm:w-48">
-                          <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center text-slate-400 pointer-events-none">
-                            <Search className="h-3 w-3" />
-                          </span>
-                          <input
-                            type="text"
-                            placeholder="Filter candidates..."
-                            value={assignSearchQuery}
-                            onChange={e => setAssignSearchQuery(e.target.value)}
-                            className="block w-full pl-7 pr-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-[10px] focus:outline-none focus:border-deepskyblue"
-                          />
-                        </div>
-                      </div>
-
-                      {studentsList.filter(s => s.course === quizForm.course).length === 0 ? (
-                        <p className="text-[10px] text-amber-600 font-bold italic">No candidates enrolled in this course cohort yet.</p>
-                      ) : (
-                        <div className="max-h-[140px] overflow-y-auto border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
-                          {(() => {
-                            const filtered = studentsList
-                              .filter(s => s.course === quizForm.course)
-                              .filter(student => {
-                                if (!assignSearchQuery) return true;
-                                const query = assignSearchQuery.toLowerCase();
-                                return (
-                                  student.name.toLowerCase().includes(query) ||
-                                  student.registrationId.toLowerCase().includes(query)
-                                );
-                              });
-
-                            if (filtered.length === 0) {
-                              return <p className="text-[10px] text-slate-400 italic text-center py-2">No matching candidates found.</p>;
-                            }
-
-                            return filtered.map((student, sIdx) => {
-                              const isChecked = quizForm.assignedStudents.includes(student._id);
-                              return (
-                                <label key={sIdx} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer hover:text-slate-900">
-                                  <input
-                                    type="checkbox"
-                                    checked={isChecked}
-                                    onChange={() => {
-                                      const updated = isChecked
-                                        ? quizForm.assignedStudents.filter(id => id !== student._id)
-                                        : [...quizForm.assignedStudents, student._id];
-                                      setQuizForm(prev => ({ ...prev, assignedStudents: updated }));
-                                    }}
-                                    className="accent-deepskyblue rounded border-slate-350 cursor-pointer h-3.5 w-3.5"
-                                  />
-                                  <span className="truncate">{student.name} ({student.registrationId})</span>
-                                </label>
-                              );
-                            });
-                          })()}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Questions Array */}
-                <div className="space-y-6 pt-4">
-                  <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900">
-                      Questions List ({quizForm.questions.length})
-                    </h3>
-                    
-                    <button
-                      type="button"
-                      onClick={addQuizQuestion}
-                      className="flex items-center gap-1.5 py-1.5 px-3.5 rounded-xl bg-deepskyblue hover:bg-deepskyblue-dark text-[10px] font-bold text-white shadow cursor-pointer"
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span>Add Question</span>
-                    </button>
-                  </div>
-
-                  {quizForm.questions.map((question, qIdx) => (
-                    <div key={qIdx} className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-4 relative">
-                      
-                      {quizForm.questions.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeQuizQuestion(qIdx)}
-                          className="absolute top-4 right-4 text-slate-400 hover:text-rose-500 p-1.5 transition-colors cursor-pointer"
-                        >
-                          <Trash className="h-4 w-4" />
-                        </button>
-                      )}
-
-                      <span className="text-[10px] uppercase font-black text-deepskyblue-dark">Question #{qIdx + 1}</span>
-
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Question Prompt Text</label>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Duration (Minutes)</label>
                         <input
-                          type="text"
+                          type="number"
                           required
-                          placeholder="e.g. Which HTML tag is used for injecting external stylesheets?"
-                          value={question.questionText}
-                          onChange={e => handleQuizQuestionChange(qIdx, e.target.value)}
-                          className="block w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue"
+                          min={1}
+                          value={quizForm.duration}
+                          onChange={e => setQuizForm(prev => ({ ...prev, duration: parseInt(e.target.value) || 30 }))}
+                          className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white"
                         />
                       </div>
 
-                      {/* Options */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {question.options.map((opt, optIdx) => (
-                          <div key={optIdx} className="space-y-1">
-                            <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Option {optIdx + 1}</label>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Exam Password</label>
+                        <input
+                          type="text"
+                          placeholder="Optional room key"
+                          value={quizForm.examPassword}
+                          onChange={e => setQuizForm(prev => ({ ...prev, examPassword: e.target.value }))}
+                          className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white"
+                        />
+                      </div>
+                    </div>
+
+                    {quizForm.course && (
+                      <div className="space-y-2 border-t border-slate-100 pt-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                            Assign Candidates ({quizForm.assignedStudents.length} selected)
+                          </label>
+                          <div className="relative w-full sm:w-48">
+                            <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center text-slate-400 pointer-events-none">
+                              <Search className="h-3 w-3" />
+                            </span>
                             <input
                               type="text"
+                              placeholder="Filter candidates..."
+                              value={assignSearchQuery}
+                              onChange={e => setAssignSearchQuery(e.target.value)}
+                              className="block w-full pl-7 pr-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-[10px] focus:outline-none focus:border-deepskyblue"
+                            />
+                          </div>
+                        </div>
+
+                        {studentsList.filter(s => s.course === quizForm.course).length === 0 ? (
+                          <p className="text-[10px] text-amber-600 font-bold italic">No candidates enrolled in this course cohort yet.</p>
+                        ) : (
+                          <div className="max-h-[140px] overflow-y-auto border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
+                            {(() => {
+                              const filtered = studentsList
+                                .filter(s => s.course === quizForm.course)
+                                .filter(student => {
+                                  if (!assignSearchQuery) return true;
+                                  const query = assignSearchQuery.toLowerCase();
+                                  return (
+                                    student.name.toLowerCase().includes(query) ||
+                                    student.registrationId.toLowerCase().includes(query)
+                                  );
+                                });
+
+                              if (filtered.length === 0) {
+                                return <p className="text-[10px] text-slate-400 italic text-center py-2">No matching candidates found.</p>;
+                              }
+
+                              return filtered.map((student, sIdx) => {
+                                const isChecked = quizForm.assignedStudents.includes(student._id);
+                                return (
+                                  <label key={sIdx} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer hover:text-slate-900">
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={() => {
+                                        const updated = isChecked
+                                          ? quizForm.assignedStudents.filter(id => id !== student._id)
+                                          : [...quizForm.assignedStudents, student._id];
+                                        setQuizForm(prev => ({ ...prev, assignedStudents: updated }));
+                                      }}
+                                      className="accent-deepskyblue rounded border-slate-350 cursor-pointer h-3.5 w-3.5"
+                                    />
+                                    <span className="truncate">{student.name} ({student.registrationId})</span>
+                                  </label>
+                                );
+                              });
+                            })()}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Questions Array */}
+                  <div className="space-y-6 pt-4">
+                    <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900">
+                        Questions List ({quizForm.questions.length})
+                      </h3>
+
+                      <button
+                        type="button"
+                        onClick={addQuizQuestion}
+                        className="flex items-center gap-1.5 py-1.5 px-3.5 rounded-xl bg-deepskyblue hover:bg-deepskyblue-dark text-[10px] font-bold text-white shadow cursor-pointer"
+                      >
+                        <Plus className="h-4 w-4" />
+                        <span>Add Question</span>
+                      </button>
+                    </div>
+
+                    {quizForm.questions.map((question, qIdx) => (
+                      <div key={qIdx} className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-4 relative">
+
+                        {quizForm.questions.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeQuizQuestion(qIdx)}
+                            className="absolute top-4 right-4 text-slate-400 hover:text-rose-500 p-1.5 transition-colors cursor-pointer"
+                          >
+                            <Trash className="h-4 w-4" />
+                          </button>
+                        )}
+
+                        <span className="text-[10px] uppercase font-black text-deepskyblue-dark">Question #{qIdx + 1}</span>
+
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Question Prompt Text</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. Which HTML tag is used for injecting external stylesheets?"
+                            value={question.questionText}
+                            onChange={e => handleQuizQuestionChange(qIdx, e.target.value)}
+                            className="block w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue"
+                          />
+                        </div>
+
+                        {/* Options */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {question.options.map((opt, optIdx) => (
+                            <div key={optIdx} className="space-y-1">
+                              <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Option {optIdx + 1}</label>
+                              <input
+                                type="text"
+                                required
+                                placeholder={`Option ${optIdx + 1} choice`}
+                                value={opt}
+                                onChange={e => handleQuizOptionChange(qIdx, optIdx, e.target.value)}
+                                className="block w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-750 text-xs focus:outline-none focus:border-deepskyblue"
+                              />
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {/* Correct answer Selection */}
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Correct Choice Index</label>
+                            <select
+                              value={question.correctAnswerIndex}
+                              onChange={e => handleQuizCorrectIndexChange(qIdx, parseInt(e.target.value))}
+                              className="block w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-750 text-xs focus:outline-none focus:border-deepskyblue"
+                            >
+                              <option value={0}>Option 1</option>
+                              <option value={1}>Option 2</option>
+                              <option value={2}>Option 3</option>
+                              <option value={3}>Option 4</option>
+                            </select>
+                          </div>
+
+                          {/* Question Marks Selection */}
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Question Marks</label>
+                            <input
+                              type="number"
                               required
-                              placeholder={`Option ${optIdx + 1} choice`}
-                              value={opt}
-                              onChange={e => handleQuizOptionChange(qIdx, optIdx, e.target.value)}
+                              min={1}
+                              value={question.marks || 1}
+                              onChange={e => handleQuizMarksChange(qIdx, parseInt(e.target.value) || 1)}
                               className="block w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-750 text-xs focus:outline-none focus:border-deepskyblue"
                             />
                           </div>
-                        ))}
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {/* Correct answer Selection */}
-                        <div className="space-y-1">
-                          <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Correct Choice Index</label>
-                          <select
-                            value={question.correctAnswerIndex}
-                            onChange={e => handleQuizCorrectIndexChange(qIdx, parseInt(e.target.value))}
-                            className="block w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-750 text-xs focus:outline-none focus:border-deepskyblue"
-                          >
-                            <option value={0}>Option 1</option>
-                            <option value={1}>Option 2</option>
-                            <option value={2}>Option 3</option>
-                            <option value={3}>Option 4</option>
-                          </select>
                         </div>
 
-                        {/* Question Marks Selection */}
-                        <div className="space-y-1">
-                          <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Question Marks</label>
-                          <input
-                            type="number"
-                            required
-                            min={1}
-                            value={question.marks || 1}
-                            onChange={e => handleQuizMarksChange(qIdx, parseInt(e.target.value) || 1)}
-                            className="block w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-750 text-xs focus:outline-none focus:border-deepskyblue"
-                          />
-                        </div>
                       </div>
+                    ))}
+                  </div>
 
+                  <button
+                    type="submit"
+                    className="w-full flex items-center justify-center gap-1.5 py-3 px-4 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-sm shadow-md cursor-pointer"
+                  >
+                    <Award className="h-4 w-4" />
+                    <span>Build and Assign Exam</span>
+                  </button>
+                </form>
+
+                {/* Right Column: Exams List */}
+                <div className="md:col-span-7 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-3">
+                    Created Exams Directory
+                  </h3>
+                  {quizzesList.length === 0 ? (
+                    <p className="text-xs text-slate-450 py-8 text-center font-medium">No exams created in database yet.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-3">
+                      {quizzesList.map((quiz, idx) => {
+                        const totalQuizMarks = quiz.questions.reduce((acc: number, q: any) => acc + (q.marks || 1), 0);
+                        return (
+                          <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200/60 flex justify-between items-center">
+                            <div className="space-y-1">
+                              <span className="text-[9px] font-bold bg-deepskyblue/10 text-deepskyblue-dark px-2 py-0.5 rounded-full uppercase tracking-wider">{quiz.course}</span>
+                              <h4 className="text-xs font-bold text-slate-800 mt-1">{quiz.title}</h4>
+                              <p className="text-[9px] text-slate-400 font-bold mt-1">
+                                Scheduled: {quiz.scheduledAt ? new Date(quiz.scheduledAt).toLocaleString() : "Now"}
+                                {quiz.duration && ` | Duration: ${quiz.duration} Mins`}
+                                {quiz.examPassword && ` | Passkey: ${quiz.examPassword}`}
+                              </p>
+                            </div>
+                            <div className="text-right flex flex-col items-end gap-1.5">
+                              <span className="text-[10px] font-bold text-slate-400 bg-white border border-slate-200 px-2 py-1 rounded-lg">
+                                {quiz.questions.length} Questions
+                              </span>
+                              <span className="text-[10px] font-extrabold text-deepskyblue-dark">
+                                Total Marks: {totalQuizMarks}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ================= TAB CONTENT 7: EXAM RESULTS ================= */}
+            {activeTab === "results" && (
+              <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-5">
+                <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Exam Results Registry</h3>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Master ledger of completed student examinations</p>
+                  </div>
                 </div>
 
-                <button
-                  type="submit"
-                  className="w-full flex items-center justify-center gap-1.5 py-3 px-4 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-sm shadow-md cursor-pointer"
-                >
-                  <Award className="h-4 w-4" />
-                  <span>Build and Assign Exam</span>
-                </button>
-              </form>
-
-              {/* Right Column: Exams List */}
-              <div className="md:col-span-7 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-4">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-3">
-                  Created Exams Directory
-                </h3>
-                {quizzesList.length === 0 ? (
-                  <p className="text-xs text-slate-450 py-8 text-center font-medium">No exams created in database yet.</p>
+                {resultsList.length === 0 ? (
+                  <p className="text-xs text-slate-400 py-10 text-center font-medium">No exam results recorded in the database yet.</p>
                 ) : (
-                  <div className="grid grid-cols-1 gap-3">
-                    {quizzesList.map((quiz, idx) => {
-                      const totalQuizMarks = quiz.questions.reduce((acc: number, q: any) => acc + (q.marks || 1), 0);
-                      return (
-                        <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200/60 flex justify-between items-center">
-                          <div className="space-y-1">
-                            <span className="text-[9px] font-bold bg-deepskyblue/10 text-deepskyblue-dark px-2 py-0.5 rounded-full uppercase tracking-wider">{quiz.course}</span>
-                            <h4 className="text-xs font-bold text-slate-800 mt-1">{quiz.title}</h4>
-                            <p className="text-[9px] text-slate-400 font-bold mt-1">
-                              Scheduled: {quiz.scheduledAt ? new Date(quiz.scheduledAt).toLocaleString() : "Now"}
-                              {quiz.duration && ` | Duration: ${quiz.duration} Mins`}
-                              {quiz.examPassword && ` | Passkey: ${quiz.examPassword}`}
-                            </p>
-                          </div>
-                          <div className="text-right flex flex-col items-end gap-1.5">
-                            <span className="text-[10px] font-bold text-slate-400 bg-white border border-slate-200 px-2 py-1 rounded-lg">
-                              {quiz.questions.length} Questions
-                            </span>
-                            <span className="text-[10px] font-extrabold text-deepskyblue-dark">
-                              Total Marks: {totalQuizMarks}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] tracking-wider font-bold">
+                          <th className="pb-3 pl-2">Student Name</th>
+                          <th className="pb-3">Reg ID</th>
+                          <th className="pb-3">Course Cohort</th>
+                          <th className="pb-3">Exam Title</th>
+                          <th className="pb-3 text-center">Score</th>
+                          <th className="pb-3 text-center">Percentage</th>
+                          <th className="pb-3 text-center">Grade</th>
+                          <th className="pb-3">Date Taken</th>
+                          <th className="pb-3 text-right pr-2">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {resultsList
+                          .filter(res => {
+                            const query = searchQuery.toLowerCase();
+                            const studentName = res.candidateId?.name?.toLowerCase() || "";
+                            const regId = res.candidateId?.registrationId?.toLowerCase() || "";
+                            const course = res.candidateId?.course?.toLowerCase() || "";
+                            const examTitle = res.quizTitle?.toLowerCase() || "";
+                            return studentName.includes(query) || regId.includes(query) || course.includes(query) || examTitle.includes(query);
+                          })
+                          .map((res, idx) => (
+                            <tr key={idx} className="text-slate-700 hover:bg-slate-50/50 hover:text-slate-900 transition-colors">
+                              <td className="py-3.5 pl-2 font-semibold">
+                                {res.candidateId?.name || "Deleted Candidate"}
+                              </td>
+                              <td className="py-3.5 font-bold text-deepskyblue-dark">
+                                {res.candidateId?.registrationId || "N/A"}
+                              </td>
+                              <td className="py-3.5 text-slate-500 font-medium">
+                                {res.candidateId?.course || "N/A"}
+                              </td>
+                              <td className="py-3.5 font-semibold text-slate-800">
+                                {res.quizTitle}
+                              </td>
+                              <td className="py-3.5 text-center font-bold text-slate-700">
+                                {res.score} / {res.total}
+                              </td>
+                              <td className="py-3.5 text-center font-extrabold text-slate-900">
+                                {res.percentage}%
+                              </td>
+                              <td className="py-3.5 text-center font-black text-deepskyblue-dark">
+                                {res.grade}
+                              </td>
+                              <td className="py-3.5 text-slate-400 font-medium">
+                                {new Date(res.date).toLocaleDateString()}
+                              </td>
+                              <td className="py-3.5 text-right pr-2 space-x-2">
+                                <button
+                                  onClick={() => triggerPrint("marksheet", res)}
+                                  className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-[10px] font-bold text-slate-600 transition cursor-pointer"
+                                >
+                                  Marksheet
+                                </button>
+                                <button
+                                  onClick={() => triggerPrint("certificate", res)}
+                                  className="px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-[10px] font-bold text-white shadow shadow-amber-500/10 transition cursor-pointer"
+                                >
+                                  Certificate
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
-            </div>
-          )}
+            )}
 
-          {/* ================= TAB CONTENT 7: EXAM RESULTS ================= */}
-          {activeTab === "results" && (
-            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-5">
-              <div className="flex justify-between items-center border-b border-slate-100 pb-4">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">Exam Results Registry</h3>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Master ledger of completed student examinations</p>
+            {/* ================= TAB CONTENT 8: MANAGE AGENTS ================= */}
+            {activeTab === "agents" && (
+              <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-5 animate-fade-in">
+                <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Registered Agents Ledger</h3>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Approve agent applications, check original passwords, and trace referrals count</p>
+                  </div>
                 </div>
+
+                {agentsList.length === 0 ? (
+                  <p className="text-xs text-slate-400 py-10 text-center font-medium">No agents registered in the database yet.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] tracking-wider font-bold">
+                          <th className="pb-3 pl-2">Agent Details</th>
+                          <th className="pb-3">Referral Code</th>
+                          <th className="pb-3">Original Password</th>
+                          <th className="pb-3 text-center">Referrals Count</th>
+                          <th className="pb-3 text-center">Status</th>
+                          <th className="pb-3 text-right pr-2">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {agentsList
+                          .filter(agent => {
+                            const query = searchQuery.toLowerCase();
+                            return (
+                              agent.name.toLowerCase().includes(query) ||
+                              agent.email.toLowerCase().includes(query) ||
+                              agent.agentCode.toLowerCase().includes(query)
+                            );
+                          })
+                          .map((agent, idx) => (
+                            <tr key={idx} className="text-slate-700 hover:bg-slate-50/50 hover:text-slate-900 transition-colors">
+                              <td className="py-4 pl-2">
+                                <div className="font-bold text-slate-900">{agent.name}</div>
+                                <div className="text-[10px] text-slate-400 mt-1 flex flex-col space-y-0.5">
+                                  <span>{agent.email}</span>
+                                  <span>{agent.phone}</span>
+                                </div>
+                              </td>
+                              <td className="py-4 font-mono font-bold text-deepskyblue-dark">
+                                {agent.agentCode}
+                              </td>
+                              <td className="py-4 font-mono text-slate-505 font-semibold select-all">
+                                {agent.originalPassword || "N/A"}
+                              </td>
+                              <td className="py-4 text-center font-extrabold text-slate-900">
+                                {agent.studentCount} Students
+                              </td>
+                              <td className="py-4 text-center">
+                                <span className={`px-2.5 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${agent.status === "approved" ? "bg-emerald-50 text-emerald-650 border border-emerald-100" :
+                                    agent.status === "rejected" ? "bg-rose-50 text-rose-650 border border-rose-100" :
+                                      "bg-amber-50 text-amber-650 border border-amber-100"
+                                  }`}>
+                                  {agent.status}
+                                </span>
+                              </td>
+                              <td className="py-4 text-right pr-2 space-x-2">
+                                {agent.status !== "approved" && (
+                                  <button
+                                    onClick={() => handleAgentStatus(agent.id, "approved")}
+                                    className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-[10px] font-bold text-white shadow shadow-emerald-500/10 transition cursor-pointer"
+                                  >
+                                    Approve
+                                  </button>
+                                )}
+                                {agent.status !== "rejected" && (
+                                  <button
+                                    onClick={() => handleAgentStatus(agent.id, "rejected")}
+                                    className="px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-[10px] font-bold text-white shadow shadow-rose-500/10 transition cursor-pointer"
+                                  >
+                                    Reject
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
+            )}
 
-              {resultsList.length === 0 ? (
-                <p className="text-xs text-slate-400 py-10 text-center font-medium">No exam results recorded in the database yet.</p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] tracking-wider font-bold">
-                        <th className="pb-3 pl-2">Student Name</th>
-                        <th className="pb-3">Reg ID</th>
-                        <th className="pb-3">Course Cohort</th>
-                        <th className="pb-3">Exam Title</th>
-                        <th className="pb-3 text-center">Score</th>
-                        <th className="pb-3 text-center">Percentage</th>
-                        <th className="pb-3 text-center">Grade</th>
-                        <th className="pb-3">Date Taken</th>
-                        <th className="pb-3 text-right pr-2">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {resultsList
-                        .filter(res => {
-                          const query = searchQuery.toLowerCase();
-                          const studentName = res.candidateId?.name?.toLowerCase() || "";
-                          const regId = res.candidateId?.registrationId?.toLowerCase() || "";
-                          const course = res.candidateId?.course?.toLowerCase() || "";
-                          const examTitle = res.quizTitle?.toLowerCase() || "";
-                          return studentName.includes(query) || regId.includes(query) || course.includes(query) || examTitle.includes(query);
-                        })
-                        .map((res, idx) => (
-                          <tr key={idx} className="text-slate-700 hover:bg-slate-50/50 hover:text-slate-900 transition-colors">
-                            <td className="py-3.5 pl-2 font-semibold">
-                              {res.candidateId?.name || "Deleted Candidate"}
-                            </td>
-                            <td className="py-3.5 font-bold text-deepskyblue-dark">
-                              {res.candidateId?.registrationId || "N/A"}
-                            </td>
-                            <td className="py-3.5 text-slate-500 font-medium">
-                              {res.candidateId?.course || "N/A"}
-                            </td>
-                            <td className="py-3.5 font-semibold text-slate-800">
-                              {res.quizTitle}
-                            </td>
-                            <td className="py-3.5 text-center font-bold text-slate-700">
-                              {res.score} / {res.total}
-                            </td>
-                            <td className="py-3.5 text-center font-extrabold text-slate-900">
-                              {res.percentage}%
-                            </td>
-                            <td className="py-3.5 text-center font-black text-deepskyblue-dark">
-                              {res.grade}
-                            </td>
-                            <td className="py-3.5 text-slate-400 font-medium">
-                              {new Date(res.date).toLocaleDateString()}
-                            </td>
-                            <td className="py-3.5 text-right pr-2 space-x-2">
-                              <button
-                                onClick={() => triggerPrint("marksheet", res)}
-                                className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-[10px] font-bold text-slate-600 transition cursor-pointer"
-                              >
-                                Marksheet
-                              </button>
-                              <button
-                                onClick={() => triggerPrint("certificate", res)}
-                                className="px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-[10px] font-bold text-white shadow shadow-amber-500/10 transition cursor-pointer"
-                              >
-                                Certificate
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ================= TAB CONTENT 8: MANAGE AGENTS ================= */}
-          {activeTab === "agents" && (
-            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-5 animate-fade-in">
-              <div className="flex justify-between items-center border-b border-slate-100 pb-4">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">Registered Agents Ledger</h3>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Approve agent applications, check original passwords, and trace referrals count</p>
-                </div>
-              </div>
-
-              {agentsList.length === 0 ? (
-                <p className="text-xs text-slate-400 py-10 text-center font-medium">No agents registered in the database yet.</p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] tracking-wider font-bold">
-                        <th className="pb-3 pl-2">Agent Details</th>
-                        <th className="pb-3">Referral Code</th>
-                        <th className="pb-3">Original Password</th>
-                        <th className="pb-3 text-center">Referrals Count</th>
-                        <th className="pb-3 text-center">Status</th>
-                        <th className="pb-3 text-right pr-2">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {agentsList
-                        .filter(agent => {
-                          const query = searchQuery.toLowerCase();
-                          return (
-                            agent.name.toLowerCase().includes(query) ||
-                            agent.email.toLowerCase().includes(query) ||
-                            agent.agentCode.toLowerCase().includes(query)
-                          );
-                        })
-                        .map((agent, idx) => (
-                          <tr key={idx} className="text-slate-700 hover:bg-slate-50/50 hover:text-slate-900 transition-colors">
-                            <td className="py-4 pl-2">
-                              <div className="font-bold text-slate-900">{agent.name}</div>
-                              <div className="text-[10px] text-slate-400 mt-1 flex flex-col space-y-0.5">
-                                <span>{agent.email}</span>
-                                <span>{agent.phone}</span>
-                              </div>
-                            </td>
-                            <td className="py-4 font-mono font-bold text-deepskyblue-dark">
-                              {agent.agentCode}
-                            </td>
-                            <td className="py-4 font-mono text-slate-505 font-semibold select-all">
-                              {agent.originalPassword || "N/A"}
-                            </td>
-                            <td className="py-4 text-center font-extrabold text-slate-900">
-                              {agent.studentCount} Students
-                            </td>
-                            <td className="py-4 text-center">
-                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${
-                                agent.status === "approved" ? "bg-emerald-50 text-emerald-650 border border-emerald-100" :
-                                agent.status === "rejected" ? "bg-rose-50 text-rose-650 border border-rose-100" :
-                                "bg-amber-50 text-amber-650 border border-amber-100"
-                              }`}>
-                                {agent.status}
-                              </span>
-                            </td>
-                            <td className="py-4 text-right pr-2 space-x-2">
-                              {agent.status !== "approved" && (
-                                <button
-                                  onClick={() => handleAgentStatus(agent.id, "approved")}
-                                  className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-[10px] font-bold text-white shadow shadow-emerald-500/10 transition cursor-pointer"
-                                >
-                                  Approve
-                                </button>
-                              )}
-                              {agent.status !== "rejected" && (
-                                <button
-                                  onClick={() => handleAgentStatus(agent.id, "rejected")}
-                                  className="px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-[10px] font-bold text-white shadow shadow-rose-500/10 transition cursor-pointer"
-                                >
-                                  Reject
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-
-        </main>
+          </main>
         </div>{/* end scrollable body */}
       </div>{/* end main column */}
 
@@ -3297,31 +3292,28 @@ export default function AdminDashboardPage() {
                 <div className="flex border-b border-slate-100">
                   <button
                     onClick={() => setModalActiveTab("profile")}
-                    className={`pb-2.5 px-4 text-xs font-bold transition-all border-b-2 cursor-pointer ${
-                      modalActiveTab === "profile"
+                    className={`pb-2.5 px-4 text-xs font-bold transition-all border-b-2 cursor-pointer ${modalActiveTab === "profile"
                         ? "border-deepskyblue text-deepskyblue-dark font-black"
                         : "border-transparent text-slate-450 hover:text-slate-700"
-                    }`}
+                      }`}
                   >
                     Profile Info
                   </button>
                   <button
                     onClick={() => setModalActiveTab("attendance")}
-                    className={`pb-2.5 px-4 text-xs font-bold transition-all border-b-2 cursor-pointer ${
-                      modalActiveTab === "attendance"
+                    className={`pb-2.5 px-4 text-xs font-bold transition-all border-b-2 cursor-pointer ${modalActiveTab === "attendance"
                         ? "border-deepskyblue text-deepskyblue-dark font-black"
                         : "border-transparent text-slate-450 hover:text-slate-700"
-                    }`}
+                      }`}
                   >
                     Attendance Sheet ({studentDetails.attendance?.length || 0})
                   </button>
                   <button
                     onClick={() => setModalActiveTab("results")}
-                    className={`pb-2.5 px-4 text-xs font-bold transition-all border-b-2 cursor-pointer ${
-                      modalActiveTab === "results"
+                    className={`pb-2.5 px-4 text-xs font-bold transition-all border-b-2 cursor-pointer ${modalActiveTab === "results"
                         ? "border-deepskyblue text-deepskyblue-dark font-black"
                         : "border-transparent text-slate-450 hover:text-slate-700"
-                    }`}
+                      }`}
                   >
                     Quiz Results ({studentDetails.results?.length || 0})
                   </button>
@@ -3332,9 +3324,9 @@ export default function AdminDashboardPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-xs text-slate-700">
                     {studentDetails.student.profilePicUrl && (
                       <div className="sm:col-span-2 flex justify-center pb-4">
-                        <img 
-                          src={studentDetails.student.profilePicUrl} 
-                          alt="Student Profile" 
+                        <img
+                          src={studentDetails.student.profilePicUrl}
+                          alt="Student Profile"
                           className="h-24 w-24 rounded-full object-cover border-2 border-slate-200 shadow-sm"
                         />
                       </div>
@@ -3413,7 +3405,7 @@ export default function AdminDashboardPage() {
                       const absent = studentDetails.attendance?.filter((a: any) => a.status === "absent").length || 0;
                       const leave = studentDetails.attendance?.filter((a: any) => a.status === "leave").length || 0;
                       const percent = total > 0 ? ((present / total) * 100).toFixed(1) : "100.0";
-                      
+
                       return (
                         <div className="grid grid-cols-4 gap-4 text-center bg-slate-50 p-4 border border-slate-200/80 rounded-2xl">
                           <div>
@@ -3454,10 +3446,9 @@ export default function AdminDashboardPage() {
                               <tr key={idx} className="text-slate-700">
                                 <td className="py-2.5 font-semibold text-slate-500">{new Date(att.date).toLocaleDateString()}</td>
                                 <td className="py-2.5">
-                                  <span className={`px-2 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${
-                                    att.status === "present" ? "bg-emerald-50 text-emerald-600" :
-                                    att.status === "absent" ? "bg-rose-50 text-rose-600" : "bg-amber-50 text-amber-600"
-                                  }`}>
+                                  <span className={`px-2 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${att.status === "present" ? "bg-emerald-50 text-emerald-600" :
+                                      att.status === "absent" ? "bg-rose-50 text-rose-600" : "bg-amber-50 text-amber-600"
+                                    }`}>
                                     {att.status}
                                   </span>
                                 </td>
