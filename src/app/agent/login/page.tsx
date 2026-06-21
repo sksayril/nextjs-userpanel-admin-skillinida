@@ -62,7 +62,7 @@ export default function AgentLoginPage() {
 
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center justify-center bg-slate-50 text-slate-800 overflow-hidden font-sans py-12 px-4 sm:px-6">
-      
+
       {/* Background Glowing Orbs */}
       <div className="absolute inset-0 z-0 overflow-hidden">
         <div className="absolute w-[400px] h-[400px] rounded-full bg-deepskyblue/10 blur-[100px] top-[-50px] left-[-50px]" />
@@ -71,13 +71,13 @@ export default function AgentLoginPage() {
 
       <div className="relative z-10 w-full max-w-md">
         <div className="backdrop-blur-xl bg-white/95 border border-slate-200/80 rounded-2xl shadow-xl shadow-slate-200/40 p-8 sm:p-10">
-          
+
           <div className="flex flex-col items-center mb-8 text-center">
             <div className="h-12 w-12 rounded-xl bg-gradient-to-tr from-deepskyblue to-sky-600 flex items-center justify-center shadow-lg shadow-deepskyblue/25 mb-4">
               <Sparkles className="h-6 w-6 text-white" />
             </div>
             <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 bg-gradient-to-r from-slate-900 via-deepskyblue-dark to-sky-600 bg-clip-text text-transparent">
-              Agent Partner Login
+              Associate Partner Login
             </h1>
             <p className="mt-1.5 text-sm text-slate-500">
               Support Mission India — Sign in to manage referred candidates

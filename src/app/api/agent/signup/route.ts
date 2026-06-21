@@ -53,7 +53,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: "Agent registered successfully and pending admin approval",
+      message: "Associate registered successfully and pending admin approval",
       agent: {
         id: newAgent._id,
         name: newAgent.name,

@@ -31,7 +31,7 @@ export default function AgentDashboardPage() {
         const dataAgent = await resAgent.json();
         if (resAgent.ok && dataAgent.success) {
           setAgent(dataAgent.agent);
-          
+
           // Fetch Students registered under this agent
           const resStudents = await fetch("/api/agent/students");
           const dataStudents = await resStudents.json();
@@ -114,7 +114,7 @@ export default function AgentDashboardPage() {
           </div>
           <div>
             <h1 className="text-base font-black tracking-tight text-slate-900 leading-none">SUPPORT MISSION INDIA</h1>
-            <p className="text-[9px] uppercase font-bold text-deepskyblue-dark tracking-wider mt-1">Agent Partner Portal</p>
+            <p className="text-[9px] uppercase font-bold text-deepskyblue-dark tracking-wider mt-1">Associate Partner Portal</p>
           </div>
         </div>
 
@@ -135,10 +135,10 @@ export default function AgentDashboardPage() {
 
       {/* Main Grid */}
       <main className="relative z-10 max-w-7xl mx-auto px-6 mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
+
         {/* Left column: Profile Card & Referral Code */}
         <section className="lg:col-span-4 space-y-8">
-          
+
           {/* Agent Profile Details Card */}
           <div className="bg-white border border-slate-200/85 rounded-2xl shadow-xl shadow-slate-200/25 p-6 space-y-6">
             <div className="flex items-center gap-4 pb-4 border-b border-slate-100">

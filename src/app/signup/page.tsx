@@ -233,7 +233,7 @@ export default function SignupPage() {
 
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center justify-center bg-slate-50 text-slate-800 overflow-hidden font-sans select-none py-12 px-4 sm:px-6">
-      
+
       {/* Background Glowing Ambient Orbs */}
       <div className="absolute inset-0 z-0 overflow-hidden print:hidden">
         <div className="absolute w-[400px] h-[400px] rounded-full bg-deepskyblue/10 blur-[100px] top-[-50px] left-[-50px] animate-drift-slow" />
@@ -267,7 +267,7 @@ export default function SignupPage() {
 
       {/* Main Content Area */}
       <div className="relative z-10 w-full max-w-2xl">
-        
+
         {/* Progress Step Header (Hidden when printing ID Card) */}
         {step < 4 && (
           <div className="flex items-center justify-between mb-8 px-4 print:hidden">
@@ -289,7 +289,7 @@ export default function SignupPage() {
         )}
 
         <div className={`backdrop-blur-xl bg-white/95 border border-slate-200/80 rounded-2xl shadow-xl shadow-slate-200/40 transition-all duration-300 ${step === 4 ? "p-4 sm:p-6" : "p-8 sm:p-10"} print:border-none print:shadow-none print:bg-transparent`}>
-          
+
           {/* Header Title Section (Hidden when printing) */}
           {step < 4 && (
             <div className="flex flex-col items-center mb-8 text-center print:hidden">
@@ -417,7 +417,7 @@ export default function SignupPage() {
                   </span>
                   <input
                     id="phone"
-                      suppressHydrationWarning
+                    suppressHydrationWarning
                     type="tel"
                     placeholder="+91 XXXXX XXXXX"
                     value={formData.phone}
@@ -438,7 +438,7 @@ export default function SignupPage() {
                   </span>
                   <textarea
                     id="address"
-                      suppressHydrationWarning
+                    suppressHydrationWarning
                     rows={3}
                     placeholder="Enter permanent house, block, state, and pincode details"
                     value={formData.address}
@@ -455,7 +455,7 @@ export default function SignupPage() {
                 </Link>
                 <button
                   type="button"
-                      suppressHydrationWarning
+                  suppressHydrationWarning
                   onClick={nextStep}
                   className="flex items-center gap-2 py-2.5 px-6 rounded-xl bg-deepskyblue hover:bg-deepskyblue-dark font-bold text-white text-sm shadow-md shadow-deepskyblue/15 transition-all active:scale-[0.98] cursor-pointer"
                 >
@@ -480,7 +480,7 @@ export default function SignupPage() {
                   </span>
                   <select
                     id="course"
-                      suppressHydrationWarning
+                    suppressHydrationWarning
                     value={formData.course}
                     onChange={handleChange}
                     disabled={coursesList.length === 0}
@@ -501,7 +501,7 @@ export default function SignupPage() {
               {/* Agent Referral Code */}
               <div className="space-y-1.5">
                 <label htmlFor="agentCode" className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  Agent Referral Code (Optional)
+                  Associate Referral Code (Optional)
                 </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
@@ -509,9 +509,9 @@ export default function SignupPage() {
                   </span>
                   <input
                     id="agentCode"
-                      suppressHydrationWarning
+                    suppressHydrationWarning
                     type="text"
-                    placeholder="Enter Agent referral code if you have one"
+                    placeholder="Enter Associate referral code if you have one"
                     value={formData.agentCode}
                     onChange={handleChange}
                     className="block w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/10"
@@ -535,11 +535,10 @@ export default function SignupPage() {
                       <span className="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full font-bold">Uploaded</span>
                     )}
                   </div>
-                  <div className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all p-5 text-center flex flex-col items-center justify-center min-h-[120px] ${
-                    formData.profilePicUrl 
-                      ? "bg-emerald-50/20 border-emerald-500/40 hover:bg-emerald-50/35" 
-                      : "bg-slate-50/60 border-slate-200/80 hover:bg-deepskyblue-light/10 hover:border-deepskyblue"
-                  }`}>
+                  <div className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all p-5 text-center flex flex-col items-center justify-center min-h-[120px] ${formData.profilePicUrl
+                    ? "bg-emerald-50/20 border-emerald-500/40 hover:bg-emerald-50/35"
+                    : "bg-slate-50/60 border-slate-200/80 hover:bg-deepskyblue-light/10 hover:border-deepskyblue"
+                    }`}>
                     <input
                       type="file"
                       id="profile-pic-file"
@@ -548,7 +547,7 @@ export default function SignupPage() {
                       onChange={(e) => handleFileUpload(e, "profilePicUrl")}
                       className="absolute inset-0 opacity-0 cursor-pointer z-10"
                     />
-                    
+
                     {uploadingProfile ? (
                       <div className="flex flex-col items-center gap-2">
                         <div className="h-8 w-8 border-3 border-deepskyblue/30 border-t-deepskyblue rounded-full animate-spin" />
@@ -588,11 +587,10 @@ export default function SignupPage() {
                       <span className="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full font-bold">Uploaded</span>
                     )}
                   </div>
-                  <div className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all p-5 text-center flex flex-col items-center justify-center min-h-[120px] ${
-                    formData.admitUrl 
-                      ? "bg-emerald-50/20 border-emerald-500/40 hover:bg-emerald-50/35" 
-                      : "bg-slate-50/60 border-slate-200/80 hover:bg-deepskyblue-light/10 hover:border-deepskyblue"
-                  }`}>
+                  <div className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all p-5 text-center flex flex-col items-center justify-center min-h-[120px] ${formData.admitUrl
+                    ? "bg-emerald-50/20 border-emerald-500/40 hover:bg-emerald-50/35"
+                    : "bg-slate-50/60 border-slate-200/80 hover:bg-deepskyblue-light/10 hover:border-deepskyblue"
+                    }`}>
                     <input
                       type="file"
                       id="admit-file"
@@ -601,7 +599,7 @@ export default function SignupPage() {
                       onChange={(e) => handleFileUpload(e, "admitUrl")}
                       className="absolute inset-0 opacity-0 cursor-pointer z-10"
                     />
-                    
+
                     {uploadingAdmit ? (
                       <div className="flex flex-col items-center gap-2">
                         <div className="h-8 w-8 border-3 border-deepskyblue/30 border-t-deepskyblue rounded-full animate-spin" />
@@ -641,11 +639,10 @@ export default function SignupPage() {
                       <span className="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full font-bold">Uploaded</span>
                     )}
                   </div>
-                  <div className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all p-5 text-center flex flex-col items-center justify-center min-h-[120px] ${
-                    formData.qualificationUrl 
-                      ? "bg-emerald-50/20 border-emerald-500/40 hover:bg-emerald-50/35" 
-                      : "bg-slate-50/60 border-slate-200/80 hover:bg-deepskyblue-light/10 hover:border-deepskyblue"
-                  }`}>
+                  <div className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all p-5 text-center flex flex-col items-center justify-center min-h-[120px] ${formData.qualificationUrl
+                    ? "bg-emerald-50/20 border-emerald-500/40 hover:bg-emerald-50/35"
+                    : "bg-slate-50/60 border-slate-200/80 hover:bg-deepskyblue-light/10 hover:border-deepskyblue"
+                    }`}>
                     <input
                       type="file"
                       id="qual-file"
@@ -654,7 +651,7 @@ export default function SignupPage() {
                       onChange={(e) => handleFileUpload(e, "qualificationUrl")}
                       className="absolute inset-0 opacity-0 cursor-pointer z-10"
                     />
-                    
+
                     {uploadingQual ? (
                       <div className="flex flex-col items-center gap-2">
                         <div className="h-8 w-8 border-3 border-deepskyblue/30 border-t-deepskyblue rounded-full animate-spin" />
@@ -694,11 +691,10 @@ export default function SignupPage() {
                       <span className="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full font-bold">Uploaded</span>
                     )}
                   </div>
-                  <div className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all p-5 text-center flex flex-col items-center justify-center min-h-[120px] ${
-                    formData.extraQualificationUrl 
-                      ? "bg-emerald-50/20 border-emerald-500/40 hover:bg-emerald-50/35" 
-                      : "bg-slate-50/60 border-slate-200/80 hover:bg-deepskyblue-light/10 hover:border-deepskyblue"
-                  }`}>
+                  <div className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all p-5 text-center flex flex-col items-center justify-center min-h-[120px] ${formData.extraQualificationUrl
+                    ? "bg-emerald-50/20 border-emerald-500/40 hover:bg-emerald-50/35"
+                    : "bg-slate-50/60 border-slate-200/80 hover:bg-deepskyblue-light/10 hover:border-deepskyblue"
+                    }`}>
                     <input
                       type="file"
                       id="extra-file"
@@ -707,7 +703,7 @@ export default function SignupPage() {
                       onChange={(e) => handleFileUpload(e, "extraQualificationUrl")}
                       className="absolute inset-0 opacity-0 cursor-pointer z-10"
                     />
-                    
+
                     {uploadingExtra ? (
                       <div className="flex flex-col items-center gap-2">
                         <div className="h-8 w-8 border-3 border-deepskyblue/30 border-t-deepskyblue rounded-full animate-spin" />
@@ -742,7 +738,7 @@ export default function SignupPage() {
               <div className="flex justify-between items-center pt-6 border-t border-slate-100">
                 <button
                   type="button"
-                      suppressHydrationWarning
+                  suppressHydrationWarning
                   onClick={prevStep}
                   className="flex items-center gap-2 py-2.5 px-5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold text-sm transition-all cursor-pointer"
                 >
@@ -751,7 +747,7 @@ export default function SignupPage() {
                 </button>
                 <button
                   type="button"
-                      suppressHydrationWarning
+                  suppressHydrationWarning
                   onClick={nextStep}
                   className="flex items-center gap-2 py-2.5 px-6 rounded-xl bg-deepskyblue hover:bg-deepskyblue-dark font-bold text-white text-sm shadow-md shadow-deepskyblue/15 transition-all active:scale-[0.98] cursor-pointer"
                 >
@@ -788,7 +784,7 @@ export default function SignupPage() {
                       </span>
                       <input
                         id="email"
-                      suppressHydrationWarning
+                        suppressHydrationWarning
                         type="email"
                         required
                         placeholder="candidate@example.com"
@@ -850,7 +846,7 @@ export default function SignupPage() {
                   {/* Submit Button */}
                   <button
                     type="submit"
-                      suppressHydrationWarning
+                    suppressHydrationWarning
                     disabled={submitLoading || !formData.otp}
                     className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-sm transition-all duration-200 shadow-md shadow-deepskyblue/15 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2 cursor-pointer"
                   >
@@ -870,7 +866,7 @@ export default function SignupPage() {
               <div className="flex justify-between items-center pt-4 border-t border-slate-100">
                 <button
                   type="button"
-                      suppressHydrationWarning
+                  suppressHydrationWarning
                   onClick={prevStep}
                   className="flex items-center gap-2 py-2.5 px-5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold text-sm transition-all cursor-pointer"
                 >
@@ -884,7 +880,7 @@ export default function SignupPage() {
           {/* STEP 4: Success & Registration ID Card */}
           {step === 4 && registeredCandidate && (
             <div className="flex flex-col items-center">
-              
+
               {/* Success Info (Hidden when printing ID Card) */}
               <div className="flex flex-col items-center text-center mb-8 print:hidden">
                 <div className="h-16 w-16 rounded-full bg-emerald-100 border border-emerald-200 flex items-center justify-center mb-4 text-emerald-600">
