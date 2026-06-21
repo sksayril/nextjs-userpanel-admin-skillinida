@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/Toast";
 import {
   Calendar,
   BookOpen,
@@ -23,6 +24,7 @@ import {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState<string>("courses");
   const [loading, setLoading] = useState<boolean>(true);
   const [candidate, setCandidate] = useState<any>(null);
@@ -111,11 +113,11 @@ export default function DashboardPage() {
         setEnteredPassword("");
         setPasswordError("");
       } else {
-        alert(data.error || "Failed to load exam questions. Make sure it has started.");
+        toast.error(data.error || "Failed to load exam questions. Make sure it has started.");
       }
     } catch (err) {
       console.error(err);
-      alert("Network error starting exam.");
+      toast.error("Network error starting exam.");
     }
   };
 
@@ -215,7 +217,7 @@ export default function DashboardPage() {
       const keyRes = await fetch("/api/payment/key");
       const keyData = await keyRes.json();
       if (!keyRes.ok || !keyData.success || !keyData.keyId) {
-        alert(keyData.error || "Failed to retrieve payment configuration keys.");
+        toast.error(keyData.error || "Failed to retrieve payment configuration keys.");
         setPaymentLoading(false);
         return;
       }
@@ -226,7 +228,7 @@ export default function DashboardPage() {
       });
       const orderData = await orderRes.json();
       if (!orderRes.ok || !orderData.success || !orderData.order) {
-        alert(orderData.error || "Failed to initialize enrollment payment order.");
+        toast.error(orderData.error || "Failed to initialize enrollment payment order.");
         setPaymentLoading(false);
         return;
       }
@@ -247,7 +249,7 @@ export default function DashboardPage() {
       });
 
       if (!scriptLoaded) {
-        alert("Failed to load Razorpay SDK. Please check your internet connection.");
+        toast.error("Failed to load Razorpay SDK. Please check your internet connection.");
         setPaymentLoading(false);
         return;
       }
@@ -276,15 +278,15 @@ export default function DashboardPage() {
             });
             const verifyData = await verifyRes.json();
             if (verifyRes.ok && verifyData.success) {
-              alert("Payment successful! Your course has been unlocked.");
+              toast.success("Payment successful! Your course has been unlocked.");
               // Update local state dynamically to immediately unlock the UI
               setCandidate((prev: any) => ({ ...prev, isPaid: true }));
             } else {
-              alert(verifyData.error || "Payment verification failed. Please contact support.");
+              toast.error(verifyData.error || "Payment verification failed. Please contact support.");
             }
           } catch (err) {
             console.error("Payment verification network error:", err);
-            alert("Network error verifying payment.");
+            toast.error("Network error verifying payment.");
           } finally {
             setPaymentLoading(false);
           }
@@ -309,7 +311,7 @@ export default function DashboardPage() {
 
     } catch (err) {
       console.error("Initiating payment error:", err);
-      alert("An unexpected error occurred while initiating payment.");
+      toast.error("An unexpected error occurred while initiating payment.");
       setPaymentLoading(false);
     }
   };
@@ -323,12 +325,12 @@ export default function DashboardPage() {
       if (res.ok && data.success) {
         setReviewQuiz(data.quiz);
       } else {
-        alert(data.error || "Failed to load quiz details for review.");
+        toast.error(data.error || "Failed to load quiz details for review.");
         setReviewResult(null);
       }
     } catch (err) {
       console.error("Error fetching review quiz:", err);
-      alert("Network error fetching quiz details.");
+      toast.error("Network error fetching quiz details.");
       setReviewResult(null);
     } finally {
       setLoadingReview(false);
@@ -349,7 +351,7 @@ export default function DashboardPage() {
   // Start Exam Quiz Handler
   const handleStartQuiz = async (quiz: any) => {
     if (quiz.scheduledAt && new Date(quiz.scheduledAt) > new Date()) {
-      alert("This exam has not started yet. Please wait until the scheduled start time.");
+      toast.error("This exam has not started yet. Please wait until the scheduled start time.");
       return;
     }
 
@@ -385,18 +387,18 @@ export default function DashboardPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         if (isAutoSubmit) {
-          alert(`Time expired! Your exam was automatically submitted. Score: ${data.result.score}/${data.result.total} (${data.result.percentage}%) - Grade: ${data.result.grade}`);
+          toast.success(`Time expired! Your exam was automatically submitted. Score: ${data.result.score}/${data.result.total} (${data.result.percentage}%) - Grade: ${data.result.grade}`);
         } else {
-          alert(`Exam submitted successfully! Score: ${data.result.score}/${data.result.total} (${data.result.percentage}%) - Grade: ${data.result.grade}`);
+          toast.success(`Exam submitted successfully! Score: ${data.result.score}/${data.result.total} (${data.result.percentage}%) - Grade: ${data.result.grade}`);
         }
         setActiveQuiz(null);
         await fetchDashboardData();
       } else {
-        alert(data.error || "Failed to submit answers.");
+        toast.error(data.error || "Failed to submit answers.");
       }
     } catch (err) {
       console.error("Exam submission error:", err);
-      alert("Network error submitting answers.");
+      toast.error("Network error submitting answers.");
     } finally {
       setSubmittingQuiz(false);
     }
@@ -405,7 +407,7 @@ export default function DashboardPage() {
   const handleSubmitQuiz = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedAnswers.includes(-1)) {
-      alert("Please answer all questions before submitting.");
+      toast.error("Please answer all questions before submitting.");
       return;
     }
     await submitQuizAnswers(selectedAnswers, false);

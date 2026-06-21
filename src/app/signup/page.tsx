@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/Toast";
 import {
   User,
   Users,
@@ -24,6 +25,7 @@ import {
 
 export default function SignupPage() {
   const router = useRouter();
+  const toast = useToast();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     name: "",
@@ -119,12 +121,13 @@ export default function SignupPage() {
       const result = await res.json();
       if (res.ok && result.url) {
         setFormData((prev) => ({ ...prev, [field]: result.url }));
+        toast.success("Document uploaded successfully.");
       } else {
-        alert(result.error || "File upload failed.");
+        toast.error(result.error || "File upload failed.");
       }
     } catch (err) {
       console.error(err);
-      alert("Error uploading file.");
+      toast.error("Error uploading file.");
     } finally {
       if (field === "admitUrl") setUploadingAdmit(false);
       else if (field === "qualificationUrl") setUploadingQual(false);

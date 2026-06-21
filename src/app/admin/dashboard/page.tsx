@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/Toast";
 import {
   Shield,
   BookOpen,
@@ -50,6 +51,7 @@ const hexToRgb = (hex: string): string => {
 
 export default function AdminDashboardPage() {
   const router = useRouter();
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState<string>("overview");
   const [loading, setLoading] = useState<boolean>(true);
   const [admin, setAdmin] = useState<any>(null);
@@ -713,12 +715,12 @@ export default function AdminDashboardPage() {
           results: data.results,
         });
       } else {
-        alert(data.error || "Failed to load student details");
+        toast.error(data.error || "Failed to load student details");
         setSelectedStudentId(null);
       }
     } catch (err) {
       console.error(err);
-      alert("Network error fetching student details");
+      toast.error("Network error fetching student details");
       setSelectedStudentId(null);
     } finally {
       setLoadingDetails(false);
