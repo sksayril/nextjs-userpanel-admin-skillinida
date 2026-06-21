@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/Toast";
+import { resolveFileUrl } from "@/lib/fileUrl";
 import {
   Shield,
   BookOpen,
@@ -388,9 +389,17 @@ export default function AdminDashboardPage() {
     else if (field === "extraQualificationUrl") setUploadingExtra(true);
     else setUploadingPaper(true);
 
+    const uploadFolderMap = {
+      admitUrl: "documents",
+      qualificationUrl: "documents",
+      extraQualificationUrl: "documents",
+      paperUrl: "papers",
+    } as const;
+
     try {
       const data = new FormData();
       data.append("file", file);
+      data.append("folder", uploadFolderMap[field]);
 
       const res = await fetch("/api/upload", {
         method: "POST",
@@ -567,6 +576,7 @@ export default function AdminDashboardPage() {
     try {
       const data = new FormData();
       data.append("file", file);
+      data.append("folder", "papers");
 
       const res = await fetch("/api/upload", {
         method: "POST",
@@ -947,7 +957,7 @@ export default function AdminDashboardPage() {
                 {/* Photo container */}
                 <div className="h-[75px] w-[60px] border border-slate-300 rounded overflow-hidden flex items-center justify-center bg-slate-50 shadow-inner">
                   {student.profilePicUrl ? (
-                    <img src={student.profilePicUrl} className="h-full w-full object-cover" alt="Candidate Photo" />
+                    <img src={resolveFileUrl(student.profilePicUrl)} className="h-full w-full object-cover" alt="Candidate Photo" />
                   ) : (
                     <span className="text-[7px] text-slate-400 text-center font-bold">PASTE PHOTO</span>
                   )}
@@ -3599,7 +3609,7 @@ export default function AdminDashboardPage() {
                     {studentDetails.student.profilePicUrl && (
                       <div className="sm:col-span-2 flex justify-center pb-4">
                         <img
-                          src={studentDetails.student.profilePicUrl}
+                          src={resolveFileUrl(studentDetails.student.profilePicUrl)}
                           alt="Student Profile"
                           className="h-24 w-24 rounded-full object-cover border-2 border-slate-200 shadow-sm"
                         />
@@ -3637,7 +3647,7 @@ export default function AdminDashboardPage() {
                       <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px] block">Uploaded Documents (S3 Links)</span>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         {studentDetails.student.admitUrl && (
-                          <a href={studentDetails.student.admitUrl} target="_blank" rel="noreferrer" className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-[11px] font-bold text-slate-655 hover:bg-slate-100 transition">
+                          <a href={resolveFileUrl(studentDetails.student.admitUrl)} target="_blank" rel="noreferrer" className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-[11px] font-bold text-slate-655 hover:bg-slate-100 transition">
                             <span>Uploaded Admit Card</span>
                             <span className="text-deepskyblue-dark font-black hover:underline">Open link</span>
                           </a>
@@ -3653,13 +3663,13 @@ export default function AdminDashboardPage() {
                           </span>
                         </button>
                         {studentDetails.student.qualificationUrl && (
-                          <a href={studentDetails.student.qualificationUrl} target="_blank" rel="noreferrer" className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-[11px] font-bold text-slate-655 hover:bg-slate-100 transition">
+                          <a href={resolveFileUrl(studentDetails.student.qualificationUrl)} target="_blank" rel="noreferrer" className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-[11px] font-bold text-slate-655 hover:bg-slate-100 transition">
                             <span>Last Qualification</span>
                             <span className="text-deepskyblue-dark font-black hover:underline">Open link</span>
                           </a>
                         )}
                         {studentDetails.student.extraQualificationUrl && (
-                          <a href={studentDetails.student.extraQualificationUrl} target="_blank" rel="noreferrer" className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-[11px] font-bold text-slate-655 hover:bg-slate-100 transition">
+                          <a href={resolveFileUrl(studentDetails.student.extraQualificationUrl)} target="_blank" rel="noreferrer" className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-[11px] font-bold text-slate-655 hover:bg-slate-100 transition">
                             <span>Extra Certificate</span>
                             <span className="text-deepskyblue-dark font-black hover:underline">Open link</span>
                           </a>

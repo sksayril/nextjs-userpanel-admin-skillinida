@@ -19,8 +19,10 @@ import {
   Printer,
   Sparkles,
   ChevronDown,
-  BookMarked
+  BookMarked,
+  ExternalLink
 } from "lucide-react";
+import { resolveFileUrl } from "@/lib/fileUrl";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -466,6 +468,25 @@ export default function DashboardPage() {
   const avatarInitials = candidate.name
     ? candidate.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
     : "ST";
+  const profilePhotoUrl = resolveFileUrl(candidate.profilePicUrl);
+
+  const renderProfileAvatar = (
+    className: string,
+    textClassName = "text-xs font-bold text-white"
+  ) =>
+    profilePhotoUrl ? (
+      <img
+        src={profilePhotoUrl}
+        className={`${className} object-cover`}
+        alt={`${candidate.name} profile`}
+      />
+    ) : (
+      <div
+        className={`${className} bg-gradient-to-tr from-deepskyblue to-sky-600 flex items-center justify-center ${textClassName} shadow-inner`}
+      >
+        {avatarInitials}
+      </div>
+    );
 
   const isDashboardLocked = courseData?.isPaid && !candidate?.isPaid;
 
@@ -656,7 +677,7 @@ export default function DashboardPage() {
                 {/* Photo container */}
                 <div className="h-[75px] w-[60px] border border-slate-300 rounded overflow-hidden flex items-center justify-center bg-slate-50 shadow-inner">
                   {student.profilePicUrl ? (
-                    <img src={student.profilePicUrl} className="h-full w-full object-cover" alt="Candidate Photo" />
+                    <img src={resolveFileUrl(student.profilePicUrl)} className="h-full w-full object-cover" alt="Candidate Photo" />
                   ) : (
                     <span className="text-[7px] text-slate-400 text-center font-bold">PASTE PHOTO</span>
                   )}
@@ -1187,9 +1208,7 @@ export default function DashboardPage() {
           </button>
           {/* User Profile Summary */}
           <div className="flex items-center gap-2.5 pl-2 border-l border-slate-250">
-            <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-deepskyblue to-sky-600 flex items-center justify-center text-xs font-bold text-white shadow-inner">
-              {avatarInitials}
-            </div>
+            {renderProfileAvatar("h-8 w-8 rounded-full overflow-hidden")}
             <div className="hidden md:block text-left">
               <p className="text-xs font-bold text-slate-800 leading-3">{candidate.name}</p>
               <p className="text-[9px] text-slate-400 font-semibold mt-1">{candidate.registrationId}</p>
@@ -1916,10 +1935,10 @@ export default function DashboardPage() {
               {/* Detail Profile Panel */}
               <div className="p-6 sm:p-8 rounded-2xl bg-white border border-slate-200/80 space-y-6 shadow-sm shadow-slate-100">
                 <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 border-b border-slate-100 pb-6">
-                  {/* Photo Initials */}
-                  <div className="h-20 w-20 rounded-2xl bg-gradient-to-tr from-deepskyblue to-sky-600 flex items-center justify-center text-2xl font-black text-white shadow-lg shadow-deepskyblue/10 animate-pulse">
-                    {avatarInitials}
-                  </div>
+                  {renderProfileAvatar(
+                    "h-20 w-20 rounded-2xl overflow-hidden shadow-lg shadow-deepskyblue/10",
+                    "text-2xl font-black text-white"
+                  )}
                   <div className="text-center sm:text-left">
                     <h3 className="text-lg font-bold text-slate-800">{candidate.name}</h3>
                     <p className="text-xs text-slate-450 mt-1 font-semibold">Student UID: {candidate.registrationId}</p>
@@ -1971,6 +1990,31 @@ export default function DashboardPage() {
                   <div className="py-2.5 border-b border-slate-100 sm:col-span-2 flex flex-col gap-2">
                     <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Permanent Address</span>
                     <span className="text-slate-600 font-medium break-words leading-relaxed">{candidate.address}</span>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100 space-y-3">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Uploaded Documents</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {[
+                      { label: "Profile Picture", url: candidate.profilePicUrl },
+                      { label: "Admit Card", url: candidate.admitUrl },
+                      { label: "Qualification Certificate", url: candidate.qualificationUrl },
+                      { label: "Extra Qualification", url: candidate.extraQualificationUrl },
+                    ]
+                      .filter((doc) => doc.url)
+                      .map((doc) => (
+                        <a
+                          key={doc.label}
+                          href={resolveFileUrl(doc.url)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-[11px] font-bold text-slate-700 hover:bg-slate-100 transition"
+                        >
+                          <span>{doc.label}</span>
+                          <ExternalLink className="h-3.5 w-3.5 text-deepskyblue" />
+                        </a>
+                      ))}
                   </div>
                 </div>
               </div>

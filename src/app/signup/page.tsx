@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/Toast";
+import { resolveFileUrl } from "@/lib/fileUrl";
 import {
   User,
   Users,
@@ -109,9 +110,17 @@ export default function SignupPage() {
       setExtraFileName(file.name);
     }
 
+    const uploadFolderMap = {
+      profilePicUrl: "profile",
+      admitUrl: "documents",
+      qualificationUrl: "documents",
+      extraQualificationUrl: "documents",
+    } as const;
+
     try {
       const data = new FormData();
       data.append("file", file);
+      data.append("folder", uploadFolderMap[field]);
 
       const res = await fetch("/api/upload", {
         method: "POST",
@@ -556,7 +565,7 @@ export default function SignupPage() {
                     ) : formData.profilePicUrl ? (
                       <div className="flex flex-col items-center gap-2">
                         <div className="h-10 w-10 rounded-full overflow-hidden border border-slate-200 shadow-sm flex items-center justify-center">
-                          <img src={formData.profilePicUrl} className="h-full w-full object-cover" alt="Profile Preview" />
+                          <img src={resolveFileUrl(formData.profilePicUrl)} className="h-full w-full object-cover" alt="Profile Preview" />
                         </div>
                         <div className="max-w-full px-2">
                           <p className="text-xs font-bold text-slate-700 break-all">{profileFileName || "profile_picture"}</p>
@@ -927,7 +936,7 @@ export default function SignupPage() {
                   <div className="sm:col-span-3 flex flex-col items-center sm:items-start">
                     <div className="h-24 w-20 bg-slate-100 border border-slate-250 rounded-xl overflow-hidden flex flex-col items-center justify-center text-slate-400 shadow-inner bg-gradient-to-b from-white to-slate-50">
                       {registeredCandidate.profilePicUrl ? (
-                        <img src={registeredCandidate.profilePicUrl} className="h-full w-full object-cover" alt="Student Photo" />
+                        <img src={resolveFileUrl(registeredCandidate.profilePicUrl)} className="h-full w-full object-cover" alt="Student Photo" />
                       ) : (
                         <>
                           <span className="text-2xl font-black text-slate-500 uppercase">

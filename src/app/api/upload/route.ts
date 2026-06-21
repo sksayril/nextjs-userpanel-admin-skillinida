@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, type ObjectCannedACL } from "@aws-sdk/client-s3";
 import { promises as fs } from "fs";
 import path from "path";
+import {
+  buildS3ObjectKey,
+  createUniqueFileName,
+  getS3PublicUrl,
+  getUploadFolder,
+  validateUploadFile,
+} from "@/lib/s3";
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION || "us-east-1",
@@ -15,43 +22,59 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
+    const folder = getUploadFolder(formData.get("folder"));
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
+    const validation = validateUploadFile(file, folder);
+    if (!validation.ok) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
+    }
+
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
+    const uniqueFileName = createUniqueFileName(file.name);
+    const key = buildS3ObjectKey(folder, uniqueFileName);
+    const contentType = file.type || "application/octet-stream";
 
-    // Generate a unique key to avoid overwrites
-    const fileExtension = file.name.split(".").pop();
-    const uniqueFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExtension}`;
+    if (process.env.AWS_S3_BUCKET) {
+      const uploadInput = {
+        Bucket: process.env.AWS_S3_BUCKET,
+        Key: key,
+        Body: buffer,
+        ContentType: contentType,
+      };
 
-    // Save file locally in public/uploads so that it always loads/opens in browser
+      if (process.env.AWS_S3_ACL) {
+        Object.assign(uploadInput, {
+          ACL: process.env.AWS_S3_ACL as ObjectCannedACL,
+        });
+      }
+
+      const command = new PutObjectCommand(uploadInput);
+
+      await s3Client.send(command);
+
+      const fileUrl = getS3PublicUrl(key);
+      if (!fileUrl) {
+        return NextResponse.json({ error: "Failed to build S3 file URL" }, { status: 500 });
+      }
+
+      return NextResponse.json({ url: fileUrl, key, storage: "s3" });
+    }
+
     const uploadDir = path.join(process.cwd(), "public", "uploads");
     await fs.mkdir(uploadDir, { recursive: true });
     const filePath = path.join(uploadDir, uniqueFileName);
     await fs.writeFile(filePath, buffer);
 
-    const key = `candidates/${uniqueFileName}`;
-
-    if (process.env.AWS_S3_BUCKET) {
-      try {
-        const command = new PutObjectCommand({
-          Bucket: process.env.AWS_S3_BUCKET,
-          Key: key,
-          Body: buffer,
-          ContentType: file.type || "application/octet-stream",
-        });
-        await s3Client.send(command);
-      } catch (s3Err) {
-        console.error("Non-blocking S3 Upload Error:", s3Err);
-      }
-    }
-
-    const fileUrl = `/uploads/${uniqueFileName}`;
-
-    return NextResponse.json({ url: fileUrl });
+    return NextResponse.json({
+      url: `/uploads/${uniqueFileName}`,
+      key: `uploads/${uniqueFileName}`,
+      storage: "local",
+    });
   } catch (error: any) {
     console.error("Upload Error:", error);
     return NextResponse.json({ error: error.message || "Failed to upload file" }, { status: 500 });
