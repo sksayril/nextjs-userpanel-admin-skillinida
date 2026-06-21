@@ -25,7 +25,9 @@ import {
   BookMarked,
   Printer,
   Settings,
-  Palette
+  Palette,
+  CreditCard,
+  DollarSign
 } from "lucide-react";
 
 // ── Sidebar Theme Definitions ────────────────────────────────────────────────
@@ -257,6 +259,14 @@ export default function AdminDashboardPage() {
   });
   const [uploadingCoursePdf, setUploadingCoursePdf] = useState(false);
 
+  // Payment Settings
+  const [paymentSettingsForm, setPaymentSettingsForm] = useState({
+    razorpayKeyId: "",
+    razorpayKeySecret: ""
+  });
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [adminViewQuiz, setAdminViewQuiz] = useState<any>(null);
+
   // ================= FETCH LOGIC =================
   useEffect(() => {
     const checkAdmin = async () => {
@@ -321,6 +331,20 @@ export default function AdminDashboardPage() {
       const dataAgents = await resAgents.json();
       const agents = dataAgents.agents || [];
       setAgentsList(agents);
+
+      // Fetch Settings
+      try {
+        const resSettings = await fetch("/api/admin/settings");
+        const dataSettings = await resSettings.json();
+        if (resSettings.ok && dataSettings.success && dataSettings.settings) {
+          setPaymentSettingsForm({
+            razorpayKeyId: dataSettings.settings.razorpayKeyId || "",
+            razorpayKeySecret: dataSettings.settings.razorpayKeySecret || ""
+          });
+        }
+      } catch (err) {
+        console.error("Error loading settings:", err);
+      }
 
       // Update Stats
       setStats({
@@ -426,6 +450,32 @@ export default function AdminDashboardPage() {
       }
     } catch (err) {
       setErrorMsg("Network error creating course.");
+    }
+  };
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+    setSuccessMsg("");
+    setSavingSettings(true);
+
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(paymentSettingsForm)
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSuccessMsg("Payment settings updated successfully!");
+        setTimeout(() => setSuccessMsg(""), 4000);
+      } else {
+        setErrorMsg(data.error || "Failed to save settings.");
+      }
+    } catch (err) {
+      setErrorMsg("Network error saving settings.");
+    } finally {
+      setSavingSettings(false);
     }
   };
 
@@ -1526,6 +1576,25 @@ export default function AdminDashboardPage() {
   const themeRgb = hexToRgb(activeSidebarTheme.bg);
   const themeDarkRgb = hexToRgb(activeSidebarTheme.dark);
 
+  // Payment totals calculation
+  const totalCollected = studentsList.reduce((sum, student) => {
+    if (student.isPaid) {
+      if (student.paymentDetails?.amount) {
+        return sum + student.paymentDetails.amount;
+      }
+      const course = coursesList.find(c => c.title === student.course || c.code === student.course);
+      return sum + (course?.price || 0);
+    }
+    return sum;
+  }, 0);
+
+  const paidStudentsCount = studentsList.filter(s => s.isPaid).length;
+
+  const pendingStudentsCount = studentsList.filter(student => {
+    const course = coursesList.find(c => c.title === student.course || c.code === student.course);
+    return course?.isPaid && !student.isPaid;
+  }).length;
+
   return (
     <div
       id="admin-theme-root"
@@ -1572,6 +1641,8 @@ export default function AdminDashboardPage() {
             { id: "quizzes", label: "Create Exam", Icon: Award },
             { id: "results", label: "Exam Results", Icon: CheckCircle },
             { id: "agents", label: "Manage Agents", Icon: Users },
+            { id: "payments", label: "Payment Ledger", Icon: CreditCard },
+            { id: "settings", label: "Payment Settings", Icon: Settings },
           ] as { id: string; label: string; Icon: React.ElementType }[]).map(({ id, label, Icon }) => (
             <button
               key={id}
@@ -2023,6 +2094,7 @@ export default function AdminDashboardPage() {
                             <th className="pb-3">Candidate Name</th>
                             <th className="pb-3">Enrolled Program</th>
                             <th className="pb-3">Email ID</th>
+                            <th className="pb-3">Payment</th>
                             <th className="pb-3">Date Created</th>
                             <th className="pb-3 text-right pr-2">Actions</th>
                           </tr>
@@ -2041,6 +2113,22 @@ export default function AdminDashboardPage() {
                               </td>
                               <td className="py-3.5 text-slate-500 font-medium">{stud.course}</td>
                               <td className="py-3.5 text-slate-500 font-mono">{stud.email}</td>
+                              <td className="py-3.5">
+                                {(() => {
+                                  const course = coursesList.find(c => c.title === stud.course || c.code === stud.course);
+                                  if (!course?.isPaid) {
+                                    return <span className="px-2 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider bg-slate-100 text-slate-500 border border-slate-200/60">Free</span>;
+                                  }
+                                  return (
+                                    <span className={`px-2 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${stud.isPaid 
+                                      ? "bg-emerald-50 text-emerald-650 border border-emerald-100" 
+                                      : "bg-amber-50 text-amber-655 border border-amber-100"
+                                    }`}>
+                                      {stud.isPaid ? "Success" : "Pending"}
+                                    </span>
+                                  );
+                                })()}
+                              </td>
                               <td className="py-3.5 text-slate-400 font-medium">
                                 {new Date(stud.createdAt).toLocaleDateString()}
                               </td>
@@ -3068,6 +3156,13 @@ export default function AdminDashboardPage() {
                               <span className="text-[10px] font-extrabold text-deepskyblue-dark">
                                 Total Marks: {totalQuizMarks}
                               </span>
+                              <button
+                                type="button"
+                                onClick={() => setAdminViewQuiz(quiz)}
+                                className="px-2.5 py-1 bg-deepskyblue/10 hover:bg-deepskyblue text-deepskyblue-dark hover:text-white rounded-xl text-[10px] font-bold cursor-pointer transition shadow shadow-deepskyblue/5"
+                              >
+                                View Questions
+                              </button>
                             </div>
                           </div>
                         );
@@ -3250,6 +3345,183 @@ export default function AdminDashboardPage() {
                     </table>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* ================= TAB CONTENT 9: PAYMENT SETTINGS ================= */}
+            {activeTab === "settings" && (
+              <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-md shadow-slate-200/40 max-w-2xl animate-fade-in space-y-6">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Razorpay Credentials Configuration</h3>
+                  <p className="text-xs text-slate-500 mt-1">Configure active client credentials for student course payment checkouts</p>
+                </div>
+
+                <form onSubmit={handleSaveSettings} className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Razorpay Key ID</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="rzp_test_..."
+                      value={paymentSettingsForm.razorpayKeyId}
+                      onChange={e => setPaymentSettingsForm(prev => ({ ...prev, razorpayKeyId: e.target.value }))}
+                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Razorpay Key Secret</label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="Enter Key Secret"
+                      value={paymentSettingsForm.razorpayKeySecret}
+                      onChange={e => setPaymentSettingsForm(prev => ({ ...prev, razorpayKeySecret: e.target.value }))}
+                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={savingSettings}
+                    className="w-full flex items-center justify-center gap-1.5 py-3 px-4 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-xs shadow-md disabled:opacity-50 cursor-pointer transition-all"
+                  >
+                    {savingSettings ? (
+                      <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Shield className="h-4 w-4" />
+                        <span>Save Configuration</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* ================= TAB CONTENT 10: PAYMENT LEDGER ================= */}
+            {activeTab === "payments" && (
+              <div className="space-y-6 animate-fade-in">
+                {/* Metrics row */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                  {/* Card 1: Revenue */}
+                  <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-md shadow-slate-200/50 flex items-center justify-between">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Total Collected</span>
+                      <span className="text-2xl font-black text-slate-900">₹{totalCollected}</span>
+                      <p className="text-[10px] text-slate-400 font-medium">Accumulated course fees</p>
+                    </div>
+                    <div className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                      <DollarSign className="h-5 w-5" />
+                    </div>
+                  </div>
+
+                  {/* Card 2: Successful Payments */}
+                  <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-md shadow-slate-200/50 flex items-center justify-between">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Paid Students</span>
+                      <span className="text-2xl font-black text-slate-900">{paidStudentsCount}</span>
+                      <p className="text-[10px] text-slate-400 font-medium">Successful unlocks</p>
+                    </div>
+                    <div className="h-10 w-10 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
+                      <CheckCircle className="h-5 w-5" />
+                    </div>
+                  </div>
+
+                  {/* Card 3: Pending Payments */}
+                  <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-md shadow-slate-200/50 flex items-center justify-between">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Pending Payments</span>
+                      <span className="text-2xl font-black text-slate-900">{pendingStudentsCount}</span>
+                      <p className="text-[10px] text-slate-400 font-medium">Awaiting Razorpay checkout</p>
+                    </div>
+                    <div className="h-10 w-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                      <AlertCircle className="h-5 w-5" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payments list ledger */}
+                <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-5">
+                  <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900">Course Payment Ledger</h3>
+                      <p className="text-[10px] text-slate-400 mt-0.5">Audit transaction history and course enrollment unlocks</p>
+                    </div>
+                  </div>
+
+                  {studentsList.filter(student => {
+                    const course = coursesList.find(c => c.title === student.course || c.code === student.course);
+                    return course?.isPaid;
+                  }).length === 0 ? (
+                    <p className="text-xs text-slate-400 py-10 text-center font-medium">No students enrolled in paid courses found.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] tracking-wider font-bold">
+                            <th className="pb-3 pl-2">Candidate Details</th>
+                            <th className="pb-3">Enrolled Program</th>
+                            <th className="pb-3">Fee Amount</th>
+                            <th className="pb-3 text-center">Payment Status</th>
+                            <th className="pb-3">Transaction Details</th>
+                            <th className="pb-3">Unlock Date</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {studentsList
+                            .filter(student => {
+                              const course = coursesList.find(c => c.title === student.course || c.code === student.course);
+                              const query = searchQuery.toLowerCase();
+                              const matchesSearch = student.name.toLowerCase().includes(query) ||
+                                student.registrationId.toLowerCase().includes(query) ||
+                                student.course.toLowerCase().includes(query);
+                              return course?.isPaid && matchesSearch;
+                            })
+                            .map((stud, idx) => {
+                              const course = coursesList.find(c => c.title === stud.course || c.code === stud.course);
+                              const amount = course?.price || 0;
+                              return (
+                                <tr key={idx} className="text-slate-700 hover:bg-slate-50/50 hover:text-slate-900 transition-colors">
+                                  <td className="py-3.5 pl-2">
+                                    <div className="font-bold text-slate-900">{stud.name}</div>
+                                    <div className="text-[10px] text-slate-400 mt-0.5">{stud.registrationId}</div>
+                                  </td>
+                                  <td className="py-3.5 text-slate-500 font-semibold">{stud.course}</td>
+                                  <td className="py-3.5 font-bold text-slate-800">₹{amount}</td>
+                                  <td className="py-3.5 text-center">
+                                    <span className={`px-2.5 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${stud.isPaid 
+                                      ? "bg-emerald-50 text-emerald-650 border border-emerald-100" 
+                                      : "bg-amber-50 text-amber-655 border border-amber-100"
+                                    }`}>
+                                      {stud.isPaid ? "SUCCESS / PAID" : "PENDING / UNPAID"}
+                                    </span>
+                                  </td>
+                                  <td className="py-3.5 text-slate-505 font-mono text-[10px]">
+                                    {stud.isPaid && stud.paymentDetails ? (
+                                      <div className="flex flex-col">
+                                        <span>Order: {stud.paymentDetails.orderId}</span>
+                                        <span>Pay ID: {stud.paymentDetails.paymentId}</span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-slate-300">—</span>
+                                    )}
+                                  </td>
+                                  <td className="py-3.5 text-slate-400 font-medium">
+                                    {stud.isPaid && stud.paymentDetails?.paidAt ? (
+                                      new Date(stud.paymentDetails.paidAt).toLocaleString()
+                                    ) : (
+                                      <span className="text-slate-300">—</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -3525,6 +3797,77 @@ export default function AdminDashboardPage() {
             ) : (
               <p className="text-xs text-slate-400 text-center py-10 font-semibold">Error rendering student data.</p>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ADMIN QUIZ VIEWER MODAL */}
+      {adminViewQuiz && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto animate-fade-in">
+          <div className="relative w-full max-w-2xl bg-white border border-slate-250 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 my-8 text-left">
+            <div className="flex justify-between items-start border-b border-slate-150 pb-4">
+              <div>
+                <h3 className="text-lg font-extrabold text-slate-900 uppercase tracking-tight">{adminViewQuiz.title}</h3>
+                <div className="flex flex-wrap items-center gap-3 mt-1.5">
+                  <span className="text-xs text-slate-450 font-semibold">Course: {adminViewQuiz.course}</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-slate-350" />
+                  <span className="text-xs font-bold text-deepskyblue-dark">
+                    {adminViewQuiz.questions.length} Questions | Total Marks: {adminViewQuiz.questions.reduce((acc: number, q: any) => acc + (q.marks || 1), 0)}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setAdminViewQuiz(null)}
+                className="text-slate-500 hover:text-slate-800 text-xs font-bold bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 cursor-pointer transition-colors"
+              >
+                Close Viewer
+              </button>
+            </div>
+
+            <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2">
+              {adminViewQuiz.questions.map((question: any, qIdx: number) => (
+                <div key={qIdx} className="space-y-3 p-4 bg-slate-50 border border-slate-150 rounded-2xl">
+                  <div className="flex justify-between items-start gap-4">
+                    <h4 className="text-xs font-bold text-slate-800 leading-normal">
+                      Q{qIdx + 1}. {question.questionText}
+                    </h4>
+                    <span className="px-2 py-0.5 rounded text-[8px] font-black bg-deepskyblue/10 text-deepskyblue-dark border border-deepskyblue/25 uppercase tracking-wider shrink-0">
+                      {question.marks || 1} Marks
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    {question.options.map((opt: string, optIdx: number) => {
+                      const isCorrectChoice = question.correctAnswerIndex === optIdx;
+                      let btnStyle = "bg-white border-slate-200 text-slate-600";
+                      if (isCorrectChoice) {
+                        btnStyle = "bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm shadow-emerald-500/10";
+                      }
+
+                      return (
+                        <div
+                          key={optIdx}
+                          className={`p-3 rounded-xl border font-bold flex items-center justify-between ${btnStyle}`}
+                        >
+                          <div className="flex items-center min-w-0">
+                            <span className={`inline-block h-4 w-4 rounded-full border mr-2 text-center text-[9px] font-black uppercase leading-4 shrink-0 select-none ${
+                              isCorrectChoice ? "bg-emerald-100 border-emerald-300 text-emerald-750" : "bg-slate-50 border-slate-300 text-slate-500"
+                            }`}>
+                              {String.fromCharCode(65 + optIdx)}
+                            </span>
+                            <span className="truncate pr-2">{opt}</span>
+                          </div>
+
+                          {isCorrectChoice && (
+                            <span className="text-[9px] font-black uppercase text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded shrink-0">Correct Answer</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}

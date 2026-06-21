@@ -108,6 +108,7 @@ export async function POST(request: Request) {
       grade,
       correctCount,
       incorrectCount,
+      answers,
       date: new Date(),
     };
 

@@ -16,6 +16,14 @@ export interface ICandidate extends Document {
   password?: string;
   agentCode?: string | null;
   profilePicUrl?: string | null;
+  isPaid: boolean;
+  paymentDetails?: {
+    orderId: string;
+    paymentId: string;
+    signature: string;
+    amount: number;
+    paidAt: Date;
+  };
   createdAt: Date;
 }
 
@@ -35,6 +43,14 @@ const CandidateSchema = new Schema<ICandidate>({
   password: { type: String, required: true },
   agentCode: { type: String, default: null, index: true },
   profilePicUrl: { type: String, default: null },
+  isPaid: { type: Boolean, default: false },
+  paymentDetails: {
+    orderId: { type: String },
+    paymentId: { type: String },
+    signature: { type: String },
+    amount: { type: Number },
+    paidAt: { type: Date },
+  },
   createdAt: { type: Date, default: Date.now },
 });
 

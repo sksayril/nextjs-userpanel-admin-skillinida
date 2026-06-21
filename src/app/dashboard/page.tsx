@@ -49,6 +49,12 @@ export default function DashboardPage() {
 
   // Print Target State
   const [printTarget, setPrintTarget] = useState<any>(null);
+  const [paymentLoading, setPaymentLoading] = useState<boolean>(false);
+
+  // Exam Review States
+  const [reviewResult, setReviewResult] = useState<any>(null);
+  const [reviewQuiz, setReviewQuiz] = useState<any>(null);
+  const [loadingReview, setLoadingReview] = useState<boolean>(false);
 
   // Exam Locker and Countdown States
   const [pendingQuiz, setPendingQuiz] = useState<any>(null);
@@ -202,6 +208,133 @@ export default function DashboardPage() {
     }
   };
 
+  const handlePayment = async () => {
+    setPaymentLoading(true);
+    try {
+      // 1. Fetch public Key ID from /api/payment/key
+      const keyRes = await fetch("/api/payment/key");
+      const keyData = await keyRes.json();
+      if (!keyRes.ok || !keyData.success || !keyData.keyId) {
+        alert(keyData.error || "Failed to retrieve payment configuration keys.");
+        setPaymentLoading(false);
+        return;
+      }
+
+      // 2. Create payment order via /api/payment/create-order
+      const orderRes = await fetch("/api/payment/create-order", {
+        method: "POST"
+      });
+      const orderData = await orderRes.json();
+      if (!orderRes.ok || !orderData.success || !orderData.order) {
+        alert(orderData.error || "Failed to initialize enrollment payment order.");
+        setPaymentLoading(false);
+        return;
+      }
+
+      const { id: order_id, amount, currency } = orderData.order;
+
+      // 3. Load checkout.js script
+      const scriptLoaded = await new Promise((resolve) => {
+        if ((window as any).Razorpay) {
+          resolve(true);
+          return;
+        }
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+      });
+
+      if (!scriptLoaded) {
+        alert("Failed to load Razorpay SDK. Please check your internet connection.");
+        setPaymentLoading(false);
+        return;
+      }
+
+      // 4. Initialize Razorpay Checkout options
+      const options = {
+        key: keyData.keyId,
+        amount: amount,
+        currency: currency,
+        name: "Support Mission India",
+        description: `Enrollment Fee - ${candidate.course}`,
+        image: "/smi-logo.png",
+        order_id: order_id,
+        handler: async function (response: any) {
+          setPaymentLoading(true);
+          try {
+            // Verify payment on backend
+            const verifyRes = await fetch("/api/payment/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              })
+            });
+            const verifyData = await verifyRes.json();
+            if (verifyRes.ok && verifyData.success) {
+              alert("Payment successful! Your course has been unlocked.");
+              // Update local state dynamically to immediately unlock the UI
+              setCandidate((prev: any) => ({ ...prev, isPaid: true }));
+            } else {
+              alert(verifyData.error || "Payment verification failed. Please contact support.");
+            }
+          } catch (err) {
+            console.error("Payment verification network error:", err);
+            alert("Network error verifying payment.");
+          } finally {
+            setPaymentLoading(false);
+          }
+        },
+        prefill: {
+          name: candidate.name,
+          email: candidate.email,
+          contact: candidate.phone
+        },
+        theme: {
+          color: "#0ea5e9"
+        },
+        modal: {
+          ondismiss: function () {
+            setPaymentLoading(false);
+          }
+        }
+      };
+
+      const rzp1 = new (window as any).Razorpay(options);
+      rzp1.open();
+
+    } catch (err) {
+      console.error("Initiating payment error:", err);
+      alert("An unexpected error occurred while initiating payment.");
+      setPaymentLoading(false);
+    }
+  };
+
+  const handleReviewAnswers = async (resultRecord: any) => {
+    setReviewResult(resultRecord);
+    setLoadingReview(true);
+    try {
+      const res = await fetch(`/api/quizzes/${resultRecord.quizId}`);
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setReviewQuiz(data.quiz);
+      } else {
+        alert(data.error || "Failed to load quiz details for review.");
+        setReviewResult(null);
+      }
+    } catch (err) {
+      console.error("Error fetching review quiz:", err);
+      alert("Network error fetching quiz details.");
+      setReviewResult(null);
+    } finally {
+      setLoadingReview(false);
+    }
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -331,6 +464,8 @@ export default function DashboardPage() {
   const avatarInitials = candidate.name
     ? candidate.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
     : "ST";
+
+  const isDashboardLocked = courseData?.isPaid && !candidate?.isPaid;
 
 
   const renderPrintAdmitCard = (student: any) => {
@@ -1063,8 +1198,61 @@ export default function DashboardPage() {
 
       {/* BODY CONTENT CONTAINER */}
       <div className="flex-1 flex w-full relative">
+        {isDashboardLocked ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-2xl mx-auto space-y-8 animate-fade-in py-16">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full bg-amber-500/10 blur-xl animate-pulse" />
+              <div className="relative h-20 w-20 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-600 flex items-center justify-center shadow-lg shadow-amber-500/20 text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-10 h-10">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                </svg>
+              </div>
+            </div>
 
-        {/* DESKTOP SIDEBAR NAVIGATION (Hidden when printing & on Mobile view) */}
+            <div className="space-y-3">
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Dashboard Locked</h2>
+              <p className="text-sm text-slate-550 leading-relaxed max-w-md mx-auto">
+                This is a premium, paid program: <span className="font-bold text-slate-800">{candidate.course}</span>. Please complete your enrollment payment to unlock all lectures, notes, attendance history, quizzes, and certificates.
+              </p>
+            </div>
+
+            <div className="w-full bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className="text-left">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Course Enrollment Fee</span>
+                <span className="text-3xl font-black text-slate-900 leading-tight">₹{courseData?.price || 0}</span>
+                <span className="text-[10px] text-slate-400 font-medium block mt-0.5">One-time payment, lifetime syllabus access</span>
+              </div>
+
+              <button
+                onClick={handlePayment}
+                disabled={paymentLoading}
+                className="w-full sm:w-auto py-3 px-8 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-sm shadow-md shadow-deepskyblue/25 cursor-pointer disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+              >
+                {paymentLoading ? (
+                  <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <span>Unlock Enrolled Course</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                    </svg>
+                  </>
+                )}
+              </button>
+            </div>
+
+            <div className="pt-4">
+              <button
+                onClick={handleSignOut}
+                className="text-xs font-bold text-slate-400 hover:text-rose-650 hover:bg-rose-50 px-4 py-2 rounded-xl transition cursor-pointer"
+              >
+                Sign Out Session
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* DESKTOP SIDEBAR NAVIGATION (Hidden when printing & on Mobile view) */}
         <aside className="w-64 border-r border-slate-200/80 bg-white flex flex-col justify-between py-6 px-4 shrink-0 hidden lg:flex print:hidden">
           <div className="space-y-6">
             <div className="px-3">
@@ -1538,6 +1726,12 @@ export default function DashboardPage() {
                                   >
                                     Certificate
                                   </button>
+                                  <button
+                                    onClick={() => handleReviewAnswers(res.originalData)}
+                                    className="py-1 px-2.5 rounded-lg bg-deepskyblue hover:bg-deepskyblue-dark text-[10px] font-bold text-white shadow shadow-deepskyblue/10 transition cursor-pointer"
+                                  >
+                                    Review
+                                  </button>
                                 </>
                               )}
                             </div>
@@ -1782,6 +1976,8 @@ export default function DashboardPage() {
           )}
 
         </main>
+          </>
+        )}
       </div>
 
       {/* EXAM KEY / PASSWORD ENTRY MODAL */}
@@ -1924,8 +2120,132 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* QUIZ REVIEW MODAL */}
+      {(reviewResult || loadingReview) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto animate-fade-in">
+          <div className="relative w-full max-w-2xl bg-white border border-slate-250 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 my-8 text-left">
+            <div className="flex justify-between items-start border-b border-slate-150 pb-4">
+              <div>
+                <h3 className="text-lg font-extrabold text-slate-900 uppercase tracking-tight">
+                  {loadingReview ? "Loading Review..." : reviewQuiz?.title}
+                </h3>
+                {!loadingReview && reviewResult && (
+                  <div className="flex flex-wrap items-center gap-3 mt-1.5">
+                    <span className="text-xs text-slate-400 font-semibold">Course: {reviewQuiz?.course}</span>
+                    <span className="h-1.5 w-1.5 rounded-full bg-slate-350" />
+                    <span className="text-xs font-bold text-deepskyblue-dark">
+                      Score: {reviewResult.score} / {reviewResult.total} ({reviewResult.percentage}%) - {reviewResult.grade}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  setReviewResult(null);
+                  setReviewQuiz(null);
+                }}
+                className="text-slate-500 hover:text-slate-800 text-xs font-bold bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 cursor-pointer transition-colors"
+              >
+                Close Review
+              </button>
+            </div>
+
+            {loadingReview ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-3">
+                <div className="h-10 w-10 border-4 border-deepskyblue/30 border-t-deepskyblue rounded-full animate-spin" />
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Loading Exam Submission Details...</p>
+              </div>
+            ) : (
+              <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2">
+                {/* Score breakdown metrics cards */}
+                <div className="grid grid-cols-3 gap-4 bg-slate-50 p-4 border border-slate-200/80 rounded-2xl">
+                  <div className="text-center">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase block">Correct</span>
+                    <span className="text-lg font-black text-emerald-600 mt-0.5 block">{reviewResult.correctCount}</span>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase block">Incorrect</span>
+                    <span className="text-lg font-black text-rose-500 mt-0.5 block">{reviewResult.incorrectCount}</span>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase block">Result Status</span>
+                    <span className={`text-lg font-black mt-0.5 block ${reviewResult.percentage >= 50 ? "text-emerald-600" : "text-rose-600"}`}>
+                      {reviewResult.percentage >= 50 ? "PASS" : "FAIL"}
+                    </span>
+                  </div>
+                </div>
+
+                {reviewQuiz?.questions?.map((question: any, qIdx: number) => {
+                  const studentAnsIdx = reviewResult.answers ? reviewResult.answers[qIdx] : -1;
+                  const correctAnsIdx = question.correctAnswerIndex;
+                  const isCorrect = studentAnsIdx === correctAnsIdx;
+
+                  return (
+                    <div key={qIdx} className={`space-y-3 p-4 border rounded-2xl ${
+                      isCorrect 
+                        ? "bg-emerald-50/20 border-emerald-150" 
+                        : "bg-rose-50/10 border-rose-150"
+                    }`}>
+                      <div className="flex justify-between items-start gap-4">
+                        <h4 className="text-xs font-bold text-slate-800 leading-normal">
+                          Q{qIdx + 1}. {question.questionText}
+                        </h4>
+                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider shrink-0 ${
+                          isCorrect ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                        }`}>
+                          {isCorrect ? `+${question.marks || 1} Marks` : "0 Marks"}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        {question.options.map((opt: string, optIdx: number) => {
+                          const isStudentSelected = studentAnsIdx === optIdx;
+                          const isCorrectChoice = correctAnsIdx === optIdx;
+
+                          let btnStyle = "bg-white border-slate-200 text-slate-600";
+                          if (isCorrectChoice) {
+                            btnStyle = "bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm shadow-emerald-500/10";
+                          } else if (isStudentSelected) {
+                            btnStyle = "bg-rose-50 border-rose-500 text-rose-700 shadow-sm shadow-rose-500/10";
+                          }
+
+                          return (
+                            <div
+                              key={optIdx}
+                              className={`p-3 rounded-xl border font-bold flex items-center justify-between ${btnStyle}`}
+                            >
+                              <div className="flex items-center min-w-0">
+                                <span className={`inline-block h-4 w-4 rounded-full border mr-2 text-center text-[9px] font-black uppercase leading-4 shrink-0 select-none ${
+                                  isCorrectChoice ? "bg-emerald-100 border-emerald-300 text-emerald-750" :
+                                  isStudentSelected ? "bg-rose-100 border-rose-300 text-rose-750" : "bg-slate-50 border-slate-300 text-slate-500"
+                                }`}>
+                                  {String.fromCharCode(65 + optIdx)}
+                                </span>
+                                <span className="truncate pr-2">{opt}</span>
+                              </div>
+
+                              {isCorrectChoice && (
+                                <span className="text-[9px] font-black uppercase text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded shrink-0">Correct Key</span>
+                              )}
+                              {!isCorrectChoice && isStudentSelected && (
+                                <span className="text-[9px] font-black uppercase text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded shrink-0">Your Choice</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* MOBILE BOTTOM MENU BAR */}
-      <footer className="h-18 border-t border-slate-200/80 backdrop-blur-lg bg-white/90 fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around px-1 lg:hidden print:hidden shadow-[0_-4px_20px_0_rgba(0,0,0,0.05)] transition-all">
+      {!isDashboardLocked && (
+        <footer className="h-18 border-t border-slate-200/80 backdrop-blur-lg bg-white/90 fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around px-1 lg:hidden print:hidden shadow-[0_-4px_20px_0_rgba(0,0,0,0.05)] transition-all">
         {/* Courses */}
         <button
           onClick={() => setActiveTab("courses")}
@@ -2046,6 +2366,7 @@ export default function DashboardPage() {
           )}
         </button>
       </footer>
+      )}
 
       {/* PRINT AREA CONTAINER (Hidden on screen, shown in printing) */}
       <div id="print-area-wrapper" className="hidden print:block">

@@ -10,6 +10,7 @@ export interface IResult extends Document {
   grade: string;
   correctCount: number;
   incorrectCount: number;
+  answers?: number[];
   date: Date;
 }
 
@@ -23,6 +24,7 @@ const ResultSchema = new Schema<IResult>({
   grade: { type: String, required: true },
   correctCount: { type: Number, required: true, default: 0 },
   incorrectCount: { type: Number, required: true, default: 0 },
+  answers: { type: [Number], default: [] },
   date: { type: Date, default: Date.now },
 });
 
