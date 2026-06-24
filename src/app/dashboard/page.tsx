@@ -23,6 +23,7 @@ import {
   ExternalLink
 } from "lucide-react";
 import { resolveFileUrl } from "@/lib/fileUrl";
+import Logo from "@/components/Logo";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -343,7 +344,7 @@ export default function DashboardPage() {
     window.print();
   };
 
-  const triggerPrint = (type: "marksheet" | "certificate" | "cumulative_marksheet" | "admitcard", data: any) => {
+  const triggerPrint = (type: "marksheet" | "certificate" | "cumulative_marksheet" | "admitcard" | "idcard", data: any) => {
     setPrintTarget({ type, data });
     setTimeout(() => {
       window.print();
@@ -389,9 +390,9 @@ export default function DashboardPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         if (isAutoSubmit) {
-          toast.success(`Time expired! Your exam was automatically submitted. Score: ${data.result.score}/${data.result.total} (${data.result.percentage}%) - Grade: ${data.result.grade}`);
+          toast.success("Time expired! Your exam was automatically submitted. Your results are pending administrator review.");
         } else {
-          toast.success(`Exam submitted successfully! Score: ${data.result.score}/${data.result.total} (${data.result.percentage}%) - Grade: ${data.result.grade}`);
+          toast.success("Exam submitted successfully! Your results are pending administrator review.");
         }
         setActiveQuiz(null);
         await fetchDashboardData();
@@ -416,36 +417,35 @@ export default function DashboardPage() {
   };
 
   // Dynamic Results mapping into print Mark Sheet
-  const resultsToDisplay = results.length > 0
-    ? results.map((r, i) => {
-        // Map quiz percentage directly into a standard 100-mark schema for print layout
-        const code = `QUIZ-${101 + i}`;
-        const internal = Math.round(r.score * (30 / r.total));
-        const external = Math.round((r.total - r.score) * (70 / r.total)) + r.score * 5;
-        const total = Math.round((r.score / r.total) * 100);
-        return {
-          code,
-          subject: r.quizTitle,
-          internal: internal > 30 ? 30 : internal,
-          external: external > 70 ? 70 : external,
-          total,
-          grade: r.grade,
-          originalData: r
-        };
-      })
-    : [
-        { code: "CS-101", subject: "Theoretical Principles", internal: 28, external: 66, total: 94, grade: "A+" },
-        { code: "CS-102", subject: "Practical Applications Lab", internal: 26, external: 60, total: 86, grade: "A" },
-        { code: "CS-103", subject: "Security & Auditing Essentials", internal: 22, external: 56, total: 78, grade: "B+" },
-        { code: "CS-104", subject: "Final Term Capstone Project", internal: 28, external: 60, total: 88, grade: "A" }
-      ];
+  const resultsToDisplay = results.map((r, i) => {
+    const code = `QUIZ-${101 + i}`;
+    const isApproved = !!r.isApproved;
+    
+    // If approved, map scores. If not, fallback to placeholders.
+    const internal = isApproved ? Math.round((r.score || 0) * (30 / (r.total || 1))) : null;
+    const external = isApproved ? Math.round(((r.total || 0) - (r.score || 0)) * (70 / (r.total || 1))) + (r.score || 0) * 5 : null;
+    const total = isApproved ? Math.round(((r.score || 0) / (r.total || 1)) * 100) : null;
+    
+    return {
+      code,
+      subject: r.quizTitle,
+      internal: isApproved ? (internal! > 30 ? 30 : internal) : "-",
+      external: isApproved ? (external! > 70 ? 70 : external) : "-",
+      total: isApproved ? total : "Pending",
+      grade: isApproved ? r.grade : "Pending",
+      isApproved,
+      isCertificateApproved: !!r.isCertificateApproved,
+      originalData: r
+    };
+  });
 
-  // Derive GPA
-  const totalPercentage = results.length > 0
-    ? results.reduce((acc, curr) => acc + curr.percentage, 0) / results.length
-    : 86.5;
-  const weightedGpa = (totalPercentage / 10).toFixed(2);
-  const finalStatus = totalPercentage >= 50 ? "PASS" : "FAIL";
+  // Derive GPA only from APPROVED results
+  const approvedResults = results.filter(r => r.isApproved);
+  const totalPercentage = approvedResults.length > 0
+    ? approvedResults.reduce((acc, curr) => acc + (curr.percentage || 0), 0) / approvedResults.length
+    : 0;
+  const weightedGpa = approvedResults.length > 0 ? (totalPercentage / 10).toFixed(2) : "0.00";
+  const finalStatus = approvedResults.length > 0 && totalPercentage >= 50 ? "PASS" : "PENDING";
 
   // Loading Screen Spinner
   if (loading) {
@@ -491,6 +491,189 @@ export default function DashboardPage() {
   const isDashboardLocked = courseData?.isPaid && !candidate?.isPaid;
 
 
+  const renderPrintIdCard = (student: any) => {
+    if (!student) return null;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent("https://app.smi.in.net/login")}`;
+
+    const formatDate = (dateInput: any) => {
+      if (!dateInput) return "01.01.2025";
+      const d = new Date(dateInput);
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = String(d.getFullYear()).slice(-2);
+      return `${day}.${month}.${year}`;
+    };
+
+    const joinedDate = formatDate(student.createdAt);
+    const expireDate = formatDate(
+      student.createdAt 
+        ? new Date(new Date(student.createdAt).setFullYear(new Date(student.createdAt).getFullYear() + 1))
+        : new Date(new Date().setFullYear(new Date().getFullYear() + 1))
+    );
+
+    return (
+      <div 
+        className="w-[210mm] h-[297mm] bg-white hidden print:flex flex-row items-start justify-center gap-10 pt-24 absolute inset-0 z-50 font-sans"
+        style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}
+      >
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Inter:wght@400;500;600;700;800;900&display=swap');
+          .font-sans {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          }
+          .font-signature {
+            font-family: 'Dancing Script', cursive;
+          }
+        `}</style>
+
+        {/* FRONT CARD */}
+        <div className="w-[64mm] h-[100mm] border border-slate-300 rounded-2xl shadow-xl bg-white overflow-hidden relative flex flex-col scale-110 transform origin-top-left">
+          {/* Header SVG Wave Background */}
+          <div className="absolute top-0 left-0 w-full h-[32%] z-0">
+            <svg viewBox="0 0 200 80" className="w-full h-full" preserveAspectRatio="none">
+              <path d="M0,0 L200,0 L200,55 C160,75 140,45 100,55 C60,65 40,75 0,55 Z" fill="#00BFFF" />
+              <path d="M0,55 C40,75 60,65 100,55 C140,45 160,75 200,55 L200,58 C160,78 140,48 100,58 C60,68 40,78 0,58 Z" fill="#0C2340" opacity="0.4" />
+              <path d="M0,55 C40,75 60,65 100,55 C140,45 160,75 200,55" fill="none" stroke="#0C2340" strokeWidth="1" />
+            </svg>
+          </div>
+
+          {/* Company Logo and Tagline */}
+          <div className="flex flex-col items-center justify-center pt-3 pb-1 z-10 relative">
+            <img src="/smi-logo-clean.png" alt="SMI Logo" className="h-6 object-contain drop-shadow-sm" />
+            <span className="text-[5.5px] font-black uppercase tracking-wider text-[#0C2340] mt-0.5">Support Mission India</span>
+          </div>
+
+          {/* Photo overlapping header */}
+          <div className="flex-shrink-0 flex justify-center mt-3 z-10 relative">
+            <div className="relative p-0.5 bg-white rounded-full shadow-md border border-slate-200">
+              <div className="absolute inset-[-3px] rounded-full border border-[#00BFFF] opacity-80 scale-100"></div>
+              <div className="w-16 h-16 rounded-full overflow-hidden bg-slate-100 flex items-center justify-center">
+                {student.profilePicUrl ? (
+                  <img src={resolveFileUrl(student.profilePicUrl)} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="h-6 w-6 text-slate-300" />
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Content Area */}
+          <div className="px-4 pt-4 pb-12 flex-1 flex flex-col items-center z-10 relative">
+            <h3 className="text-[11px] font-black text-[#00BFFF] uppercase tracking-tight text-center">{student.name}</h3>
+            <p className="text-[7.5px] text-[#0C2340] font-black tracking-wider uppercase mt-0.5 text-center">{student.course}</p>
+            
+            <div className="w-full mt-3 space-y-1 text-[7px] font-semibold text-slate-700 bg-slate-50/50 p-2 rounded-xl border border-slate-100">
+              <div className="flex justify-between border-b border-slate-100 pb-0.5">
+                <span className="text-slate-400 font-bold uppercase text-[5.5px]">ID No</span>
+                <span className="text-[#00BFFF] font-bold">{student.registrationId}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-100 pb-0.5">
+                <span className="text-slate-400 font-bold uppercase text-[5.5px]">Father's Name</span>
+                <span className="text-slate-800 font-bold truncate max-w-[28mm] text-right">{student.fatherName || "N/A"}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-100 pb-0.5">
+                <span className="text-slate-400 font-bold uppercase text-[5.5px]">DOB</span>
+                <span className="text-slate-800 font-bold">{new Date(student.dob).toLocaleDateString("en-GB")}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-100 pb-0.5">
+                <span className="text-slate-400 font-bold uppercase text-[5.5px]">Mobile</span>
+                <span className="text-slate-800 font-bold">{student.phone || student.mobile || "N/A"}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer Wave & Website */}
+          <div className="absolute bottom-0 left-0 w-full h-[10%] z-10">
+            <svg viewBox="0 0 200 40" className="w-full h-full" preserveAspectRatio="none">
+              <path d="M0,20 C40,5 60,15 100,5 C140,-5 160,10 200,0 L200,40 L0,40 Z" fill="#00BFFF" />
+            </svg>
+            <div className="absolute bottom-1 w-full text-center text-white text-[6.5px] font-black tracking-widest">
+              app.smi.in.net
+            </div>
+          </div>
+        </div>
+
+        {/* BACK CARD */}
+        <div className="w-[64mm] h-[100mm] border border-slate-300 rounded-2xl shadow-xl bg-white overflow-hidden relative flex flex-col scale-110 transform origin-top-left">
+          {/* Header Curved Double Lines */}
+          <div className="absolute top-0 left-0 w-full h-[15%] z-0">
+            <svg viewBox="0 0 200 50" className="w-full h-full" preserveAspectRatio="none">
+              <path d="M0,0 Q100,45 200,0" fill="none" stroke="#00BFFF" strokeWidth="2.5" />
+              <path d="M0,0 Q100,35 200,0" fill="none" stroke="#00BFFF" strokeWidth="1" opacity="0.6" />
+            </svg>
+          </div>
+
+          {/* Spacer to push content down */}
+          <div className="h-[12%]"></div>
+
+          {/* Terms & Conditions */}
+          <div className="px-4 py-2 flex flex-col items-center">
+            <h4 className="text-[7.5px] font-bold text-[#00BFFF] tracking-wide uppercase border-b border-[#00BFFF] pb-0.5 w-full text-center">Terms and Conditions</h4>
+            <ul className="text-[5.5px] text-slate-500 font-semibold space-y-1 mt-2 text-left w-full list-disc pl-3">
+              <li>This Identity Card is non-transferable and remains the property of Support Mission India.</li>
+              <li>It must be presented during examinations, practical classes, and official visits.</li>
+              <li>Scan the QR code below using any smartphone to verify the dynamic digital profile.</li>
+              <li>If found, please return to nearest SMI campus or mail to administrative head office.</li>
+            </ul>
+          </div>
+
+          {/* Dates Section */}
+          <div className="px-4 mt-1 flex justify-around text-center w-full">
+            <div>
+              <span className="text-[5px] text-slate-400 font-bold uppercase block">Joined</span>
+              <span className="text-[7.5px] text-slate-800 font-black">{joinedDate}</span>
+            </div>
+            <div className="w-[0.5px] h-6 bg-slate-200"></div>
+            <div>
+              <span className="text-[5px] text-slate-400 font-bold uppercase block">Expire</span>
+              <span className="text-[7.5px] text-[#00BFFF] font-black">{expireDate}</span>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="px-4 mt-2">
+            <div className="w-full h-[0.5px] bg-[#00BFFF]/20"></div>
+          </div>
+
+          {/* Contact Details */}
+          <div className="px-4 mt-2 text-center">
+            <span className="text-[5px] text-slate-400 font-bold uppercase block">Contact Company</span>
+            <span className="text-[6.5px] text-slate-700 font-bold block mt-0.5">info@smi.in.net</span>
+            <span className="text-[6.5px] text-[#0C2340] font-bold block">www.smi.in.net</span>
+          </div>
+
+          {/* Footer Area with QR Code and Signature */}
+          <div className="flex-1 flex items-end justify-between px-4 pb-4 mt-2 z-10 relative">
+            {/* QR Code and verify text */}
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 bg-white p-0.5 border border-slate-200 rounded-lg shadow-sm flex items-center justify-center">
+                <img src={qrUrl} alt="QR Code" className="w-full h-full object-contain" />
+              </div>
+              <span className="text-[4.5px] text-slate-400 font-bold mt-1 uppercase">Scan to Verify</span>
+            </div>
+
+            {/* Signature */}
+            <div className="flex flex-col items-center justify-end h-16">
+              <div className="h-10 w-20 relative flex items-center justify-center -rotate-2 select-none pr-1">
+                <img src="/authorized-signature.jpg" alt="Authorized Signature" className="max-h-full max-w-full object-contain mix-blend-multiply" />
+              </div>
+              <div className="w-20 h-[0.5px] bg-slate-300 my-1"></div>
+              <span className="text-[5px] text-slate-400 font-bold uppercase tracking-wider">Authorized Signatory</span>
+            </div>
+          </div>
+
+          {/* Bottom Right Corner Navy Curve */}
+          <div className="absolute bottom-0 right-0 w-20 h-20 z-0">
+            <svg viewBox="0 0 100 100" className="w-full h-full" preserveAspectRatio="none">
+              <path d="M100,0 Q50,50 100,100 Z" fill="#00BFFF" />
+              <path d="M100,10 Q60,60 100,100" fill="none" stroke="#0C2340" strokeWidth="1.5" opacity="0.6" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderPrintAdmitCard = (student: any) => {
     if (!student) return null;
     
@@ -514,7 +697,7 @@ export default function DashboardPage() {
     const startTime = student.startTime || "10:00AM";
     
     // Fallback QR code data
-    const verifyUrl = `https://supportmissionindia.org/verify?reg=${student.registrationId || "N/A"}`;
+    const verifyUrl = `https://smi.in.net/verify?reg=${student.registrationId || "N/A"}`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(verifyUrl)}`;
 
     return (
@@ -654,11 +837,11 @@ export default function DashboardPage() {
                     </tr>
                     <tr>
                       <td className="text-slate-400 font-bold uppercase tracking-wider text-[7px] py-0.5">Gender</td>
-                      <td className="font-semibold text-slate-700 py-0.5">{student.gender || "FEMALE"}</td>
+                      <td className="font-semibold text-slate-700 py-0.5">{student.gender || "MALE"}</td>
                     </tr>
                     <tr>
                       <td className="text-slate-400 font-bold uppercase tracking-wider text-[7px] py-0.5">Category</td>
-                      <td className="font-semibold text-slate-700 py-0.5">{student.category || "ST"}</td>
+                      <td className="font-semibold text-slate-700 py-0.5">{student.category || "GEN"}</td>
                     </tr>
                     <tr>
                       <td className="text-slate-400 font-bold uppercase tracking-wider text-[7px] py-0.5">Mobile Number</td>
@@ -696,20 +879,20 @@ export default function DashboardPage() {
             {/* Exam Details (Middle section) */}
             <div className="flex flex-col">
               <div className="bg-[#0c3e8a] text-white text-[8.5px] font-bold px-2 py-0.5 uppercase tracking-wide rounded-sm mb-1.5">
-                EXAMINATION / INTERVIEW DETAILS
+                INTERVIEW DETAILS
               </div>
               <table className="w-full text-[9px] leading-relaxed">
                 <tbody>
                   <tr className="grid grid-cols-12 w-full gap-x-2">
                     <td className="col-span-4"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Post Applied For</span><span className="font-extrabold text-[#0c3e8a]">{student.course || "Instructor"}</span></td>
-                    <td className="col-span-4"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Examination Mode</span><span className="font-semibold text-slate-700">Online (Remote Proctored)</span></td>
-                    <td className="col-span-4"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Exam Date</span><span className="font-semibold text-slate-700">{examDate}</span></td>
+                    <td className="col-span-4"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Interview Mode</span><span className="font-semibold text-slate-700">Online (Remote Proctored)</span></td>
+                    <td className="col-span-4"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Interview Date</span><span className="font-semibold text-slate-700">As per Schedule</span></td>
                   </tr>
                   <tr className="grid grid-cols-12 w-full gap-x-2 mt-1">
-                    <td className="col-span-3"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Login Time</span><span className="font-semibold text-slate-700">{loginTime}</span></td>
-                    <td className="col-span-3"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Interview Start Time</span><span className="font-semibold text-slate-700">{startTime}</span></td>
-                    <td className="col-span-2"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Duration</span><span className="font-semibold text-slate-700">Asper Schedule</span></td>
-                    <td className="col-span-4"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Platform / Portal</span><span className="font-semibold text-slate-700">Support Mission India Assessment Portal</span></td>
+                    <td className="col-span-3"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Login Time</span><span className="font-semibold text-slate-700">As per Schedule</span></td>
+                    <td className="col-span-3"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Exam Start Time</span><span className="font-semibold text-slate-700">As per Schedule</span></td>
+                    <td className="col-span-2"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Duration</span><span className="font-semibold text-slate-700">As per Schedule</span></td>
+                    <td className="col-span-4"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Platform / Portal</span><span className="font-semibold text-slate-700">www.smi.in.net</span></td>
                   </tr>
                 </tbody>
               </table>
@@ -724,7 +907,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="border border-slate-200 p-1.5 rounded bg-slate-50/50 text-[8.5px] space-y-1 flex-1">
                   <p className="font-bold text-slate-600">User ID/ Registration No. : <span className="font-mono font-extrabold text-[#0c3e8a] block">{student.registrationId}</span></p>
-                  <p className="font-bold text-slate-500">Password : <span className="text-[#b89047] italic">Will besent onyour registered email& mobile before exam</span></p>
+                  <p className="font-bold text-slate-500">Password : <span className="text-rose-600 font-extrabold font-mono tracking-wide">{student.originalPassword || "(Your portal login password)"}</span></p>
                 </div>
               </div>
 
@@ -779,10 +962,8 @@ export default function DashboardPage() {
 
             {/* Authorised Signatory Signature stamp */}
             <div className="text-center mt-2 border-t border-slate-200 pt-1.5 flex flex-col items-center">
-              <div className="h-6 flex items-center justify-center">
-                <span style={{ fontFamily: "'Dancing Script', 'Pacifico', 'Brush Script MT', cursive", fontSize: "16px", color: "#1e3a8a" }} className="font-extrabold">
-                  Manish Sinha
-                </span>
+              <div className="h-6 w-24 relative flex items-center justify-center">
+                <img src="/admit-signature.png" alt="Authorized Signature" className="max-h-full max-w-full object-contain mix-blend-multiply" />
               </div>
               <div className="h-[1px] bg-slate-400 w-[80%] my-0.5"></div>
               <span className="text-[6.5px] font-extrabold text-slate-500 leading-tight uppercase block">Authorised Signatory</span>
@@ -917,7 +1098,7 @@ export default function DashboardPage() {
               <div className="h-11 w-11 border border-slate-300 p-0.5 bg-white flex items-center justify-center shrink-0">
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
-                    `https://supportmissionindia.org/verify?reg=${candidate?.registrationId || "N/A"}&id=${res._id}`
+                    `https://smi.in.net/verify?reg=${candidate?.registrationId || "N/A"}&id=${res._id}`
                   )}`}
                   className="h-10 w-10 object-contain"
                   alt="QR Code"
@@ -1193,9 +1374,7 @@ export default function DashboardPage() {
       {/* HEADER SECTION (Hidden when printing) */}
       <header className="h-16 border-b border-slate-200/80 backdrop-blur-md bg-white/80 sticky top-0 z-40 flex items-center justify-between px-6 print:hidden">
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-lg bg-gradient-to-tr from-deepskyblue to-sky-600 flex items-center justify-center shadow-md shadow-deepskyblue/20">
-            <Sparkles className="h-5 w-5 text-white" />
-          </div>
+          <Logo iconSize="sm" showText={false} />
           <span className="font-extrabold tracking-tight text-slate-900 hidden sm:inline-block text-sm">SUPPORT MISSION INDIA</span>
           <span className="font-extrabold tracking-tight text-slate-900 sm:hidden text-xs">SMI PANEL</span>
         </div>
@@ -1302,7 +1481,7 @@ export default function DashboardPage() {
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer ${activeTab === "papers" ? "bg-deepskyblue/10 text-deepskyblue-dark border-l-2 border-deepskyblue" : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"}`}
               >
                 <FileText className="h-4 w-4" />
-                <span>Question Paper</span>
+                <span>Exam</span>
               </button>
 
               <button
@@ -1373,6 +1552,12 @@ export default function DashboardPage() {
                   )}
                 </div>
                 <h3 className="text-lg font-bold text-slate-900 mt-3">{candidate.course}</h3>
+                {courseData?.duration && (
+                  <p className="text-[11px] text-deepskyblue-dark font-bold mt-1 flex items-center gap-1.5">
+                    <Calendar className="h-3.5 w-3.5" />
+                    Program Duration: {courseData.duration}
+                  </p>
+                )}
                 <p className="text-xs text-slate-500 mt-1 font-semibold">Registered Student ID: {candidate.registrationId}</p>
 
                 <div className="flex gap-4 items-center mt-6">
@@ -1655,27 +1840,56 @@ export default function DashboardPage() {
                   <p className="text-xs text-slate-500 mt-1">Download and inspect verified semester mark sheets</p>
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => triggerPrint("cumulative_marksheet", results)}
-                    className="flex items-center gap-2 py-2 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-xs font-bold text-slate-700 shadow-sm transition-all active:scale-[0.98] cursor-pointer"
-                  >
-                    <Printer className="h-3.5 w-3.5" />
-                    <span>Print Mark Sheet</span>
-                  </button>
                   {results.length > 0 && (
                     <button
-                      onClick={() => triggerPrint("certificate", results[results.length - 1])}
-                      className="flex items-center gap-2 py-2 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-xs font-bold text-white shadow shadow-amber-500/10 transition-all active:scale-[0.98] cursor-pointer"
+                      onClick={() => approvedResults.length > 0 && triggerPrint("cumulative_marksheet", approvedResults)}
+                      disabled={approvedResults.length === 0}
+                      className={`flex items-center gap-2 py-2 px-4 rounded-xl text-xs font-bold shadow-sm transition-all active:scale-[0.98] ${
+                        approvedResults.length > 0
+                          ? "bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 cursor-pointer"
+                          : "bg-slate-50 border border-slate-100 text-slate-400 cursor-not-allowed opacity-60"
+                      }`}
                     >
-                      <Award className="h-3.5 w-3.5 text-white" />
+                      <Printer className="h-3.5 w-3.5" />
+                      <span>Print Mark Sheet</span>
+                    </button>
+                  )}
+                  {results.length > 0 && (
+                    <button
+                      onClick={() => {
+                        const latestApprovedCert = [...results].reverse().find(r => r.isCertificateApproved);
+                        if (latestApprovedCert) {
+                          triggerPrint("certificate", latestApprovedCert);
+                        }
+                      }}
+                      disabled={!results.some(r => r.isCertificateApproved)}
+                      className={`flex items-center gap-2 py-2 px-4 rounded-xl text-xs font-bold shadow transition-all active:scale-[0.98] ${
+                        results.some(r => r.isCertificateApproved)
+                          ? "bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white shadow-amber-500/10 cursor-pointer"
+                          : "bg-slate-50 border border-slate-100 text-slate-400 cursor-not-allowed opacity-60"
+                      }`}
+                    >
+                      <Award className="h-3.5 w-3.5" />
                       <span>Print Certificate</span>
                     </button>
                   )}
                 </div>
               </div>
 
-              {/* Printable Marksheet Container */}
-              <div id="id-card-print-area" className="p-6 sm:p-8 rounded-2xl bg-white border border-slate-250 shadow-xl relative overflow-hidden bg-gradient-to-br from-white via-slate-50/50 to-deepskyblue-light/20 print:bg-white print:border-none print:shadow-none print:text-black">
+              {results.length > 0 && approvedResults.length < results.length && (
+                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-250 flex items-start gap-3 print:hidden">
+                  <AlertCircle className="h-5.5 w-5.5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h4 className="text-xs font-bold text-amber-800">Results Verification Pending</h4>
+                    <p className="text-[10px] text-amber-650 font-semibold mt-0.5 animate-pulse">
+                      Some of your completed exam records are currently undergoing verification by the academic board. Individual marksheets and certificates will become downloadable once approved by the administrator.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {results.length > 0 ? (
+                <div id="id-card-print-area" className="p-6 sm:p-8 rounded-2xl bg-white border border-slate-250 shadow-xl relative overflow-hidden bg-gradient-to-br from-white via-slate-50/50 to-deepskyblue-light/20 print:bg-white print:border-none print:shadow-none print:text-black">
                 
                 {/* Print Title Header */}
                 <div className="text-center border-b border-slate-200/80 pb-5 mb-6 print:border-zinc-300">
@@ -1700,11 +1914,15 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <span className="text-slate-400 block font-semibold">Course Code</span>
-                    <span className="font-bold text-deepskyblue-dark print:text-zinc-800">ADIT-2026</span>
+                    <span className="font-bold text-deepskyblue-dark print:text-zinc-800">{courseData?.code || "N/A"}</span>
                   </div>
-                  <div className="sm:col-span-3">
+                  <div>
                     <span className="text-slate-400 block font-semibold">Course Name</span>
                     <span className="font-semibold text-slate-700 print:text-black">{candidate.course}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block font-semibold">Program Duration</span>
+                    <span className="font-semibold text-slate-700 print:text-black">{courseData?.duration || "N/A"}</span>
                   </div>
                 </div>
 
@@ -1736,20 +1954,38 @@ export default function DashboardPage() {
                               {res.originalData && (
                                 <>
                                   <button
-                                    onClick={() => triggerPrint("marksheet", res.originalData)}
-                                    className="py-1 px-2.5 rounded-lg bg-slate-50 border border-slate-200 hover:bg-slate-100 text-[10px] font-bold text-slate-600 transition cursor-pointer"
+                                    onClick={() => res.isApproved && triggerPrint("marksheet", res.originalData)}
+                                    disabled={!res.isApproved}
+                                    className={`py-1 px-2.5 rounded-lg text-[10px] font-bold transition ${
+                                      res.isApproved
+                                        ? "bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 cursor-pointer"
+                                        : "bg-slate-50 border border-slate-100 text-slate-400 cursor-not-allowed opacity-60"
+                                    }`}
+                                    title={res.isApproved ? "Print Marksheet" : "Pending Approval"}
                                   >
                                     Marksheet
                                   </button>
                                   <button
-                                    onClick={() => triggerPrint("certificate", res.originalData)}
-                                    className="py-1 px-2.5 rounded-lg bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-[10px] font-bold text-white shadow shadow-amber-500/10 transition cursor-pointer"
+                                    onClick={() => res.isCertificateApproved && triggerPrint("certificate", res.originalData)}
+                                    disabled={!res.isCertificateApproved}
+                                    className={`py-1 px-2.5 rounded-lg text-[10px] font-bold transition ${
+                                      res.isCertificateApproved
+                                        ? "bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white shadow shadow-amber-500/10 cursor-pointer"
+                                        : "bg-slate-50 border border-slate-100 text-slate-400 cursor-not-allowed opacity-60"
+                                    }`}
+                                    title={res.isCertificateApproved ? "Print Certificate" : "Certificate Not Approved"}
                                   >
                                     Certificate
                                   </button>
                                   <button
-                                    onClick={() => handleReviewAnswers(res.originalData)}
-                                    className="py-1 px-2.5 rounded-lg bg-deepskyblue hover:bg-deepskyblue-dark text-[10px] font-bold text-white shadow shadow-deepskyblue/10 transition cursor-pointer"
+                                    onClick={() => res.isApproved && handleReviewAnswers(res.originalData)}
+                                    disabled={!res.isApproved}
+                                    className={`py-1 px-2.5 rounded-lg text-[10px] font-bold transition ${
+                                      res.isApproved
+                                        ? "bg-deepskyblue hover:bg-deepskyblue-dark text-white shadow shadow-deepskyblue/10 cursor-pointer"
+                                        : "bg-slate-50 border border-slate-100 text-slate-400 cursor-not-allowed opacity-60"
+                                    }`}
+                                    title={res.isApproved ? "Review Answers" : "Pending Approval"}
                                   >
                                     Review
                                   </button>
@@ -1782,6 +2018,19 @@ export default function DashboardPage() {
                 </div>
 
               </div>
+              ) : (
+                <div className="p-10 rounded-2xl bg-white border border-rose-200 shadow-sm shadow-slate-100 flex flex-col items-center justify-center text-center space-y-4 animate-fade-in mt-8">
+                  <div className="h-16 w-16 rounded-full bg-rose-50 flex items-center justify-center border border-rose-100">
+                    <AlertCircle className="h-8 w-8 text-rose-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-slate-800">No Results Found</h3>
+                    <p className="text-sm text-slate-500 font-medium max-w-md mx-auto mt-2">
+                      You are not eligible for a marksheet and certificate. Please complete your assigned semester exams first to generate your verified results.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1952,6 +2201,13 @@ export default function DashboardPage() {
                       >
                         <Printer className="h-3.5 w-3.5" />
                         <span>Print Admit Card</span>
+                      </button>
+                      <button
+                        onClick={() => triggerPrint("idcard", candidate)}
+                        className="inline-flex items-center gap-1.5 py-1 px-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-[10px] font-bold text-white rounded-xl shadow-md cursor-pointer transition active:scale-95"
+                      >
+                        <Printer className="h-3.5 w-3.5" />
+                        <span>Print ID Card</span>
                       </button>
                     </div>
                   </div>
@@ -2420,6 +2676,7 @@ export default function DashboardPage() {
         {printTarget?.type === "cumulative_marksheet" && renderPrintCumulativeMarksheet(printTarget.data)}
         {printTarget?.type === "certificate" && renderPrintCertificate(printTarget.data)}
         {printTarget?.type === "admitcard" && renderPrintAdmitCard(printTarget.data)}
+        {printTarget?.type === "idcard" && renderPrintIdCard(printTarget.data)}
       </div>
 
     </div>

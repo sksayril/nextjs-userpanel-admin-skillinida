@@ -30,7 +30,21 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
     }
 
-    const results = await Result.find({ candidateId: student.id }).sort({ date: -1 });
+    const rawResults = await Result.find({ candidateId: student.id }).sort({ date: -1 });
+    const results = rawResults.map(r => {
+      const obj = r.toObject();
+      if (!obj.isApproved) {
+        // Redact fields until approved
+        delete obj.score;
+        delete obj.percentage;
+        delete obj.grade;
+        delete obj.correctCount;
+        delete obj.incorrectCount;
+        delete obj.answers;
+      }
+      return obj;
+    });
+
     return NextResponse.json({ success: true, results });
   } catch (error: any) {
     console.error("Fetch Results Error:", error);
@@ -117,10 +131,20 @@ export async function POST(request: Request) {
       upsert: true,
     });
 
+    const returnedResult = resultRecord.toObject();
+    if (!returnedResult.isApproved) {
+      delete returnedResult.score;
+      delete returnedResult.percentage;
+      delete returnedResult.grade;
+      delete returnedResult.correctCount;
+      delete returnedResult.incorrectCount;
+      delete returnedResult.answers;
+    }
+
     return NextResponse.json({
       success: true,
       message: "Answers submitted and graded successfully",
-      result: resultRecord,
+      result: returnedResult,
     });
   } catch (error: any) {
     console.error("Submit Quiz Error:", error);

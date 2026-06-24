@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { User, Lock, ArrowRight, Shield } from "lucide-react";
+import Logo from "@/components/Logo";
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
@@ -56,10 +57,8 @@ export default function AdminLoginPage() {
           
           {/* Header Title */}
           <div className="flex flex-col items-center mb-8 text-center">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-deepskyblue to-sky-600 flex items-center justify-center shadow-lg shadow-deepskyblue/25 mb-4 animate-pulse">
-              <Shield className="h-6 w-6 text-white" />
-            </div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 bg-gradient-to-r from-slate-900 via-deepskyblue-dark to-sky-600 bg-clip-text text-transparent">
+            <Logo iconSize="xl" className="mb-2" showText={false} />
+            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 bg-gradient-to-r from-slate-900 via-deepskyblue-dark to-sky-600 bg-clip-text text-transparent mt-1">
               Admin Portal Login
             </h1>
             <p className="mt-2 text-xs font-medium text-slate-400">

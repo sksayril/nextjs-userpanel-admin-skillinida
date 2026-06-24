@@ -12,6 +12,8 @@ export interface IResult extends Document {
   incorrectCount: number;
   answers?: number[];
   date: Date;
+  isApproved?: boolean;
+  isCertificateApproved?: boolean;
 }
 
 const ResultSchema = new Schema<IResult>({
@@ -26,6 +28,8 @@ const ResultSchema = new Schema<IResult>({
   incorrectCount: { type: Number, required: true, default: 0 },
   answers: { type: [Number], default: [] },
   date: { type: Date, default: Date.now },
+  isApproved: { type: Boolean, default: false },
+  isCertificateApproved: { type: Boolean, default: false },
 });
 
 export const Result = models.Result || model<IResult>("Result", ResultSchema);

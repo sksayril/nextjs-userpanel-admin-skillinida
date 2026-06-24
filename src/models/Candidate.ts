@@ -12,8 +12,11 @@ export interface ICandidate extends Document {
   qualificationUrl: string;
   extraQualificationUrl?: string;
   course: string;
+  category: string;
+  gender: string;
   registrationId: string;
   password?: string;
+  originalPassword?: string;
   agentCode?: string | null;
   profilePicUrl?: string | null;
   isPaid: boolean;
@@ -39,8 +42,11 @@ const CandidateSchema = new Schema<ICandidate>({
   qualificationUrl: { type: String, required: true },
   extraQualificationUrl: { type: String },
   course: { type: String, required: true },
+  category: { type: String, default: "GEN", enum: ["GEN", "OBC", "SC", "ST"] },
+  gender: { type: String, default: "MALE", enum: ["MALE", "FEMALE", "OTHER"] },
   registrationId: { type: String, required: true, unique: true, index: true },
   password: { type: String, required: true },
+  originalPassword: { type: String },
   agentCode: { type: String, default: null, index: true },
   profilePicUrl: { type: String, default: null },
   isPaid: { type: Boolean, default: false },

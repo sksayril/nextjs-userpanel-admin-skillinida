@@ -59,6 +59,8 @@ export async function POST(request: Request) {
       qualificationUrl,
       extraQualificationUrl,
       course,
+      category,
+      gender,
       password,
     } = data;
 
@@ -107,6 +109,12 @@ export async function POST(request: Request) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    const allowedCategories = ["GEN", "OBC", "SC", "ST"];
+    const finalCategory = allowedCategories.includes(category) ? category : "GEN";
+
+    const allowedGenders = ["MALE", "FEMALE", "OTHER"];
+    const finalGender = allowedGenders.includes(gender?.toUpperCase()) ? gender.toUpperCase() : "MALE";
+
     const student = new Candidate({
       name,
       fatherName,
@@ -119,8 +127,11 @@ export async function POST(request: Request) {
       qualificationUrl,
       extraQualificationUrl: extraQualificationUrl || undefined,
       course,
+      category: finalCategory,
+      gender: finalGender,
       registrationId,
       password: hashedPassword,
+      originalPassword: password,
     });
 
     await student.save();

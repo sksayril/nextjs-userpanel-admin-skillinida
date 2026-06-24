@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { User, Lock, ArrowRight } from "lucide-react";
+import Logo from "@/components/Logo";
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState("");
@@ -58,21 +59,10 @@ export default function LoginPage() {
           
           {/* Logo / Heading Section */}
           <div className="flex flex-col items-center mb-8 text-center">
-            {/* 3D SMI Logo */}
-            <div className="relative mb-3 animate-float" style={{ filter: "drop-shadow(0 12px 32px rgba(14,165,233,0.30)) drop-shadow(0 4px 12px rgba(0,0,0,0.15))" }}>
-              <Image
-                src="/smi-logo-3d.png"
-                alt="Support Mission India Logo"
-                width={120}
-                height={120}
-                priority
-                className="select-none"
-                style={{ transform: "translateZ(0)" }}
-              />
-            </div>
+            <Logo iconSize="xl" className="mb-2" showText={false} />
 
-            <h1 className="text-xl font-extrabold tracking-tight text-slate-900">
-              Support Mission India
+            <h1 className="text-[22px] font-black tracking-tight text-[#0f172a] mt-1">
+              SUPPORT MISSION INDIA
             </h1>
             <p className="text-[11px] font-bold mt-0.5" style={{ background: "linear-gradient(90deg,#FF9933,#138808)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
               Sabka Saath • Sabka Vikas • Sabka Mission

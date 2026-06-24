@@ -33,6 +33,8 @@ export default function SignupPage() {
     fatherName: "",
     motherName: "",
     dob: "",
+    category: "GEN",
+    gender: "MALE",
     email: "",
     phone: "",
     address: "",
@@ -214,6 +216,8 @@ export default function SignupPage() {
         !formData.fatherName ||
         !formData.motherName ||
         !formData.dob ||
+        !formData.category ||
+        !formData.gender ||
         !formData.phone ||
         !formData.address
       ) {
@@ -413,26 +417,73 @@ export default function SignupPage() {
                     />
                   </div>
                 </div>
-              </div>
 
-              {/* Phone Number */}
-              <div className="space-y-1.5">
-                <label htmlFor="phone" className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  Phone Number
-                </label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-                    <Phone className="h-4 w-4" />
-                  </span>
-                  <input
-                    id="phone"
-                    suppressHydrationWarning
-                    type="tel"
-                    placeholder="+91 XXXXX XXXXX"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    className="block w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/10"
-                  />
+                {/* Category selection */}
+                <div className="space-y-1.5">
+                  <label htmlFor="category" className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    Social Category
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
+                      <Users className="h-4 w-4" />
+                    </span>
+                    <select
+                      id="category"
+                      suppressHydrationWarning
+                      value={formData.category}
+                      onChange={handleChange}
+                      className="block w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-850 text-sm focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/10"
+                    >
+                      <option value="GEN">GEN (General)</option>
+                      <option value="OBC">OBC (Other Backward Classes)</option>
+                      <option value="SC">SC (Scheduled Caste)</option>
+                      <option value="ST">ST (Scheduled Tribe)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Gender selection */}
+                <div className="space-y-1.5">
+                  <label htmlFor="gender" className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    Gender
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
+                      <User className="h-4 w-4" />
+                    </span>
+                    <select
+                      id="gender"
+                      suppressHydrationWarning
+                      value={formData.gender}
+                      onChange={handleChange}
+                      className="block w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-850 text-sm focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/10"
+                    >
+                      <option value="MALE">Male</option>
+                      <option value="FEMALE">Female</option>
+                      <option value="OTHER">Other</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Phone Number */}
+                <div className="space-y-1.5">
+                  <label htmlFor="phone" className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    Phone Number
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                      <Phone className="h-4 w-4" />
+                    </span>
+                    <input
+                      id="phone"
+                      suppressHydrationWarning
+                      type="tel"
+                      placeholder="+91 XXXXX XXXXX"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      className="block w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/10"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -975,6 +1026,10 @@ export default function SignupPage() {
                       <span className="col-span-2 text-deepskyblue-dark font-bold">{registeredCandidate.course}</span>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
+                      <span className="text-slate-400 font-semibold">Category</span>
+                      <span className="col-span-2 text-slate-800 font-bold">{registeredCandidate.category || "GEN"}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
                       <span className="text-slate-400 font-semibold">Phone Number</span>
                       <span className="col-span-2 text-slate-700 font-medium">{registeredCandidate.phone}</span>
                     </div>
@@ -993,7 +1048,7 @@ export default function SignupPage() {
                 <div className="mt-6 border-t border-slate-200/80 pt-4 flex justify-between items-center relative z-10 text-[9px] text-slate-400">
                   <div>
                     <p>Issued: {new Date(registeredCandidate.createdAt).toLocaleString()}</p>
-                    <p className="mt-0.5 text-slate-500 font-medium">Website: supportmissionindia.org</p>
+                    <p className="mt-0.5 text-slate-500 font-medium">Website: smi.in.net</p>
                   </div>
                   {/* Barcode Mockup */}
                   <div className="flex flex-col items-end">
@@ -1063,6 +1118,8 @@ export default function SignupPage() {
                       fatherName: "",
                       motherName: "",
                       dob: "",
+                      category: "GEN",
+                      gender: "MALE",
                       email: "",
                       phone: "",
                       address: "",
