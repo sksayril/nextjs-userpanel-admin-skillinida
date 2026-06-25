@@ -3351,19 +3351,11 @@ export default function AdminDashboardPage() {
                       <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900">
                         Questions List ({quizForm.questions.length})
                       </h3>
-
-                      <button
-                        type="button"
-                        onClick={addQuizQuestion}
-                        className="flex items-center gap-1.5 py-1.5 px-3.5 rounded-xl bg-deepskyblue hover:bg-deepskyblue-dark text-[10px] font-bold text-white shadow cursor-pointer"
-                      >
-                        <Plus className="h-4 w-4" />
-                        <span>Add Question</span>
-                      </button>
                     </div>
 
                     {quizForm.questions.map((question, qIdx) => (
-                      <div key={qIdx} className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-4 relative">
+                      <React.Fragment key={qIdx}>
+                      <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-4 relative">
 
                         {quizForm.questions.length > 1 && (
                           <button
@@ -3437,6 +3429,15 @@ export default function AdminDashboardPage() {
                         </div>
 
                       </div>
+                      <button
+                        type="button"
+                        onClick={addQuizQuestion}
+                        className="mt-2 flex items-center gap-1.5 py-1.5 px-3.5 rounded-xl bg-deepskyblue hover:bg-deepskyblue-dark text-[10px] font-bold text-white shadow cursor-pointer"
+                      >
+                        <Plus className="h-4 w-4" />
+                        <span>Add Question</span>
+                      </button>
+                      </React.Fragment>
                     ))}
                   </div>
 
