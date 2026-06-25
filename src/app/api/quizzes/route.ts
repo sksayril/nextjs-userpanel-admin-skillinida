@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import { Quiz } from "@/models/Quiz";
 import { Candidate } from "@/models/Candidate";
+import { isExamNotStarted } from "@/lib/examSchedule";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
@@ -41,9 +42,8 @@ export async function GET() {
       assignedStudents: student._id
     }).sort({ createdAt: -1 }).lean();
 
-    const now = new Date();
     const sanitizedQuizzes = quizzes.map((quiz: any) => {
-      if (quiz.scheduledAt && new Date(quiz.scheduledAt) > now) {
+      if (isExamNotStarted(quiz.scheduledAt)) {
         return {
           ...quiz,
           questions: []

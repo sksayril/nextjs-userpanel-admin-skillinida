@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import { Quiz } from "@/models/Quiz";
 import { Candidate } from "@/models/Candidate";
+import { formatExamSchedule, isExamNotStarted } from "@/lib/examSchedule";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
@@ -50,9 +51,13 @@ export async function GET(
       return NextResponse.json({ error: "Exam not found or you are not assigned to it" }, { status: 404 });
     }
 
-    const now = new Date();
-    if (quiz.scheduledAt && new Date(quiz.scheduledAt) > now) {
-      return NextResponse.json({ error: "This exam has not started yet" }, { status: 403 });
+    if (isExamNotStarted(quiz.scheduledAt)) {
+      return NextResponse.json(
+        {
+          error: `This exam has not started yet. Scheduled for ${formatExamSchedule(quiz.scheduledAt)}.`,
+        },
+        { status: 403 }
+      );
     }
 
     return NextResponse.json({

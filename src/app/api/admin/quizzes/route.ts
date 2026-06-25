@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import { Quiz } from "@/models/Quiz";
+import { parseScheduledAt } from "@/lib/examSchedule";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
@@ -65,7 +66,7 @@ export async function POST(request: Request) {
       title,
       course,
       questions,
-      scheduledAt: scheduledAt ? new Date(scheduledAt) : new Date(),
+      scheduledAt: parseScheduledAt(scheduledAt),
       duration: duration || 30,
       assignedStudents: assignedStudents || [],
       examPassword: examPassword || "",

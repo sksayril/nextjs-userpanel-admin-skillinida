@@ -23,6 +23,7 @@ import {
   ExternalLink
 } from "lucide-react";
 import { resolveFileUrl } from "@/lib/fileUrl";
+import { formatExamSchedule, isExamNotStarted } from "@/lib/examSchedule";
 import Logo from "@/components/Logo";
 
 export default function DashboardPage() {
@@ -353,8 +354,10 @@ export default function DashboardPage() {
 
   // Start Exam Quiz Handler
   const handleStartQuiz = async (quiz: any) => {
-    if (quiz.scheduledAt && new Date(quiz.scheduledAt) > new Date()) {
-      toast.error("This exam has not started yet. Please wait until the scheduled start time.");
+    if (isExamNotStarted(quiz.scheduledAt)) {
+      toast.error(
+        `This exam has not started yet. It is scheduled for ${formatExamSchedule(quiz.scheduledAt)}.`
+      );
       return;
     }
 
@@ -1769,7 +1772,7 @@ export default function DashboardPage() {
                   <div className="space-y-3">
                     {quizzes.map((quiz, i) => {
                       const result = results.find(r => r.quizId === quiz._id);
-                      const isNotStarted = quiz.scheduledAt && new Date(quiz.scheduledAt) > new Date();
+                      const isNotStarted = isExamNotStarted(quiz.scheduledAt);
                       return (
                         <div key={i} className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-sm shadow-slate-100">
                           <div className="flex items-start gap-4">
@@ -1789,7 +1792,7 @@ export default function DashboardPage() {
                                 {quiz.duration && <span>| Duration: {quiz.duration} Mins</span>}
                                 {quiz.scheduledAt && (
                                   <span className={isNotStarted ? "text-amber-600 font-bold" : "text-emerald-600 font-bold"}>
-                                    | Scheduled: {new Date(quiz.scheduledAt).toLocaleString()}
+                                    | Starts: {formatExamSchedule(quiz.scheduledAt)}
                                   </span>
                                 )}
                               </p>

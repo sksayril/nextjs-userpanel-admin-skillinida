@@ -5,6 +5,11 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/components/Toast";
 import { resolveFileUrl } from "@/lib/fileUrl";
 import {
+  formatExamSchedule,
+  isExamNotStarted,
+  toDatetimeLocalValue,
+} from "@/lib/examSchedule";
+import {
   Shield,
   BookOpen,
   Users,
@@ -239,7 +244,7 @@ export default function AdminDashboardPage() {
   const [quizForm, setQuizForm] = useState({
     title: "",
     course: "",
-    scheduledAt: new Date().toISOString().slice(0, 16),
+    scheduledAt: toDatetimeLocalValue(),
     duration: 30,
     assignedStudents: [] as string[],
     examPassword: "",
@@ -718,7 +723,7 @@ export default function AdminDashboardPage() {
         setQuizForm({
           title: "",
           course: "",
-          scheduledAt: new Date().toISOString().slice(0, 16),
+          scheduledAt: toDatetimeLocalValue(),
           duration: 30,
           assignedStudents: [] as string[],
           examPassword: "",
@@ -3244,7 +3249,9 @@ export default function AdminDashboardPage() {
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Start Date & Time</label>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        Start Date & Time (IST)
+                      </label>
                       <input
                         type="datetime-local"
                         required
@@ -3252,6 +3259,9 @@ export default function AdminDashboardPage() {
                         onChange={e => setQuizForm(prev => ({ ...prev, scheduledAt: e.target.value }))}
                         className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white"
                       />
+                      <p className="text-[9px] text-slate-400 font-medium">
+                        Use 24-hour time (e.g. 13:00 for 1 PM, 22:00 for 10 PM). Students see this exact IST schedule.
+                      </p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -3467,7 +3477,7 @@ export default function AdminDashboardPage() {
                               <span className="text-[9px] font-bold bg-deepskyblue/10 text-deepskyblue-dark px-2 py-0.5 rounded-full uppercase tracking-wider">{quiz.course}</span>
                               <h4 className="text-xs font-bold text-slate-800 mt-1">{quiz.title}</h4>
                               <p className="text-[9px] text-slate-400 font-bold mt-1">
-                                Scheduled: {quiz.scheduledAt ? new Date(quiz.scheduledAt).toLocaleString() : "Now"}
+                                Scheduled: {formatExamSchedule(quiz.scheduledAt)}
                                 {quiz.duration && ` | Duration: ${quiz.duration} Mins`}
                                 {quiz.examPassword && ` | Passkey: ${quiz.examPassword}`}
                               </p>

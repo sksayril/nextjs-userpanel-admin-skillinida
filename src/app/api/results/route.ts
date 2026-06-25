@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import { Result } from "@/models/Result";
 import { Quiz } from "@/models/Quiz";
+import { formatExamSchedule, isExamNotStarted } from "@/lib/examSchedule";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
@@ -80,8 +81,13 @@ export async function POST(request: Request) {
     }
 
     // Validate start time
-    if (quiz.scheduledAt && new Date(quiz.scheduledAt) > new Date()) {
-      return NextResponse.json({ error: "This exam has not started yet" }, { status: 403 });
+    if (isExamNotStarted(quiz.scheduledAt)) {
+      return NextResponse.json(
+        {
+          error: `This exam has not started yet. Scheduled for ${formatExamSchedule(quiz.scheduledAt)}.`,
+        },
+        { status: 403 }
+      );
     }
 
     // Calculate score based on custom marks
