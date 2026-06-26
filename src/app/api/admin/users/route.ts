@@ -4,6 +4,7 @@ import { Candidate } from "@/models/Candidate";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
+import { isValidWestBengalDistrict } from "@/lib/westBengalDistricts";
 
 const JWT_SECRET = process.env.JWT_SECRET || "default-secret-key-change-me";
 
@@ -55,6 +56,7 @@ export async function POST(request: Request) {
       email,
       phone,
       address,
+      district,
       admitUrl,
       qualificationUrl,
       extraQualificationUrl,
@@ -73,6 +75,7 @@ export async function POST(request: Request) {
       !email ||
       !phone ||
       !address ||
+      !district ||
       !admitUrl ||
       !qualificationUrl ||
       !course ||
@@ -83,6 +86,10 @@ export async function POST(request: Request) {
 
     if (password.length < 6) {
       return NextResponse.json({ error: "Password must be at least 6 characters long" }, { status: 400 });
+    }
+
+    if (!isValidWestBengalDistrict(district)) {
+      return NextResponse.json({ error: "Please select a valid West Bengal district" }, { status: 400 });
     }
 
     // Check duplicate email
@@ -123,6 +130,7 @@ export async function POST(request: Request) {
       email: email.toLowerCase().trim(),
       phone,
       address,
+      district,
       admitUrl,
       qualificationUrl,
       extraQualificationUrl: extraQualificationUrl || undefined,
@@ -136,16 +144,14 @@ export async function POST(request: Request) {
 
     await student.save();
 
+    const studentObject = student.toObject();
+    delete (studentObject as { password?: string }).password;
+    delete (studentObject as { originalPassword?: string }).originalPassword;
+
     return NextResponse.json({
       success: true,
       message: "Student registered successfully",
-      student: {
-        id: student._id,
-        name: student.name,
-        registrationId: student.registrationId,
-        email: student.email,
-        course: student.course,
-      },
+      student: studentObject,
     });
   } catch (error: any) {
     console.error("Admin Student Creation Error:", error);

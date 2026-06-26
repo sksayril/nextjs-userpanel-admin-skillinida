@@ -6,6 +6,12 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/components/Toast";
 import { resolveFileUrl } from "@/lib/fileUrl";
 import {
+  RegistrationIdCard,
+  printRegistrationIdCard,
+} from "@/components/RegistrationIdCard";
+import { registrationIdCardPrintStyles } from "@/components/registrationIdCardPrintStyles";
+import { WEST_BENGAL_DISTRICTS } from "@/lib/westBengalDistricts";
+import {
   User,
   Users,
   Calendar,
@@ -37,6 +43,7 @@ export default function SignupPage() {
     gender: "MALE",
     email: "",
     phone: "",
+    district: "",
     address: "",
     course: "",
     admitUrl: "",
@@ -219,6 +226,7 @@ export default function SignupPage() {
         !formData.category ||
         !formData.gender ||
         !formData.phone ||
+        !formData.district ||
         !formData.address
       ) {
         setErrorMsg("Please fill in all personal details fields");
@@ -241,7 +249,7 @@ export default function SignupPage() {
   };
 
   const handlePrint = () => {
-    window.print();
+    printRegistrationIdCard();
   };
 
   return (
@@ -254,29 +262,7 @@ export default function SignupPage() {
         <div className="absolute w-[350px] h-[350px] rounded-full bg-sky-400/8 blur-[90px] top-1/2 left-1/3 -translate-y-1/2 -translate-x-1/2 animate-drift-slowest" />
       </div>
 
-      {/* CSS style block for print layouts */}
-      <style jsx global>{`
-        @media print {
-          body {
-            background: white !important;
-            color: black !important;
-          }
-          .print\\:hidden {
-            display: none !important;
-          }
-          #id-card-print-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            margin: 0;
-            padding: 0;
-            box-shadow: none !important;
-            border: none !important;
-            background: white !important;
-          }
-        }
-      `}</style>
+      <style jsx global>{registrationIdCardPrintStyles}</style>
 
       {/* Main Content Area */}
       <div className="relative z-10 w-full max-w-2xl">
@@ -487,6 +473,29 @@ export default function SignupPage() {
                 </div>
               </div>
 
+              {/* District */}
+              <div className="space-y-1.5">
+                <label htmlFor="district" className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  District (West Bengal)
+                </label>
+                <select
+                  id="district"
+                  required
+                  value={formData.district}
+                  onChange={handleChange}
+                  className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/10"
+                >
+                  <option value="" disabled>
+                    Select District
+                  </option>
+                  {WEST_BENGAL_DISTRICTS.map((district) => (
+                    <option key={district} value={district}>
+                      {district}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Address */}
               <div className="space-y-1.5">
                 <label htmlFor="address" className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -500,7 +509,7 @@ export default function SignupPage() {
                     id="address"
                     suppressHydrationWarning
                     rows={3}
-                    placeholder="Enter permanent house, block, state, and pincode details"
+                    placeholder="Enter house, block, area, and pincode details"
                     value={formData.address}
                     onChange={handleChange}
                     className="block w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/10 resize-none"
@@ -952,146 +961,7 @@ export default function SignupPage() {
                 </p>
               </div>
 
-              {/* Printable ID Card */}
-              <div
-                id="id-card-print-area"
-                className="w-full max-w-lg bg-white border border-slate-250 rounded-2xl p-6 sm:p-8 shadow-xl relative overflow-hidden text-left bg-gradient-to-br from-white via-slate-50/50 to-deepskyblue-light/20"
-              >
-                {/* ID Card Background Glow */}
-                <div className="absolute inset-0 pointer-events-none opacity-40">
-                  <div className="absolute w-64 h-64 rounded-full bg-deepskyblue/8 blur-[80px] -top-20 -left-20" />
-                  <div className="absolute w-64 h-64 rounded-full bg-deepskyblue-dark/4 blur-[80px] -bottom-20 -right-20" />
-                </div>
-
-                {/* Card Header */}
-                <div className="flex justify-between items-start border-b border-slate-200/80 pb-4 mb-5 relative z-10">
-                  <div>
-                    <h3 className="text-lg font-extrabold tracking-tight text-slate-900 flex items-center gap-2">
-                      <div className="h-6 w-6 rounded-md bg-deepskyblue flex items-center justify-center text-xs font-black tracking-wider text-white">S</div>
-                      SUPPORT MISSION INDIA
-                    </h3>
-                    <p className="text-[10px] uppercase font-bold text-deepskyblue-dark tracking-widest mt-0.5">
-                      Candidate Registration ID Card
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[9px] uppercase font-bold bg-deepskyblue/10 text-deepskyblue-dark border border-deepskyblue/20 px-2 py-0.5 rounded-full">
-                      Active Student
-                    </span>
-                  </div>
-                </div>
-
-                {/* Card Details */}
-                <div className="grid grid-cols-1 sm:grid-cols-12 gap-5 relative z-10">
-                  {/* Photo Box */}
-                  <div className="sm:col-span-3 flex flex-col items-center sm:items-start">
-                    <div className="h-24 w-20 bg-slate-100 border border-slate-250 rounded-xl overflow-hidden flex flex-col items-center justify-center text-slate-400 shadow-inner bg-gradient-to-b from-white to-slate-50">
-                      {registeredCandidate.profilePicUrl ? (
-                        <img src={resolveFileUrl(registeredCandidate.profilePicUrl)} className="h-full w-full object-cover" alt="Student Photo" />
-                      ) : (
-                        <>
-                          <span className="text-2xl font-black text-slate-500 uppercase">
-                            {registeredCandidate.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
-                          </span>
-                          <span className="text-[8px] text-slate-400 mt-1 uppercase tracking-wider font-semibold">Candidate</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Core Details Grid */}
-                  <div className="sm:col-span-9 space-y-2.5 text-xs text-slate-600">
-                    <div className="grid grid-cols-3 gap-2">
-                      <span className="text-slate-400 font-semibold">Registration ID</span>
-                      <span className="col-span-2 font-bold text-slate-900 tracking-wide">{registeredCandidate.registrationId}</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <span className="text-slate-400 font-semibold">Candidate Name</span>
-                      <span className="col-span-2 font-bold text-slate-800">{registeredCandidate.name}</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <span className="text-slate-400 font-semibold">Father&apos;s Name</span>
-                      <span className="col-span-2 text-slate-700 font-medium">{registeredCandidate.fatherName}</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <span className="text-slate-400 font-semibold">Mother&apos;s Name</span>
-                      <span className="col-span-2 text-slate-700 font-medium">{registeredCandidate.motherName}</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <span className="text-slate-400 font-semibold">Date of Birth</span>
-                      <span className="col-span-2 text-slate-700 font-medium">{new Date(registeredCandidate.dob).toLocaleDateString()}</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <span className="text-slate-400 font-semibold">Course Program</span>
-                      <span className="col-span-2 text-deepskyblue-dark font-bold">{registeredCandidate.course}</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <span className="text-slate-400 font-semibold">Category</span>
-                      <span className="col-span-2 text-slate-800 font-bold">{registeredCandidate.category || "GEN"}</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <span className="text-slate-400 font-semibold">Phone Number</span>
-                      <span className="col-span-2 text-slate-700 font-medium">{registeredCandidate.phone}</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <span className="text-slate-400 font-semibold">Email Mail ID</span>
-                      <span className="col-span-2 text-slate-700 font-medium truncate">{registeredCandidate.email}</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <span className="text-slate-400 font-semibold flex-shrink-0">Address</span>
-                      <span className="col-span-2 text-slate-500 font-medium break-words line-clamp-2">{registeredCandidate.address}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card Footer / Verification */}
-                <div className="mt-6 border-t border-slate-200/80 pt-4 flex justify-between items-center relative z-10 text-[9px] text-slate-400">
-                  <div>
-                    <p>Issued: {new Date(registeredCandidate.createdAt).toLocaleString()}</p>
-                    <p className="mt-0.5 text-slate-500 font-medium">Website: smi.in.net</p>
-                  </div>
-                  {/* Barcode Mockup */}
-                  <div className="flex flex-col items-end">
-                    <svg className="h-6 w-32 text-slate-650" viewBox="0 0 100 20" fill="currentColor">
-                      <rect x="0" y="0" width="2" height="20" />
-                      <rect x="3" y="0" width="1" height="20" />
-                      <rect x="5" y="0" width="4" height="20" />
-                      <rect x="10" y="0" width="1" height="20" />
-                      <rect x="12" y="0" width="2" height="20" />
-                      <rect x="15" y="0" width="3" height="20" />
-                      <rect x="19" y="0" width="1" height="20" />
-                      <rect x="21" y="0" width="2" height="20" />
-                      <rect x="24" y="0" width="4" height="20" />
-                      <rect x="29" y="0" width="1" height="20" />
-                      <rect x="31" y="0" width="2" height="20" />
-                      <rect x="34" y="0" width="1" height="20" />
-                      <rect x="36" y="0" width="3" height="20" />
-                      <rect x="40" y="0" width="1" height="20" />
-                      <rect x="42" y="0" width="4" height="20" />
-                      <rect x="47" y="0" width="2" height="20" />
-                      <rect x="50" y="0" width="1" height="20" />
-                      <rect x="52" y="0" width="3" height="20" />
-                      <rect x="56" y="0" width="2" height="20" />
-                      <rect x="59" y="0" width="1" height="20" />
-                      <rect x="61" y="0" width="4" height="20" />
-                      <rect x="66" y="0" width="1" height="20" />
-                      <rect x="68" y="0" width="2" height="20" />
-                      <rect x="71" y="0" width="3" height="20" />
-                      <rect x="75" y="0" width="1" height="20" />
-                      <rect x="77" y="0" width="4" height="20" />
-                      <rect x="82" y="0" width="2" height="20" />
-                      <rect x="85" y="0" width="1" height="20" />
-                      <rect x="87" y="0" width="3" height="20" />
-                      <rect x="91" y="0" width="1" height="20" />
-                      <rect x="93" y="0" width="4" height="20" />
-                      <rect x="98" y="0" width="2" height="20" />
-                    </svg>
-                    <span className="text-[7px] tracking-widest mt-0.5 font-mono">
-                      {registeredCandidate.registrationId}
-                    </span>
-                  </div>
-                </div>
-              </div>
+              <RegistrationIdCard candidate={registeredCandidate} />
 
               {/* Printing & Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-4 mt-8 print:hidden w-full justify-center">
@@ -1122,6 +992,7 @@ export default function SignupPage() {
                       gender: "MALE",
                       email: "",
                       phone: "",
+                      district: "",
                       address: "",
                       course: "",
                       admitUrl: "",

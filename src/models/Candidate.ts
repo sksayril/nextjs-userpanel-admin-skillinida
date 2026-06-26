@@ -8,6 +8,7 @@ export interface ICandidate extends Document {
   email: string;
   phone: string;
   address: string;
+  district: string;
   admitUrl: string;
   qualificationUrl: string;
   extraQualificationUrl?: string;
@@ -38,6 +39,7 @@ const CandidateSchema = new Schema<ICandidate>({
   email: { type: String, required: true, unique: true, index: true },
   phone: { type: String, required: true },
   address: { type: String, required: true },
+  district: { type: String, required: true },
   admitUrl: { type: String, required: true },
   qualificationUrl: { type: String, required: true },
   extraQualificationUrl: { type: String },

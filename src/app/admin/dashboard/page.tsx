@@ -5,9 +5,18 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/components/Toast";
 import { resolveFileUrl } from "@/lib/fileUrl";
 import {
+  RegistrationIdCard,
+  printRegistrationIdCard,
+  type RegistrationCandidate,
+} from "@/components/RegistrationIdCard";
+import { registrationIdCardPrintStyles } from "@/components/registrationIdCardPrintStyles";
+import Logo from "@/components/Logo";
+import { WEST_BENGAL_DISTRICTS } from "@/lib/westBengalDistricts";
+import {
   formatExamSchedule,
   isExamNotStarted,
   toDatetimeLocalValue,
+  toScheduledAtDate,
 } from "@/lib/examSchedule";
 import {
   Shield,
@@ -19,6 +28,7 @@ import {
   Award,
   Plus,
   Trash,
+  Pencil,
   LogOut,
   Bell,
   Sparkles,
@@ -30,6 +40,7 @@ import {
   UserPlus,
   Search,
   Menu,
+  X,
   BookMarked,
   Printer,
   Settings,
@@ -56,6 +67,19 @@ const hexToRgb = (hex: string): string => {
   return r ? `${parseInt(r[1], 16)}, ${parseInt(r[2], 16)}, ${parseInt(r[3], 16)}` : "14, 165, 233";
 };
 
+const ADMIN_NAV_ITEMS = [
+  { id: "overview", label: "Overview", Icon: TrendingUp },
+  { id: "courses", label: "Manage Courses", Icon: BookOpen },
+  { id: "students", label: "Register Students", Icon: UserPlus },
+  { id: "attendance", label: "Manage Attendance", Icon: Calendar },
+  { id: "papers", label: "Question Papers", Icon: FileText },
+  { id: "quizzes", label: "Create Exam", Icon: Award },
+  { id: "results", label: "Exam Results", Icon: CheckCircle },
+  { id: "agents", label: "Manage Agents", Icon: Users },
+  { id: "payments", label: "Payment Ledger", Icon: CreditCard },
+  { id: "settings", label: "Payment Settings", Icon: Settings },
+] as const;
+
 export default function AdminDashboardPage() {
   const router = useRouter();
   const toast = useToast();
@@ -66,6 +90,7 @@ export default function AdminDashboardPage() {
   // Sidebar theme state
   const [sidebarThemeId, setSidebarThemeId] = useState<string>("sky");
   const [showThemePicker, setShowThemePicker] = useState<boolean>(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState<boolean>(false);
 
   // Load saved theme from localStorage on mount
   useEffect(() => {
@@ -79,6 +104,17 @@ export default function AdminDashboardPage() {
     setSidebarThemeId(id);
     if (typeof window !== "undefined") localStorage.setItem("smi_sidebar_theme", id);
     setShowThemePicker(false);
+  };
+
+  const handleAdminTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    setMobileNavOpen(false);
+  };
+
+  const handleAdminLogoClick = () => {
+    setActiveTab("overview");
+    setMobileNavOpen(false);
+    document.getElementById("admin-scroll-body")?.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   // Inject dynamic theme CSS into document.head whenever theme changes
@@ -210,6 +246,7 @@ export default function AdminDashboardPage() {
     gender: "MALE",
     email: "",
     phone: "",
+    district: "",
     address: "",
     course: "",
     admitUrl: "",
@@ -277,6 +314,25 @@ export default function AdminDashboardPage() {
   });
   const [savingSettings, setSavingSettings] = useState(false);
   const [adminViewQuiz, setAdminViewQuiz] = useState<any>(null);
+  const [registeredStudentCard, setRegisteredStudentCard] = useState<RegistrationCandidate | null>(null);
+  const [editingQuizId, setEditingQuizId] = useState<string | null>(null);
+
+  const getDefaultQuizForm = () => ({
+    title: "",
+    course: "",
+    scheduledAt: toDatetimeLocalValue(),
+    duration: 30,
+    assignedStudents: [] as string[],
+    examPassword: "",
+    questions: [
+      {
+        questionText: "",
+        options: ["", "", "", ""],
+        correctAnswerIndex: 0,
+        marks: 1,
+      },
+    ],
+  });
 
   // ================= FETCH LOGIC =================
   useEffect(() => {
@@ -511,10 +567,11 @@ export default function AdminDashboardPage() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
+        setRegisteredStudentCard(data.student);
         setSuccessMsg(`Student registered! Registration ID: ${data.student.registrationId}`);
         setStudentForm({
           name: "", fatherName: "", motherName: "", dob: "", category: "GEN", gender: "MALE", email: "", phone: "",
-          address: "", course: "", admitUrl: "", qualificationUrl: "", extraQualificationUrl: "", password: ""
+          district: "", address: "", course: "", admitUrl: "", qualificationUrl: "", extraQualificationUrl: "", password: ""
         });
         await fetchAllData();
         setTimeout(() => setSuccessMsg(""), 6000);
@@ -706,38 +763,78 @@ export default function AdminDashboardPage() {
     setQuizForm(prev => ({ ...prev, questions: updatedQuestions }));
   };
 
-  const handleCreateQuiz = async (e: React.FormEvent) => {
+  const handleSaveQuiz = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
     setSuccessMsg("");
 
     try {
-      const res = await fetch("/api/admin/quizzes", {
-        method: "POST",
+      const isEditing = Boolean(editingQuizId);
+      const res = await fetch(isEditing ? `/api/admin/quizzes/${editingQuizId}` : "/api/admin/quizzes", {
+        method: isEditing ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(quizForm)
+        body: JSON.stringify(quizForm),
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setSuccessMsg("Quiz created and assigned successfully!");
-        setQuizForm({
-          title: "",
-          course: "",
-          scheduledAt: toDatetimeLocalValue(),
-          duration: 30,
-          assignedStudents: [] as string[],
-          examPassword: "",
-          questions: [{ questionText: "", options: ["", "", "", ""], correctAnswerIndex: 0, marks: 1 }]
-        });
+        setSuccessMsg(isEditing ? "Exam updated successfully!" : "Quiz created and assigned successfully!");
+        setEditingQuizId(null);
+        setQuizForm(getDefaultQuizForm());
         setAssignSearchQuery("");
         await fetchAllData();
         setTimeout(() => setSuccessMsg(""), 4000);
       } else {
-        setErrorMsg(data.error || "Failed to create quiz.");
+        setErrorMsg(data.error || `Failed to ${isEditing ? "update" : "create"} quiz.`);
       }
     } catch (err) {
-      setErrorMsg("Network error creating quiz.");
+      setErrorMsg(`Network error ${editingQuizId ? "updating" : "creating"} quiz.`);
     }
+  };
+
+  const handleEditQuiz = async (quizId: string) => {
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    try {
+      const res = await fetch(`/api/admin/quizzes/${quizId}`);
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        toast.error(data.error || "Failed to load exam for editing.");
+        return;
+      }
+
+      const quiz = data.quiz;
+      const scheduledDate = toScheduledAtDate(quiz.scheduledAtUtc || quiz.scheduledAt);
+
+      setQuizForm({
+        title: quiz.title || "",
+        course: quiz.course || "",
+        scheduledAt: scheduledDate ? toDatetimeLocalValue(scheduledDate) : toDatetimeLocalValue(),
+        duration: quiz.duration || 30,
+        assignedStudents: (quiz.assignedStudents || []).map((id: string) => id.toString()),
+        examPassword: quiz.examPassword || "",
+        questions: (quiz.questions || []).map((question: any) => ({
+          questionText: question.questionText || "",
+          options: [...(question.options || ["", "", "", ""])],
+          correctAnswerIndex: question.correctAnswerIndex ?? 0,
+          marks: question.marks ?? 1,
+        })),
+      });
+      setEditingQuizId(quizId);
+      setAssignSearchQuery("");
+      toast.success("Exam loaded for editing.");
+    } catch (err) {
+      console.error(err);
+      toast.error("Network error loading exam for editing.");
+    }
+  };
+
+  const handleCancelEditQuiz = () => {
+    setEditingQuizId(null);
+    setQuizForm(getDefaultQuizForm());
+    setAssignSearchQuery("");
+    setErrorMsg("");
   };
 
   const handleDeleteQuiz = async (quizId: string) => {
@@ -1880,6 +1977,7 @@ export default function AdminDashboardPage() {
       id="admin-theme-root"
       className="h-screen bg-slate-50 text-slate-800 flex font-sans select-none overflow-hidden"
     >
+      <style jsx global>{registrationIdCardPrintStyles}</style>
 
       {/* 1. SIDEBAR NAVIGATION - Fixed, independently scrollable */}
       <aside
@@ -1912,21 +2010,10 @@ export default function AdminDashboardPage() {
 
         {/* SCROLLABLE NAV LINKS */}
         <nav className="flex-1 px-3 space-y-0.5 pb-4">
-          {([
-            { id: "overview", label: "Overview", Icon: TrendingUp },
-            { id: "courses", label: "Manage Courses", Icon: BookOpen },
-            { id: "students", label: "Register Students", Icon: UserPlus },
-            { id: "attendance", label: "Manage Attendance", Icon: Calendar },
-            { id: "papers", label: "Question Papers", Icon: FileText },
-            { id: "quizzes", label: "Create Exam", Icon: Award },
-            { id: "results", label: "Exam Results", Icon: CheckCircle },
-            { id: "agents", label: "Manage Agents", Icon: Users },
-            { id: "payments", label: "Payment Ledger", Icon: CreditCard },
-            { id: "settings", label: "Payment Settings", Icon: Settings },
-          ] as { id: string; label: string; Icon: React.ElementType }[]).map(({ id, label, Icon }) => (
+          {ADMIN_NAV_ITEMS.map(({ id, label, Icon }) => (
             <button
               key={id}
-              onClick={() => setActiveTab(id)}
+              onClick={() => handleAdminTabChange(id)}
               className="relative w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer hover:translate-x-1"
               style={{
                 background: activeTab === id ? "rgba(255,255,255,0.20)" : "transparent",
@@ -2039,14 +2126,36 @@ export default function AdminDashboardPage() {
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
 
         {/* TOP NAVIGATION BAR — fixed/sticky, never scrolls */}
-        <header className="h-16 shrink-0 bg-white border-b border-slate-200/80 flex items-center justify-between px-8 z-40 shadow-sm shadow-slate-100">
-          <div className="flex items-center gap-4 flex-1">
-            <button className="lg:hidden p-1.5 rounded-xl text-slate-500 hover:bg-slate-50">
+        <header className="h-16 shrink-0 bg-white border-b border-slate-200/80 flex items-center justify-between px-4 sm:px-8 z-40 shadow-sm shadow-slate-100">
+          <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
+            <button
+              type="button"
+              onClick={() => setMobileNavOpen(true)}
+              className="lg:hidden p-2 rounded-xl text-slate-500 hover:bg-slate-50 cursor-pointer"
+              aria-label="Open navigation menu"
+            >
               <Menu className="h-5 w-5" />
             </button>
 
+            <button
+              type="button"
+              onClick={handleAdminLogoClick}
+              className="flex items-center gap-2 sm:gap-3 min-w-0 cursor-pointer"
+              aria-label="Go to admin overview"
+            >
+              <Logo iconSize="sm" showText={false} />
+              <div className="text-left min-w-0">
+                <p className="text-xs sm:text-sm font-extrabold tracking-tight text-slate-900 truncate leading-tight">
+                  SUPPORT MISSION INDIA
+                </p>
+                <p className="text-[9px] uppercase font-bold text-slate-400 tracking-wider hidden sm:block">
+                  Admin Portal
+                </p>
+              </div>
+            </button>
+
             {/* Search Input Box */}
-            <div className="relative w-64 max-w-xs">
+            <div className="relative w-64 max-w-xs hidden md:block ml-2">
               <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                 <Search className="h-4 w-4" />
               </span>
@@ -2060,8 +2169,18 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <button className="relative h-8 w-8 rounded-xl bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-550 transition-colors">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="lg:hidden flex items-center gap-1.5 py-2 px-2.5 sm:px-3 rounded-xl border border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 text-slate-600 font-bold text-xs transition-all cursor-pointer"
+              aria-label="Sign out"
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="hidden sm:inline">Logout</span>
+            </button>
+
+            <button className="relative h-8 w-8 rounded-xl bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-550 transition-colors hidden sm:flex">
               <Bell className="h-4 w-4" />
               <span
                 className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full"
@@ -2070,7 +2189,7 @@ export default function AdminDashboardPage() {
             </button>
 
             {/* Profile Avatar Widget */}
-            <div className="flex items-center gap-2.5 pl-3 border-l border-slate-200">
+            <div className="flex items-center gap-2.5 pl-2 sm:pl-3 border-l border-slate-200">
               <div
                 className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-inner"
                 style={{ background: `linear-gradient(135deg, ${activeSidebarTheme.bg}, ${activeSidebarTheme.dark})` }}
@@ -2084,6 +2203,76 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         </header>
+
+        {/* MOBILE NAVIGATION DRAWER */}
+        {mobileNavOpen && (
+          <div className="fixed inset-0 z-50 lg:hidden">
+            <button
+              type="button"
+              className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+              onClick={() => setMobileNavOpen(false)}
+              aria-label="Close navigation menu"
+            />
+            <aside
+              className="absolute left-0 top-0 h-full w-[min(85vw,320px)] flex flex-col shadow-2xl animate-fade-in"
+              style={{
+                background: `linear-gradient(160deg, ${activeSidebarTheme.bg} 0%, ${activeSidebarTheme.dark} 100%)`,
+                color: activeSidebarTheme.text,
+              }}
+            >
+              <div className="flex items-center justify-between px-4 py-4 border-b border-white/15 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleAdminLogoClick}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <Logo iconSize="sm" showText={false} />
+                  <span className="text-xs font-extrabold tracking-tight text-white">SMI Admin</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileNavOpen(false)}
+                  className="p-2 rounded-xl text-white/80 hover:bg-white/10 cursor-pointer"
+                  aria-label="Close menu"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
+                {ADMIN_NAV_ITEMS.map(({ id, label, Icon }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => handleAdminTabChange(id)}
+                    className="relative w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                    style={{
+                      background: activeTab === id ? "rgba(255,255,255,0.20)" : "transparent",
+                      color: activeTab === id ? "#fff" : "rgba(255,255,255,0.65)",
+                    }}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span>{label}</span>
+                  </button>
+                ))}
+              </nav>
+
+              <div className="px-3 py-4 border-t border-white/15 shrink-0">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    setMobileNavOpen(false);
+                    handleSignOut(e);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs font-bold text-white/90 bg-white/10 hover:bg-rose-500/30 transition-all cursor-pointer"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            </aside>
+          </div>
+        )}
 
         {/* SCROLLABLE BODY — everything below the header scrolls here */}
         <div id="admin-scroll-body" className="flex-1 overflow-y-auto">
@@ -2779,6 +2968,25 @@ export default function AdminDashboardPage() {
                   </div>
 
                   <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">District (West Bengal)</label>
+                    <select
+                      required
+                      value={studentForm.district}
+                      onChange={e => setStudentForm(prev => ({ ...prev, district: e.target.value }))}
+                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                    >
+                      <option value="" disabled>
+                        Select District
+                      </option>
+                      {WEST_BENGAL_DISTRICTS.map((district) => (
+                        <option key={district} value={district}>
+                          {district}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Complete Address</label>
                     <textarea
                       required
@@ -3209,10 +3417,21 @@ export default function AdminDashboardPage() {
             {activeTab === "quizzes" && (
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start animate-fade-in">
                 {/* Left Column: Create Quiz Form */}
-                <form onSubmit={handleCreateQuiz} className="md:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-6">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-3">
-                    Interactive Exam Builder
-                  </h3>
+                <form onSubmit={handleSaveQuiz} className="md:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-6">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3 gap-3">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900">
+                      {editingQuizId ? "Edit Exam" : "Interactive Exam Builder"}
+                    </h3>
+                    {editingQuizId ? (
+                      <button
+                        type="button"
+                        onClick={handleCancelEditQuiz}
+                        className="text-[10px] font-bold text-slate-500 hover:text-slate-800 px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer"
+                      >
+                        Cancel Edit
+                      </button>
+                    ) : null}
+                  </div>
 
                   <div className="space-y-4">
                     <div className="space-y-1">
@@ -3455,8 +3674,8 @@ export default function AdminDashboardPage() {
                     type="submit"
                     className="w-full flex items-center justify-center gap-1.5 py-3 px-4 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-sm shadow-md cursor-pointer"
                   >
-                    <Award className="h-4 w-4" />
-                    <span>Build and Assign Exam</span>
+                    {editingQuizId ? <Pencil className="h-4 w-4" /> : <Award className="h-4 w-4" />}
+                    <span>{editingQuizId ? "Save Exam Changes" : "Build and Assign Exam"}</span>
                   </button>
                 </form>
 
@@ -3472,12 +3691,16 @@ export default function AdminDashboardPage() {
                       {quizzesList.map((quiz, idx) => {
                         const totalQuizMarks = quiz.questions.reduce((acc: number, q: any) => acc + (q.marks || 1), 0);
                         return (
-                          <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200/60 flex justify-between items-center">
+                          <div key={quiz._id || idx} className={`p-4 rounded-2xl border flex justify-between items-center ${
+                            editingQuizId === quiz._id
+                              ? "bg-violet-50 border-violet-200"
+                              : "bg-slate-50 border-slate-200/60"
+                          }`}>
                             <div className="space-y-1">
                               <span className="text-[9px] font-bold bg-deepskyblue/10 text-deepskyblue-dark px-2 py-0.5 rounded-full uppercase tracking-wider">{quiz.course}</span>
                               <h4 className="text-xs font-bold text-slate-800 mt-1">{quiz.title}</h4>
                               <p className="text-[9px] text-slate-400 font-bold mt-1">
-                                Scheduled: {formatExamSchedule(quiz.scheduledAt)}
+                                Scheduled: {quiz.scheduledAtDisplay || formatExamSchedule(quiz.scheduledAt)}
                                 {quiz.duration && ` | Duration: ${quiz.duration} Mins`}
                                 {quiz.examPassword && ` | Passkey: ${quiz.examPassword}`}
                               </p>
@@ -3490,6 +3713,13 @@ export default function AdminDashboardPage() {
                                 Total Marks: {totalQuizMarks}
                               </span>
                               <div className="flex gap-2 mt-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditQuiz(quiz._id)}
+                                  className="px-2.5 py-1 bg-violet-50 hover:bg-violet-600 text-violet-700 hover:text-white rounded-xl text-[10px] font-bold cursor-pointer transition shadow shadow-violet-500/5"
+                                >
+                                  Edit
+                                </button>
                                 <button
                                   type="button"
                                   onClick={() => setAdminViewQuiz(quiz)}
@@ -3996,6 +4226,10 @@ export default function AdminDashboardPage() {
                       <span className="font-semibold text-slate-800">{studentDetails.student.phone}</span>
                     </div>
                     <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">District</span>
+                      <span className="font-semibold text-slate-800">{studentDetails.student.district || "N/A"}</span>
+                    </div>
+                    <div className="py-2.5 border-b border-slate-100 flex justify-between">
                       <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Enrolled Course</span>
                       <span className="font-semibold text-deepskyblue-dark">{studentDetails.student.course}</span>
                     </div>
@@ -4283,6 +4517,43 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* REGISTRATION SUCCESS — ID CARD MODAL */}
+      {registeredStudentCard && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto animate-fade-in print:hidden">
+          <div className="relative w-full max-w-xl bg-white border border-slate-250 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 my-8 text-left">
+            <div className="flex flex-col items-center text-center">
+              <div className="h-14 w-14 rounded-full bg-emerald-100 border border-emerald-200 flex items-center justify-center mb-3 text-emerald-600">
+                <CheckCircle className="h-7 w-7" />
+              </div>
+              <h3 className="text-lg font-extrabold text-slate-900">Registration Successful!</h3>
+              <p className="text-slate-500 text-xs mt-1 max-w-sm">
+                Student has been registered. Printable registration ID card is shown below.
+              </p>
+            </div>
+
+            <RegistrationIdCard candidate={registeredStudentCard} />
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => printRegistrationIdCard()}
+                className="flex flex-1 items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-250 font-bold text-slate-700 text-sm transition cursor-pointer"
+              >
+                <Printer className="h-4 w-4" />
+                <span>Print ID Card</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setRegisteredStudentCard(null)}
+                className="flex flex-1 items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-sm shadow-md transition cursor-pointer"
+              >
+                <span>Close</span>
+              </button>
             </div>
           </div>
         </div>

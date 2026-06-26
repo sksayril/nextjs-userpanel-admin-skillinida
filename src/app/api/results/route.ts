@@ -2,7 +2,13 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import { Result } from "@/models/Result";
 import { Quiz } from "@/models/Quiz";
-import { formatExamSchedule, isExamNotStarted } from "@/lib/examSchedule";
+import { ExamSession } from "@/models/ExamSession";
+import {
+  formatExamSchedule,
+  formatExamWindowEnd,
+  isExamNotStarted,
+  isExamWindowClosed,
+} from "@/lib/examSchedule";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
@@ -80,12 +86,33 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "You are not assigned/eligible for this exam" }, { status: 403 });
     }
 
-    // Validate start time
+    // Validate exam window
     if (isExamNotStarted(quiz.scheduledAt)) {
       return NextResponse.json(
         {
           error: `This exam has not started yet. Scheduled for ${formatExamSchedule(quiz.scheduledAt)}.`,
         },
+        { status: 403 }
+      );
+    }
+
+    if (isExamWindowClosed(quiz.scheduledAt, quiz.duration || 30)) {
+      return NextResponse.json(
+        {
+          error: `Exam window has ended. It was open until ${formatExamWindowEnd(quiz.scheduledAt, quiz.duration || 30)}.`,
+        },
+        { status: 403 }
+      );
+    }
+
+    const existingResult = await Result.findOne({
+      candidateId: student.id,
+      quizId,
+    });
+
+    if (existingResult) {
+      return NextResponse.json(
+        { error: "You have already submitted this exam." },
         { status: 403 }
       );
     }
@@ -136,6 +163,15 @@ export async function POST(request: Request) {
       new: true,
       upsert: true,
     });
+
+    await ExamSession.findOneAndUpdate(
+      { candidateId: student.id, quizId },
+      {
+        status: "submitted",
+        answers,
+        lastSavedAt: new Date(),
+      }
+    );
 
     const returnedResult = resultRecord.toObject();
     if (!returnedResult.isApproved) {

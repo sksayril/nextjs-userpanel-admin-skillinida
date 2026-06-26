@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import { Quiz } from "@/models/Quiz";
-import { parseScheduledAt } from "@/lib/examSchedule";
+import { enrichQuizWithSchedule, parseScheduledAt } from "@/lib/examSchedule";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
@@ -30,8 +30,11 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
     }
 
-    const quizzes = await Quiz.find({}).sort({ createdAt: -1 });
-    return NextResponse.json({ success: true, quizzes });
+    const quizzes = await Quiz.find({}).sort({ createdAt: -1 }).lean();
+    return NextResponse.json({
+      success: true,
+      quizzes: quizzes.map((quiz) => enrichQuizWithSchedule(quiz as Record<string, unknown>)),
+    });
   } catch (error: any) {
     console.error("Fetch Quizzes Error:", error);
     return NextResponse.json({ error: error.message || "Failed to fetch quizzes" }, { status: 500 });
@@ -77,7 +80,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       message: "Quiz created successfully",
-      quiz,
+      quiz: enrichQuizWithSchedule(quiz.toObject() as Record<string, unknown>),
     });
   } catch (error: any) {
     console.error("Create Quiz Error:", error);

@@ -4,6 +4,7 @@ import { Candidate } from "@/models/Candidate";
 import { Otp } from "@/models/Otp";
 import { Agent } from "@/models/Agent";
 import bcrypt from "bcryptjs";
+import { isValidWestBengalDistrict } from "@/lib/westBengalDistricts";
 
 export async function POST(request: Request) {
   try {
@@ -18,6 +19,7 @@ export async function POST(request: Request) {
       email,
       phone,
       address,
+      district,
       admitUrl,
       qualificationUrl,
       extraQualificationUrl,
@@ -39,6 +41,7 @@ export async function POST(request: Request) {
       !email ||
       !phone ||
       !address ||
+      !district ||
       !admitUrl ||
       !qualificationUrl ||
       !profilePicUrl ||
@@ -51,6 +54,10 @@ export async function POST(request: Request) {
 
     if (password.length < 6) {
       return NextResponse.json({ error: "Password must be at least 6 characters long" }, { status: 400 });
+    }
+
+    if (!isValidWestBengalDistrict(district)) {
+      return NextResponse.json({ error: "Please select a valid West Bengal district" }, { status: 400 });
     }
 
     // 2. Validate OTP code from the database
@@ -116,6 +123,7 @@ export async function POST(request: Request) {
       email,
       phone,
       address,
+      district,
       admitUrl,
       qualificationUrl,
       extraQualificationUrl: extraQualificationUrl || undefined,
@@ -131,10 +139,14 @@ export async function POST(request: Request) {
 
     await candidateDoc.save();
 
+    const candidateObject = candidateDoc.toObject();
+    delete (candidateObject as { password?: string }).password;
+    delete (candidateObject as { originalPassword?: string }).originalPassword;
+
     return NextResponse.json({
       success: true,
       message: "Candidate registered successfully",
-      candidate: candidateDoc,
+      candidate: candidateObject,
     });
   } catch (error: any) {
     console.error("Registration API Error:", error);

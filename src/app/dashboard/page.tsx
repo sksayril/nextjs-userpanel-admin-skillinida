@@ -23,7 +23,7 @@ import {
   ExternalLink
 } from "lucide-react";
 import { resolveFileUrl } from "@/lib/fileUrl";
-import { formatExamSchedule, isExamNotStarted } from "@/lib/examSchedule";
+import { formatExamSchedule, isExamNotStarted, isExamWindowClosed, formatExamWindowEnd } from "@/lib/examSchedule";
 import Logo from "@/components/Logo";
 
 export default function DashboardPage() {
@@ -67,9 +67,12 @@ export default function DashboardPage() {
   const [enteredPassword, setEnteredPassword] = useState<string>("");
   const [passwordError, setPasswordError] = useState<string>("");
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
+  const [savingProgress, setSavingProgress] = useState<boolean>(false);
 
   const activeQuizRef = React.useRef(activeQuiz);
   const selectedAnswersRef = React.useRef(selectedAnswers);
+  const examExpiresAtRef = React.useRef<string | null>(null);
+  const saveProgressTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     activeQuizRef.current = activeQuiz;
@@ -80,19 +83,30 @@ export default function DashboardPage() {
   }, [selectedAnswers]);
 
   useEffect(() => {
-    if (!activeQuiz) return;
+    if (!activeQuiz || !examExpiresAtRef.current) return;
+
+    const updateRemaining = () => {
+      const expiresAt = examExpiresAtRef.current;
+      if (!expiresAt) return 0;
+
+      const remaining = Math.max(
+        0,
+        Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)
+      );
+      setTimeRemaining(remaining);
+      return remaining;
+    };
+
+    updateRemaining();
 
     const interval = setInterval(() => {
-      setTimeRemaining(prev => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          if (activeQuizRef.current) {
-            submitQuizAnswers(selectedAnswersRef.current, true);
-          }
-          return 0;
+      const remaining = updateRemaining();
+      if (remaining <= 0) {
+        clearInterval(interval);
+        if (activeQuizRef.current) {
+          submitQuizAnswers(selectedAnswersRef.current, true);
         }
-        return prev - 1;
-      });
+      }
     }, 1000);
 
     return () => clearInterval(interval);
@@ -104,20 +118,60 @@ export default function DashboardPage() {
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
+  const saveExamProgress = async (answersToSave: number[], quizId: string) => {
+    try {
+      setSavingProgress(true);
+      const res = await fetch(`/api/exam-sessions/${quizId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers: answersToSave }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success && data.expiresAt) {
+        examExpiresAtRef.current = data.expiresAt;
+      }
+    } catch (err) {
+      console.error("Failed to save exam progress:", err);
+    } finally {
+      setSavingProgress(false);
+    }
+  };
+
+  const scheduleSaveExamProgress = (answersToSave: number[], quizId: string) => {
+    if (saveProgressTimeoutRef.current) {
+      clearTimeout(saveProgressTimeoutRef.current);
+    }
+
+    saveProgressTimeoutRef.current = setTimeout(() => {
+      saveExamProgress(answersToSave, quizId);
+    }, 700);
+  };
+
   const startQuizWithQuestions = async (quizId: string) => {
     try {
-      const res = await fetch(`/api/quizzes/${quizId}`);
+      const res = await fetch(`/api/exam-sessions/${quizId}`, {
+        method: "POST",
+      });
       const data = await res.json();
+
       if (res.ok && data.success) {
         const fullQuiz = data.quiz;
         setActiveQuiz(fullQuiz);
-        setSelectedAnswers(new Array(fullQuiz.questions.length).fill(-1));
-        setTimeRemaining(fullQuiz.duration ? fullQuiz.duration * 60 : 30 * 60);
+        setSelectedAnswers(data.session.answers);
+        examExpiresAtRef.current = data.expiresAt;
+        setTimeRemaining(data.remainingSeconds);
         setPendingQuiz(null);
         setEnteredPassword("");
         setPasswordError("");
+
+        if (data.resumed && data.session.answeredCount > 0) {
+          toast.success(
+            `Resuming exam. ${data.session.answeredCount} of ${data.session.totalQuestions} questions already answered.`
+          );
+        }
       } else {
-        toast.error(data.error || "Failed to load exam questions. Make sure it has started.");
+        toast.error(data.error || "Failed to load exam. Make sure the exam window is open.");
       }
     } catch (err) {
       console.error(err);
@@ -361,6 +415,13 @@ export default function DashboardPage() {
       return;
     }
 
+    if (isExamWindowClosed(quiz.scheduledAt, quiz.duration || 30)) {
+      toast.error(
+        `Exam window has ended. It was open until ${formatExamWindowEnd(quiz.scheduledAt, quiz.duration || 30)}.`
+      );
+      return;
+    }
+
     if (quiz.examPassword && quiz.examPassword.trim() !== "") {
       setPendingQuiz(quiz);
       setEnteredPassword("");
@@ -374,6 +435,10 @@ export default function DashboardPage() {
     const updated = [...selectedAnswers];
     updated[questionIndex] = optionIndex;
     setSelectedAnswers(updated);
+
+    if (activeQuiz?._id) {
+      scheduleSaveExamProgress(updated, activeQuiz._id);
+    }
   };
 
   const submitQuizAnswers = async (answersToSubmit: number[], isAutoSubmit = false) => {
@@ -397,6 +462,7 @@ export default function DashboardPage() {
         } else {
           toast.success("Exam submitted successfully! Your results are pending administrator review.");
         }
+        examExpiresAtRef.current = null;
         setActiveQuiz(null);
         await fetchDashboardData();
       } else {
@@ -1375,21 +1441,45 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans select-none overflow-x-hidden relative">
       
       {/* HEADER SECTION (Hidden when printing) */}
-      <header className="h-16 border-b border-slate-200/80 backdrop-blur-md bg-white/80 sticky top-0 z-40 flex items-center justify-between px-6 print:hidden">
-        <div className="flex items-center gap-3">
+      <header className="h-16 border-b border-slate-200/80 backdrop-blur-md bg-white/80 sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 print:hidden">
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab("courses");
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          className="flex items-center gap-2 sm:gap-3 min-w-0 cursor-pointer"
+          aria-label="Go to dashboard home"
+        >
           <Logo iconSize="sm" showText={false} />
-          <span className="font-extrabold tracking-tight text-slate-900 hidden sm:inline-block text-sm">SUPPORT MISSION INDIA</span>
-          <span className="font-extrabold tracking-tight text-slate-900 sm:hidden text-xs">SMI PANEL</span>
-        </div>
+          <div className="text-left min-w-0">
+            <span className="font-extrabold tracking-tight text-slate-900 block text-xs sm:text-sm truncate leading-tight">
+              SUPPORT MISSION INDIA
+            </span>
+            <span className="text-[9px] uppercase font-bold text-deepskyblue-dark tracking-wider hidden sm:block">
+              Student Portal
+            </span>
+          </div>
+        </button>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="lg:hidden flex items-center gap-1.5 py-2 px-2.5 sm:px-3 rounded-xl border border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 text-slate-600 font-bold text-xs transition-all cursor-pointer"
+            aria-label="Sign out"
+          >
+            <LogOut className="h-4 w-4" />
+            <span className="hidden sm:inline">Logout</span>
+          </button>
+
           {/* Notifications */}
-          <button className="relative h-9 w-9 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center hover:bg-slate-100 transition-colors cursor-pointer">
+          <button className="relative h-9 w-9 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center hover:bg-slate-100 transition-colors cursor-pointer hidden sm:flex">
             <Bell className="h-4 w-4 text-slate-600" />
             <span className="absolute top-2.5 right-2.5 h-1.5 w-1.5 rounded-full bg-deepskyblue" />
           </button>
           {/* User Profile Summary */}
-          <div className="flex items-center gap-2.5 pl-2 border-l border-slate-250">
+          <div className="flex items-center gap-2 sm:gap-2.5 pl-2 border-l border-slate-250">
             {renderProfileAvatar("h-8 w-8 rounded-full overflow-hidden")}
             <div className="hidden md:block text-left">
               <p className="text-xs font-bold text-slate-800 leading-3">{candidate.name}</p>
@@ -1770,56 +1860,132 @@ export default function DashboardPage() {
                   </p>
                 ) : (
                   <div className="space-y-3">
-                    {quizzes.map((quiz, i) => {
-                      const result = results.find(r => r.quizId === quiz._id);
-                      const isNotStarted = isExamNotStarted(quiz.scheduledAt);
+                    {quizzes.map((quiz) => {
+                      const result = results.find((r) => r.quizId === quiz._id);
+                      const meta = quiz.examMeta || {};
+                      const isNotStarted = meta.isNotStarted ?? isExamNotStarted(quiz.scheduledAt);
+                      const isWindowClosed =
+                        meta.isWindowClosed ?? isExamWindowClosed(quiz.scheduledAt, quiz.duration || 30);
+                      const canResume = meta.canResume;
+                      const isSubmitted = quiz.isSubmitted || !!result;
+                      const questionCount = quiz.questionCount ?? quiz.questions?.length ?? 0;
+                      const answeredCount = meta.answeredCount ?? 0;
+                      const scheduleLabel =
+                        quiz.scheduledAtDisplay || formatExamSchedule(quiz.scheduledAt);
+                      const windowEndLabel = formatExamWindowEnd(quiz.scheduledAt, quiz.duration || 30);
+
                       return (
-                        <div key={i} className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-sm shadow-slate-100">
-                          <div className="flex items-start gap-4">
-                            <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 border ${
-                              result 
-                                ? "bg-emerald-50 border-emerald-150 text-emerald-600" 
-                                : isNotStarted 
-                                  ? "bg-slate-50 border-slate-150 text-slate-400"
-                                  : "bg-deepskyblue/10 border-deepskyblue/20 text-deepskyblue animate-pulse"
-                            }`}>
+                        <div
+                          key={quiz._id}
+                          className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-sm shadow-slate-100"
+                        >
+                          <div className="flex items-start gap-4 min-w-0 flex-1">
+                            <div
+                              className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 border ${
+                                isSubmitted
+                                  ? "bg-emerald-50 border-emerald-200 text-emerald-600"
+                                  : isNotStarted
+                                    ? "bg-amber-50 border-amber-200 text-amber-600"
+                                    : isWindowClosed
+                                      ? "bg-slate-100 border-slate-200 text-slate-400"
+                                      : canResume
+                                        ? "bg-violet-50 border-violet-200 text-violet-600"
+                                        : "bg-deepskyblue/10 border-deepskyblue/20 text-deepskyblue"
+                              }`}
+                            >
                               <Award className="h-5 w-5" />
                             </div>
-                            <div>
-                              <h4 className="text-sm font-bold text-slate-800">{quiz.title}</h4>
-                              <p className="text-xs text-slate-400 mt-0.5 font-semibold flex flex-wrap gap-x-2 gap-y-1">
-                                <span>{quiz.questions?.length || 0} Objective Questions</span>
-                                {quiz.duration && <span>| Duration: {quiz.duration} Mins</span>}
-                                {quiz.scheduledAt && (
-                                  <span className={isNotStarted ? "text-amber-600 font-bold" : "text-emerald-600 font-bold"}>
-                                    | Starts: {formatExamSchedule(quiz.scheduledAt)}
+
+                            <div className="min-w-0 flex-1">
+                              <h4 className="text-sm font-bold text-slate-800 leading-snug break-words">
+                                {quiz.title}
+                              </h4>
+
+                              <div className="flex flex-wrap items-center gap-2 mt-2.5">
+                                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-600 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg">
+                                  <FileText className="h-3 w-3 text-slate-400" />
+                                  {questionCount} Objective {questionCount === 1 ? "Question" : "Questions"}
+                                </span>
+
+                                {quiz.duration ? (
+                                  <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-600 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg">
+                                    <Clock className="h-3 w-3 text-slate-400" />
+                                    {quiz.duration} Mins
                                   </span>
-                                )}
-                              </p>
+                                ) : null}
+
+                                {scheduleLabel && scheduleLabel !== "Now" ? (
+                                  <span
+                                    className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-lg border ${
+                                      isNotStarted
+                                        ? "text-amber-700 bg-amber-50 border-amber-200"
+                                        : isWindowClosed
+                                          ? "text-slate-600 bg-slate-100 border-slate-200"
+                                          : "text-emerald-700 bg-emerald-50 border-emerald-200"
+                                    }`}
+                                  >
+                                    <Calendar className="h-3 w-3 shrink-0" />
+                                    <span className="whitespace-normal sm:whitespace-nowrap">
+                                      {isNotStarted ? "Starts" : "Started"}: {scheduleLabel}
+                                    </span>
+                                  </span>
+                                ) : null}
+
+                                {!isNotStarted && !isWindowClosed && meta.remainingSeconds ? (
+                                  <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-deepskyblue-dark bg-deepskyblue/10 border border-deepskyblue/20 px-2.5 py-1 rounded-lg">
+                                    <Clock className="h-3 w-3" />
+                                    Join until {windowEndLabel}
+                                  </span>
+                                ) : null}
+
+                                {canResume && answeredCount > 0 ? (
+                                  <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-violet-700 bg-violet-50 border border-violet-200 px-2.5 py-1 rounded-lg">
+                                    <CheckCircle className="h-3 w-3" />
+                                    Saved: {answeredCount}/{questionCount} answered
+                                  </span>
+                                ) : null}
+                              </div>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-4 justify-between sm:justify-end">
-                            {result ? (
+                          <div className="flex items-center gap-4 justify-end shrink-0 sm:pl-2">
+                            {isSubmitted ? (
                               <div className="text-right">
-                                <span className="text-[10px] text-slate-400 block font-semibold">Grade</span>
-                                <span className="text-xs text-emerald-650 font-bold">
-                                  Score: {result.score}/{result.total} ({result.grade})
+                                <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">
+                                  {result?.score !== undefined ? "Grade" : "Submitted"}
                                 </span>
+                                {result?.score !== undefined ? (
+                                  <span className="text-xs text-emerald-650 font-bold">
+                                    Score: {result.score}/{result.total} ({result.grade})
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-slate-600 font-bold">Awaiting review</span>
+                                )}
                               </div>
                             ) : isNotStarted ? (
                               <button
                                 disabled
-                                className="py-1.5 px-4 rounded-lg bg-slate-100 border border-slate-200 text-xs font-bold text-slate-450 cursor-not-allowed shadow-none"
+                                className="min-w-[108px] py-2 px-4 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-700 cursor-not-allowed"
                               >
                                 Not Started
+                              </button>
+                            ) : isWindowClosed ? (
+                              <button
+                                disabled
+                                className="min-w-[108px] py-2 px-4 rounded-xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-500 cursor-not-allowed"
+                              >
+                                Window Closed
                               </button>
                             ) : (
                               <button
                                 onClick={() => handleStartQuiz(quiz)}
-                                className="py-1.5 px-4 rounded-lg bg-deepskyblue hover:bg-deepskyblue-dark text-xs font-bold text-white shadow-md shadow-deepskyblue/10 active:scale-95 cursor-pointer"
+                                className={`min-w-[108px] py-2 px-4 rounded-xl text-xs font-bold text-white shadow-md active:scale-95 cursor-pointer transition-colors ${
+                                  canResume
+                                    ? "bg-violet-600 hover:bg-violet-700 shadow-violet-500/10"
+                                    : "bg-deepskyblue hover:bg-deepskyblue-dark shadow-deepskyblue/10"
+                                }`}
                               >
-                                Start Exam
+                                {canResume ? "Resume Exam" : "Start Exam"}
                               </button>
                             )}
                           </div>
@@ -2239,6 +2405,10 @@ export default function DashboardPage() {
                     <span className="font-semibold text-slate-800">{candidate.phone}</span>
                   </div>
                   <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">District</span>
+                    <span className="font-semibold text-slate-800">{candidate.district || "N/A"}</span>
+                  </div>
+                  <div className="py-2.5 border-b border-slate-100 flex justify-between">
                     <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Enrolled Program</span>
                     <span className="text-right truncate pl-4 font-semibold text-deepskyblue-dark">{candidate.course}</span>
                   </div>
@@ -2353,17 +2523,25 @@ export default function DashboardPage() {
                     <Clock className="h-3.5 w-3.5" />
                     <span>Time Remaining: {formatTime(timeRemaining)}</span>
                   </span>
+                  {savingProgress ? (
+                    <span className="text-[10px] font-bold text-emerald-600">Saving...</span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-slate-400">Progress auto-saved</span>
+                  )}
                 </div>
               </div>
               <button
-                onClick={() => {
-                  if (confirm("Are you sure you want to exit the exam? Your progress will not be saved.")) {
-                    setActiveQuiz(null);
+                onClick={async () => {
+                  if (activeQuiz?._id) {
+                    await saveExamProgress(selectedAnswers, activeQuiz._id);
+                    toast.success("Progress saved. You can resume later from where you left off.");
                   }
+                  examExpiresAtRef.current = null;
+                  setActiveQuiz(null);
                 }}
                 className="text-slate-650 hover:text-slate-950 text-xs font-bold bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 cursor-pointer transition-colors"
               >
-                Close Exam
+                Save & Exit
               </button>
             </div>
 

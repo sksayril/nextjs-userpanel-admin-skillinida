@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import { Quiz } from "@/models/Quiz";
 import { Candidate } from "@/models/Candidate";
-import { formatExamSchedule, isExamNotStarted } from "@/lib/examSchedule";
+import { enrichQuizWithSchedule, formatExamSchedule, isExamNotStarted } from "@/lib/examSchedule";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
@@ -62,7 +62,7 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      quiz,
+      quiz: enrichQuizWithSchedule(quiz as Record<string, unknown>),
     });
   } catch (error: any) {
     console.error("Fetch Single Quiz Error:", error);
