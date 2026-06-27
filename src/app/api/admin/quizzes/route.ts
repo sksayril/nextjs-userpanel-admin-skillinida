@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
     }
 
-    const { title, course, questions, scheduledAt, duration, assignedStudents, examPassword } = await request.json();
+    const { title, course, questions, scheduledAt, duration, assignedStudents, examPassword, showResultToStudent, enableCertificate } = await request.json();
 
     if (!title || !course || !questions || !Array.isArray(questions) || questions.length === 0) {
       return NextResponse.json({ error: "Title, course, and questions array are required" }, { status: 400 });
@@ -73,6 +73,8 @@ export async function POST(request: Request) {
       duration: duration || 30,
       assignedStudents: assignedStudents || [],
       examPassword: examPassword || "",
+      showResultToStudent: showResultToStudent !== false,
+      enableCertificate: enableCertificate !== false,
     });
 
     await quiz.save();

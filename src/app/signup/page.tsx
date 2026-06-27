@@ -49,6 +49,7 @@ export default function SignupPage() {
     admitUrl: "",
     qualificationUrl: "",
     extraQualificationUrl: "",
+    signatureUrl: "",
     otp: "",
     password: "",
     agentCode: "",
@@ -60,10 +61,12 @@ export default function SignupPage() {
   const [uploadingQual, setUploadingQual] = useState(false);
   const [uploadingExtra, setUploadingExtra] = useState(false);
   const [uploadingProfile, setUploadingProfile] = useState(false);
+  const [uploadingSignature, setUploadingSignature] = useState(false);
   const [admitFileName, setAdmitFileName] = useState("");
   const [qualFileName, setQualFileName] = useState("");
   const [extraFileName, setExtraFileName] = useState("");
   const [profileFileName, setProfileFileName] = useState("");
+  const [signatureFileName, setSignatureFileName] = useState("");
 
   const [otpSent, setOtpSent] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
@@ -100,7 +103,7 @@ export default function SignupPage() {
   // Handle S3 uploads
   const handleFileUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
-    field: "admitUrl" | "qualificationUrl" | "extraQualificationUrl" | "profilePicUrl"
+    field: "admitUrl" | "qualificationUrl" | "extraQualificationUrl" | "profilePicUrl" | "signatureUrl"
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -114,6 +117,9 @@ export default function SignupPage() {
     } else if (field === "profilePicUrl") {
       setUploadingProfile(true);
       setProfileFileName(file.name);
+    } else if (field === "signatureUrl") {
+      setUploadingSignature(true);
+      setSignatureFileName(file.name);
     } else {
       setUploadingExtra(true);
       setExtraFileName(file.name);
@@ -124,6 +130,7 @@ export default function SignupPage() {
       admitUrl: "documents",
       qualificationUrl: "documents",
       extraQualificationUrl: "documents",
+      signatureUrl: "signature",
     } as const;
 
     try {
@@ -150,6 +157,7 @@ export default function SignupPage() {
       if (field === "admitUrl") setUploadingAdmit(false);
       else if (field === "qualificationUrl") setUploadingQual(false);
       else if (field === "profilePicUrl") setUploadingProfile(false);
+      else if (field === "signatureUrl") setUploadingSignature(false);
       else setUploadingExtra(false);
     }
   };
@@ -234,8 +242,8 @@ export default function SignupPage() {
       }
     }
     if (step === 2) {
-      if (!formData.course || !formData.admitUrl || !formData.qualificationUrl || !formData.profilePicUrl) {
-        setErrorMsg("Interested course, Admin/Intermediate Admit Card, Profile photo, and Qualification certificate are required");
+      if (!formData.course || !formData.admitUrl || !formData.qualificationUrl || !formData.profilePicUrl || !formData.signatureUrl) {
+        setErrorMsg("Interested course, Admit Card, Profile photo, Qualification certificate, and Candidate Signature are required");
         return;
       }
     }
@@ -650,7 +658,7 @@ export default function SignupPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
-                      Admin/Intermediate Admit Card <span className="text-rose-500">*</span>
+                      Admit/Intermediate Admit Card <span className="text-rose-500">*</span>
                     </label>
                     {formData.admitUrl && (
                       <span className="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full font-bold">Uploaded</span>
@@ -690,7 +698,7 @@ export default function SignupPage() {
                           <Upload className="h-5 w-5 animate-bounce" style={{ animationDuration: '2.5s' }} />
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-slate-700">Select Admin/Intermediate Admit Card Document</p>
+                          <p className="text-xs font-bold text-slate-700">Select Admit/Intermediate Admit Card Document</p>
                           <p className="text-[10px] text-slate-400 mt-1">PDF, PNG, JPG up to 5MB</p>
                         </div>
                       </div>
@@ -796,6 +804,58 @@ export default function SignupPage() {
                         <div>
                           <p className="text-xs font-bold text-slate-700">Select Extra Document (Optional)</p>
                           <p className="text-[10px] text-slate-400 mt-1">PDF, PNG, JPG up to 5MB</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Candidate Signature Upload */}
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Candidate Signature (Required) <span className="text-rose-500">*</span>
+                    </label>
+                    {formData.signatureUrl && (
+                      <span className="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full font-bold">Uploaded</span>
+                    )}
+                  </div>
+                  <div className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all p-5 text-center flex flex-col items-center justify-center min-h-[120px] ${formData.signatureUrl
+                    ? "bg-emerald-50/20 border-emerald-500/40 hover:bg-emerald-50/35"
+                    : "bg-slate-50/60 border-slate-200/80 hover:bg-deepskyblue-light/10 hover:border-deepskyblue"
+                    }`}>
+                    <input
+                      type="file"
+                      id="signature-file"
+                      suppressHydrationWarning
+                      accept=".png,.jpg,.jpeg"
+                      onChange={(e) => handleFileUpload(e, "signatureUrl")}
+                      className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                    />
+
+                    {uploadingSignature ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="h-8 w-8 border-3 border-deepskyblue/30 border-t-deepskyblue rounded-full animate-spin" />
+                        <span className="text-[11px] font-bold text-deepskyblue-dark animate-pulse">Uploading Signature...</span>
+                      </div>
+                    ) : formData.signatureUrl ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-inner">
+                          <CheckCircle className="h-5 w-5" />
+                        </div>
+                        <div className="max-w-full px-2">
+                          <p className="text-xs font-bold text-slate-700 break-all">{signatureFileName || "signature_image"}</p>
+                          <p className="text-[9px] text-slate-400 mt-0.5">Click or drag to replace file</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="h-10 w-10 rounded-full bg-deepskyblue-light/50 flex items-center justify-center text-deepskyblue-dark">
+                          <Upload className="h-5 w-5 animate-bounce" style={{ animationDuration: '2.5s' }} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-700">Select Signature Image</p>
+                          <p className="text-[10px] text-slate-400 mt-1">PNG, JPG, JPEG up to 2MB</p>
                         </div>
                       </div>
                     )}
@@ -998,6 +1058,7 @@ export default function SignupPage() {
                       admitUrl: "",
                       qualificationUrl: "",
                       extraQualificationUrl: "",
+                      signatureUrl: "",
                       otp: "",
                       password: "",
                       agentCode: "",

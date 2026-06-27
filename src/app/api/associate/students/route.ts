@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import { Candidate } from "@/models/Candidate";
-import { Agent } from "@/models/Agent";
+import { Associate } from "@/models/Associate";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
@@ -12,7 +12,7 @@ export async function GET() {
     await dbConnect();
 
     const cookieStore = await cookies();
-    const tokenCookie = cookieStore.get("agent_token");
+    const tokenCookie = cookieStore.get("associate_token");
 
     if (!tokenCookie || !tokenCookie.value) {
       return NextResponse.json({ error: "Session token not found" }, { status: 401 });
@@ -25,21 +25,21 @@ export async function GET() {
       return NextResponse.json({ error: "Session token is invalid or expired" }, { status: 401 });
     }
 
-    if (!decoded || !decoded.id || decoded.role !== "agent") {
+    if (!decoded || !decoded.id || decoded.role !== "associate") {
       return NextResponse.json({ error: "Token payload is invalid" }, { status: 401 });
     }
 
-    const agent = await Agent.findById(decoded.id);
-    if (!agent) {
-      return NextResponse.json({ error: "Agent profile not found" }, { status: 401 });
+    const associate = await Associate.findById(decoded.id);
+    if (!associate) {
+      return NextResponse.json({ error: "Associate profile not found" }, { status: 401 });
     }
 
-    if (agent.status !== "approved") {
-      return NextResponse.json({ error: "Agent is not approved" }, { status: 403 });
+    if (associate.status !== "approved") {
+      return NextResponse.json({ error: "Associate is not approved" }, { status: 403 });
     }
 
-    // Retrieve students registered with this agent's code
-    const students = await Candidate.find({ agentCode: agent.agentCode })
+    // Retrieve students registered with this associate's code
+    const students = await Candidate.find({ agentCode: associate.agentCode })
       .select("-password")
       .sort({ createdAt: -1 });
 
@@ -49,7 +49,7 @@ export async function GET() {
       count: students.length,
     });
   } catch (error: any) {
-    console.error("Agent Students API Error:", error);
-    return NextResponse.json({ error: error.message || "Failed to fetch agent students" }, { status: 500 });
+    console.error("Associate Students API Error:", error);
+    return NextResponse.json({ error: error.message || "Failed to fetch associate students" }, { status: 500 });
   }
 }

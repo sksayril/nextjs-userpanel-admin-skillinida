@@ -13,7 +13,7 @@ import {
   Sparkles,
 } from "lucide-react";
 
-export default function AgentSignupPage() {
+export default function AssociateSignupPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     name: "",
@@ -48,7 +48,7 @@ export default function AgentSignupPage() {
     setSuccessMsg("");
 
     try {
-      const res = await fetch("/api/agent/signup", {
+      const res = await fetch("/api/associate/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -63,7 +63,7 @@ export default function AgentSignupPage() {
       }
     } catch (err) {
       console.error(err);
-      setErrorMsg("Network error registering agent account");
+      setErrorMsg("Network error registering associate account");
     } finally {
       setSubmitLoading(false);
     }
@@ -141,7 +141,7 @@ export default function AgentSignupPage() {
                     id="email"
                     type="email"
                     required
-                    placeholder="agent@example.com"
+                    placeholder="associate@example.com"
                     value={formData.email}
                     onChange={handleChange}
                     className="block w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/10"
@@ -214,10 +214,10 @@ export default function AgentSignupPage() {
               </div>
               <p className="text-sm text-slate-650 leading-relaxed">
                 Thank you for registering. Your partner application is pending administrator approval.
-                Once approved, you will be able to log in to access your Agent Dashboard, manage student referral logs, and generate discount codes.
+                Once approved, you will be able to log in to access your Associate Dashboard, manage student referral logs, and generate discount codes.
               </p>
               <Link
-                href="/agent/login"
+                href="/associate/login"
                 className="inline-flex w-full justify-center py-2.5 px-4 rounded-xl bg-deepskyblue hover:bg-deepskyblue-dark text-white font-bold text-sm shadow-md shadow-deepskyblue/15 transition-all"
               >
                 Proceed to Login
@@ -227,7 +227,7 @@ export default function AgentSignupPage() {
 
           {!isRegistered && (
             <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-              <Link href="/agent/login" className="text-sm font-semibold text-slate-500 hover:text-deepskyblue transition-all">
+              <Link href="/associate/login" className="text-sm font-semibold text-slate-500 hover:text-deepskyblue transition-all">
                 Already registered? Partner Log In
               </Link>
             </div>

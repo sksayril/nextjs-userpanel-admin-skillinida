@@ -935,9 +935,15 @@ export default function DashboardPage() {
                   )}
                 </div>
                 {/* Signature line */}
-                <div className="w-full text-center border-t border-slate-200 mt-2 pt-1">
-                  <div style={{ fontFamily: "'Dancing Script', 'Pacifico', 'Brush Script MT', cursive", fontSize: "14px", color: "#1e3a8a" }} className="h-5 flex items-center justify-center font-extrabold select-none italic">
-                    {student.name}
+                <div className="w-full text-center border-t border-slate-200 mt-2 pt-1 flex flex-col items-center justify-center">
+                  <div className="h-6 w-full flex items-center justify-center overflow-hidden">
+                    {student.signatureUrl ? (
+                      <img src={resolveFileUrl(student.signatureUrl)} className="h-full object-contain" alt="Candidate Signature" />
+                    ) : (
+                      <div style={{ fontFamily: "'Dancing Script', 'Pacifico', 'Brush Script MT', cursive", fontSize: "12px", color: "#1e3a8a" }} className="font-extrabold select-none italic">
+                        {student.name}
+                      </div>
+                    )}
                   </div>
                   <div className="h-[1px] bg-slate-400 w-[85%] mx-auto mt-0.5"></div>
                   <span className="text-[7px] font-black uppercase text-slate-400 tracking-wider block mt-0.5">Candidate Signature</span>
@@ -1823,6 +1829,17 @@ export default function DashboardPage() {
                         <span className="text-[9px] font-black uppercase tracking-wider">
                           {dayObj.status === "present" ? "Pres" : dayObj.status === "absent" ? "Abs" : "Lv"}
                         </span>
+                        {dayObj.date && (
+                          <span className="text-[8px] text-slate-500 font-bold block leading-tight mt-0.5">
+                            {new Date(dayObj.date).toLocaleString("en-GB", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        )}
                         {dayObj.googleMeetLink && (
                           <a
                             href={dayObj.googleMeetLink}

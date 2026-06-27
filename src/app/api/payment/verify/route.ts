@@ -96,7 +96,7 @@ export async function POST(request: Request) {
       paidAt: new Date()
     };
 
-    await candidate.save();
+    await candidate.save({ validateBeforeSave: false });
 
     return NextResponse.json({
       success: true,

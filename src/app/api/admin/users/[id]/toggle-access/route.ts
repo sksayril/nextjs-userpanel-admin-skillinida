@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
-import { Agent } from "@/models/Agent";
+import { Candidate } from "@/models/Candidate";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
@@ -21,7 +21,7 @@ async function verifyAdmin() {
   return null;
 }
 
-export async function PUT(
+export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -33,27 +33,23 @@ export async function PUT(
     }
 
     const { id } = await params;
-    const { status } = await request.json();
+    const candidate = await Candidate.findById(id);
 
-    if (!status || !["approved", "rejected"].includes(status)) {
-      return NextResponse.json({ error: "Invalid status value. Must be 'approved' or 'rejected'." }, { status: 400 });
+    if (!candidate) {
+      return NextResponse.json({ error: "Student not found" }, { status: 404 });
     }
 
-    const agent = await Agent.findById(id);
-    if (!agent) {
-      return NextResponse.json({ error: "Agent not found" }, { status: 404 });
-    }
-
-    agent.status = status;
-    await agent.save();
+    // Toggle the isActive field
+    candidate.isActive = !candidate.isActive;
+    await candidate.save({ validateBeforeSave: false });
 
     return NextResponse.json({
       success: true,
-      message: `Agent account has been successfully ${status}`,
-      agent,
+      message: `Student access ${candidate.isActive ? "enabled" : "disabled"} successfully`,
+      isActive: candidate.isActive,
     });
   } catch (error: any) {
-    console.error("Admin Agent Approval Error:", error);
-    return NextResponse.json({ error: error.message || "Failed to update agent status" }, { status: 500 });
+    console.error("Toggle Access Error:", error);
+    return NextResponse.json({ error: error.message || "Failed to toggle student access" }, { status: 500 });
   }
 }

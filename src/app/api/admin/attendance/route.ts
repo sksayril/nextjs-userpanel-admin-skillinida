@@ -61,19 +61,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Candidate not found" }, { status: 404 });
     }
 
-    // Check if attendance already logged for this student on this day
-    const parsedDate = new Date(date);
-    const startOfDay = new Date(parsedDate.setUTCHours(0, 0, 0, 0));
-    const endOfDay = new Date(parsedDate.setUTCHours(23, 59, 59, 999));
-
+    // Check if attendance already logged for this student at this exact time
     const duplicate = await Attendance.findOne({
       candidateId,
-      date: { $gte: startOfDay, $lte: endOfDay },
+      date: new Date(date),
     });
 
     if (duplicate) {
       return NextResponse.json(
-        { error: `Attendance already logged for this candidate on ${new Date(date).toLocaleDateString()}` },
+        { error: `Attendance already logged for this candidate at ${new Date(date).toLocaleString()}` },
         { status: 400 }
       );
     }

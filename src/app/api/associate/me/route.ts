@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
-import { Agent } from "@/models/Agent";
+import { Associate } from "@/models/Associate";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
@@ -11,7 +11,7 @@ export async function GET() {
     await dbConnect();
 
     const cookieStore = await cookies();
-    const tokenCookie = cookieStore.get("agent_token");
+    const tokenCookie = cookieStore.get("associate_token");
 
     if (!tokenCookie || !tokenCookie.value) {
       return NextResponse.json({ error: "Session token not found" }, { status: 401 });
@@ -24,25 +24,26 @@ export async function GET() {
       return NextResponse.json({ error: "Session token is invalid or expired" }, { status: 401 });
     }
 
-    if (!decoded || !decoded.id || decoded.role !== "agent") {
+    if (!decoded || !decoded.id || decoded.role !== "associate") {
       return NextResponse.json({ error: "Token payload is invalid" }, { status: 401 });
     }
 
-    const agent = await Agent.findById(decoded.id).select("-password -originalPassword");
-    if (!agent) {
-      return NextResponse.json({ error: "Agent profile not found" }, { status: 401 });
+    const associate = await Associate.findById(decoded.id).select("-password -originalPassword");
+    if (!associate) {
+      return NextResponse.json({ error: "Associate profile not found" }, { status: 401 });
     }
 
-    if (agent.status !== "approved") {
-      return NextResponse.json({ error: "Agent status is not approved" }, { status: 403 });
+    if (associate.status !== "approved") {
+      return NextResponse.json({ error: "Associate status is not approved" }, { status: 403 });
     }
 
     return NextResponse.json({
       success: true,
-      agent,
+      agent: associate, // Keep key name 'agent' in response JSON so dashboard frontend doesn't need field changes, or update both! Let's return both or update the frontend! Returning both `agent` and `associate` keys is extremely robust!
+      associate,
     });
   } catch (error: any) {
-    console.error("Agent Session Check Error:", error);
+    console.error("Associate Session Check Error:", error);
     return NextResponse.json({ error: error.message || "Failed to check session" }, { status: 500 });
   }
 }

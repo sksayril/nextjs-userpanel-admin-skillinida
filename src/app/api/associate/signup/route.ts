@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
-import { Agent } from "@/models/Agent";
+import { Associate } from "@/models/Associate";
 import bcrypt from "bcryptjs";
 
 export async function POST(request: Request) {
@@ -19,19 +19,19 @@ export async function POST(request: Request) {
     }
 
     const emailLower = email.toLowerCase().trim();
-    const existingAgent = await Agent.findOne({ email: emailLower });
-    if (existingAgent) {
-      return NextResponse.json({ error: "An agent with this email already exists" }, { status: 400 });
+    const existingAssociate = await Associate.findOne({ email: emailLower });
+    if (existingAssociate) {
+      return NextResponse.json({ error: "An associate with this email already exists" }, { status: 400 });
     }
 
-    // Generate unique agent referral code
+    // Generate unique associate referral code
     let agentCode = "";
     let isUnique = false;
     while (!isUnique) {
       const randomDigits = Math.floor(1000 + Math.random() * 9000).toString();
-      agentCode = `SMI-AGT-${randomDigits}`;
+      agentCode = `SMI-ASC-${randomDigits}`;
 
-      const duplicate = await Agent.findOne({ agentCode });
+      const duplicate = await Associate.findOne({ agentCode });
       if (!duplicate) {
         isUnique = true;
       }
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newAgent = new Agent({
+    const newAssociate = new Associate({
       name: name.trim(),
       email: emailLower,
       phone: phone.trim(),
@@ -49,20 +49,20 @@ export async function POST(request: Request) {
       status: "pending",
     });
 
-    await newAgent.save();
+    await newAssociate.save();
 
     return NextResponse.json({
       success: true,
       message: "Associate registered successfully and pending admin approval",
-      agent: {
-        id: newAgent._id,
-        name: newAgent.name,
-        email: newAgent.email,
-        agentCode: newAgent.agentCode,
+      associate: {
+        id: newAssociate._id,
+        name: newAssociate.name,
+        email: newAssociate.email,
+        associateCode: newAssociate.agentCode,
       },
     });
   } catch (error: any) {
-    console.error("Agent Signup Error:", error);
-    return NextResponse.json({ error: error.message || "Failed to process agent registration" }, { status: 500 });
+    console.error("Associate Signup Error:", error);
+    return NextResponse.json({ error: error.message || "Failed to process associate registration" }, { status: 500 });
   }
 }

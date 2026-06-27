@@ -55,7 +55,8 @@ export async function GET() {
       success: true,
       settings: {
         razorpayKeyId: settings.razorpayKeyId,
-        razorpayKeySecret: settings.razorpayKeySecret // Exposed only in admin dashboard
+        razorpayKeySecret: settings.razorpayKeySecret, // Exposed only in admin dashboard
+        whatsappChannelLink: settings.whatsappChannelLink || ""
       }
     });
   } catch (error: any) {
@@ -72,18 +73,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
     }
 
-    const { razorpayKeyId, razorpayKeySecret } = await request.json();
+    const { razorpayKeyId, razorpayKeySecret, whatsappChannelLink } = await request.json();
 
     let settings = await Settings.findOne({});
     if (!settings) {
       settings = new Settings({
         razorpayKeyId: razorpayKeyId ? razorpayKeyId.trim() : "",
         razorpayKeySecret: razorpayKeySecret ? razorpayKeySecret.trim() : "",
+        whatsappChannelLink: whatsappChannelLink ? whatsappChannelLink.trim() : "",
         updatedAt: new Date()
       });
     } else {
       settings.razorpayKeyId = razorpayKeyId ? razorpayKeyId.trim() : "";
       settings.razorpayKeySecret = razorpayKeySecret ? razorpayKeySecret.trim() : "";
+      settings.whatsappChannelLink = whatsappChannelLink ? whatsappChannelLink.trim() : "";
       settings.updatedAt = new Date();
     }
 
@@ -94,7 +97,8 @@ export async function POST(request: Request) {
       message: "Settings updated successfully",
       settings: {
         razorpayKeyId: settings.razorpayKeyId,
-        razorpayKeySecret: settings.razorpayKeySecret
+        razorpayKeySecret: settings.razorpayKeySecret,
+        whatsappChannelLink: settings.whatsappChannelLink || ""
       }
     });
   } catch (error: any) {

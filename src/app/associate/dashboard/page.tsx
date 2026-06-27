@@ -16,58 +16,58 @@ import {
   BookOpen,
 } from "lucide-react";
 
-export default function AgentDashboardPage() {
+export default function AssociateDashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState<boolean>(true);
-  const [agent, setAgent] = useState<any>(null);
+  const [associate, setAssociate] = useState<any>(null);
   const [students, setStudents] = useState<any[]>([]);
   const [copied, setCopied] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   useEffect(() => {
-    const fetchAgentData = async () => {
+    const fetchAssociateData = async () => {
       try {
-        const resAgent = await fetch("/api/agent/me");
-        const dataAgent = await resAgent.json();
-        if (resAgent.ok && dataAgent.success) {
-          setAgent(dataAgent.agent);
+        const resAssociate = await fetch("/api/associate/me");
+        const dataAssociate = await resAssociate.json();
+        if (resAssociate.ok && dataAssociate.success) {
+          setAssociate(dataAssociate.associate);
 
-          // Fetch Students registered under this agent
-          const resStudents = await fetch("/api/agent/students");
+          // Fetch Students registered under this associate
+          const resStudents = await fetch("/api/associate/students");
           const dataStudents = await resStudents.json();
           if (resStudents.ok && dataStudents.success) {
             setStudents(dataStudents.students || []);
           }
           setLoading(false);
         } else {
-          router.push("/agent/login");
+          router.push("/associate/login");
         }
       } catch (err) {
-        console.error("Agent dashboard load error:", err);
-        router.push("/agent/login");
+        console.error("Associate dashboard load error:", err);
+        router.push("/associate/login");
       }
     };
-    fetchAgentData();
+    fetchAssociateData();
   }, [router]);
 
   const handleCopyCode = () => {
-    if (!agent?.agentCode) return;
-    navigator.clipboard.writeText(agent.agentCode);
+    if (!associate?.agentCode) return;
+    navigator.clipboard.writeText(associate.agentCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleSignOut = async () => {
     try {
-      const res = await fetch("/api/agent/logout", {
+      const res = await fetch("/api/associate/logout", {
         method: "POST",
       });
       if (res.ok) {
-        router.push("/agent/login");
+        router.push("/associate/login");
       }
     } catch (err) {
       console.error("Logout failed:", err);
-      router.push("/agent/login");
+      router.push("/associate/login");
     }
   };
 
@@ -91,7 +91,7 @@ export default function AgentDashboardPage() {
             <Sparkles className="h-6 w-6 text-white animate-spin" style={{ animationDuration: "3s" }} />
           </div>
           <p className="text-slate-500 text-sm font-bold tracking-wider uppercase animate-pulse">
-            Verifying Agent Session...
+            Verifying Associate Session...
           </p>
         </div>
       </div>
@@ -120,8 +120,8 @@ export default function AgentDashboardPage() {
 
         <div className="flex items-center gap-4">
           <div className="hidden md:flex flex-col text-right">
-            <span className="text-xs font-bold text-slate-900">{agent?.name}</span>
-            <span className="text-[10px] font-semibold text-slate-400">{agent?.email}</span>
+            <span className="text-xs font-bold text-slate-900">{associate?.name}</span>
+            <span className="text-[10px] font-semibold text-slate-400">{associate?.email}</span>
           </div>
           <button
             onClick={handleSignOut}
@@ -139,38 +139,38 @@ export default function AgentDashboardPage() {
         {/* Left column: Profile Card & Referral Code */}
         <section className="lg:col-span-4 space-y-8">
 
-          {/* Agent Profile Details Card */}
+          {/* Associate Profile Details Card */}
           <div className="bg-white border border-slate-200/85 rounded-2xl shadow-xl shadow-slate-200/25 p-6 space-y-6">
             <div className="flex items-center gap-4 pb-4 border-b border-slate-100">
               <div className="h-12 w-12 rounded-full bg-deepskyblue-light flex items-center justify-center text-deepskyblue-dark font-extrabold text-xl shadow-inner">
-                {agent?.name?.slice(0, 2).toUpperCase()}
+                {associate?.name?.slice(0, 2).toUpperCase()}
               </div>
               <div>
-                <h2 className="text-base font-bold text-slate-900">{agent?.name}</h2>
+                <h2 className="text-base font-bold text-slate-900">{associate?.name}</h2>
                 <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  Approved Agent
+                  Approved Associate
                 </span>
               </div>
             </div>
 
-            <div className="space-y-4 text-xs font-medium text-slate-650">
+            <div className="space-y-4 text-xs font-medium text-slate-655">
               <div className="flex items-center gap-3">
                 <Mail className="h-4 w-4 text-slate-400" />
-                <span>{agent?.email}</span>
+                <span>{associate?.email}</span>
               </div>
               <div className="flex items-center gap-3">
                 <Phone className="h-4 w-4 text-slate-400" />
-                <span>{agent?.phone}</span>
+                <span>{associate?.phone}</span>
               </div>
               <div className="flex items-center gap-3">
                 <Calendar className="h-4 w-4 text-slate-400" />
-                <span>Partner since: {new Date(agent?.createdAt).toLocaleDateString()}</span>
+                <span>Partner since: {associate?.createdAt ? new Date(associate.createdAt).toLocaleDateString() : "N/A"}</span>
               </div>
             </div>
           </div>
 
           {/* Referral Code Display */}
-          <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-slate-900 border border-slate-850 rounded-2xl shadow-xl shadow-slate-900/20 p-6 text-white space-y-6 relative overflow-hidden">
+          <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-slate-900 border border-slate-855 rounded-2xl shadow-xl shadow-slate-900/20 p-6 text-white space-y-6 relative overflow-hidden">
             {/* Ambient Background decoration */}
             <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-deepskyblue/10 blur-2xl" />
 
@@ -182,7 +182,7 @@ export default function AgentDashboardPage() {
             </div>
 
             <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex items-center justify-between gap-4">
-              <span className="font-mono font-black text-xl text-deepskyblue tracking-wider">{agent?.agentCode}</span>
+              <span className="font-mono font-black text-xl text-deepskyblue tracking-wider">{associate?.agentCode}</span>
               <button
                 onClick={handleCopyCode}
                 className="p-2.5 rounded-lg bg-deepskyblue hover:bg-deepskyblue-dark text-white font-bold text-xs transition-all active:scale-[0.95] flex items-center gap-1.5 cursor-pointer shadow-md shadow-deepskyblue/20"
@@ -211,7 +211,7 @@ export default function AgentDashboardPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
             <div>
               <h2 className="text-lg font-extrabold text-slate-900">Referred Candidates Log</h2>
-              <p className="text-slate-500 text-xs mt-1">Showing candidate enrollments linked to your referral code</p>
+              <p className="text-slate-505 text-xs mt-1">Showing candidate enrollments linked to your referral code</p>
             </div>
 
             {/* Search Input */}
@@ -233,7 +233,7 @@ export default function AgentDashboardPage() {
           <div className="overflow-x-auto border border-slate-200/60 rounded-xl">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-slate-50 text-slate-500 uppercase text-[9px] tracking-wider font-bold border-b border-slate-200">
+                <tr className="bg-slate-50 text-slate-550 uppercase text-[9px] tracking-wider font-bold border-b border-slate-200">
                   <th className="py-3.5 px-4 font-bold">Candidate Info</th>
                   <th className="py-3.5 px-4 font-bold">Registration ID</th>
                   <th className="py-3.5 px-4 font-bold">Enrolled Program</th>
@@ -265,11 +265,11 @@ export default function AgentDashboardPage() {
                         </div>
                       </td>
                       <td className="py-4 px-4 text-slate-400 font-medium">
-                        {new Date(student.createdAt).toLocaleDateString("en-US", {
+                        {student.createdAt ? new Date(student.createdAt).toLocaleDateString("en-US", {
                           year: "numeric",
                           month: "short",
                           day: "numeric",
-                        })}
+                        }) : "N/A"}
                       </td>
                     </tr>
                   ))

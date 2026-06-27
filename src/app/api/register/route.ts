@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import { Candidate } from "@/models/Candidate";
 import { Otp } from "@/models/Otp";
-import { Agent } from "@/models/Agent";
+import { Associate } from "@/models/Associate";
 import bcrypt from "bcryptjs";
 import { isValidWestBengalDistrict } from "@/lib/westBengalDistricts";
 
@@ -30,6 +30,7 @@ export async function POST(request: Request) {
       password,
       agentCode,
       profilePicUrl,
+      signatureUrl,
     } = data;
 
     // 1. Check required fields
@@ -45,11 +46,12 @@ export async function POST(request: Request) {
       !admitUrl ||
       !qualificationUrl ||
       !profilePicUrl ||
+      !signatureUrl ||
       !course ||
       !otp ||
       !password
     ) {
-      return NextResponse.json({ error: "Missing required registration fields (Name, Documents, Profile Picture, etc.)" }, { status: 400 });
+      return NextResponse.json({ error: "Missing required registration fields (Name, Documents, Profile Picture, Signature, etc.)" }, { status: 400 });
     }
 
     if (password.length < 6) {
@@ -71,20 +73,20 @@ export async function POST(request: Request) {
 
     // Validate Agent Code if provided
     if (agentCode) {
-      const agent = await Agent.findOne({ agentCode: agentCode.trim() });
+      const agent = await Associate.findOne({ agentCode: agentCode.trim() });
       if (!agent) {
-        return NextResponse.json({ error: "Invalid agent code entered" }, { status: 400 });
+        return NextResponse.json({ error: "Invalid associate code entered" }, { status: 400 });
       }
       if (agent.status !== "approved") {
-        return NextResponse.json({ error: "Agent associated with this code is not approved yet" }, { status: 400 });
+        return NextResponse.json({ error: "Associate associated with this code is not approved yet" }, { status: 400 });
       }
     }
 
-    // 3. Prevent duplicate email registrations
-    const existingCandidate = await Candidate.findOne({ email });
+    // 3. Prevent duplicate email+course registrations (same email can register for different courses)
+    const existingCandidate = await Candidate.findOne({ email, course });
     if (existingCandidate) {
       return NextResponse.json(
-        { error: "Candidate with this email has already been registered" },
+        { error: "You have already registered for this course with this email" },
         { status: 400 }
       );
     }
@@ -135,6 +137,7 @@ export async function POST(request: Request) {
       originalPassword: password,
       agentCode: agentCode ? agentCode.trim() : null,
       profilePicUrl: profilePicUrl || null,
+      signatureUrl: signatureUrl || null,
     });
 
     await candidateDoc.save();

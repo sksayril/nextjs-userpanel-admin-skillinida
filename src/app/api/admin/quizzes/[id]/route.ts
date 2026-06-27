@@ -24,7 +24,7 @@ async function verifyAdmin() {
 }
 
 function validateQuizPayload(body: any) {
-  const { title, course, questions, scheduledAt, duration, assignedStudents, examPassword } = body;
+  const { title, course, questions, scheduledAt, duration, assignedStudents, examPassword, showResultToStudent, enableCertificate } = body;
 
   if (!title || !course || !questions || !Array.isArray(questions) || questions.length === 0) {
     return { error: "Title, course, and questions array are required" };
@@ -55,6 +55,8 @@ function validateQuizPayload(body: any) {
       duration: duration || 30,
       assignedStudents: assignedStudents || [],
       examPassword: examPassword || "",
+      showResultToStudent: showResultToStudent !== false,
+      enableCertificate: enableCertificate !== false,
     },
   };
 }
@@ -118,6 +120,8 @@ export async function PUT(
         duration: data.duration,
         assignedStudents: data.assignedStudents,
         examPassword: data.examPassword,
+        showResultToStudent: data.showResultToStudent,
+        enableCertificate: data.enableCertificate,
       },
       { new: true, runValidators: true }
     );

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
-import { Agent } from "@/models/Agent";
+import { Associate } from "@/models/Associate";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
@@ -16,45 +16,45 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
     }
 
-    const agent = await Agent.findOne({ email: email.toLowerCase().trim() });
-    if (!agent) {
+    const associate = await Associate.findOne({ email: email.toLowerCase().trim() });
+    if (!associate) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 
-    const isMatch = await bcrypt.compare(password, agent.password || "");
+    const isMatch = await bcrypt.compare(password, associate.password || "");
     if (!isMatch) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 
-    // Check agent approval status
-    if (agent.status === "pending") {
+    // Check associate approval status
+    if (associate.status === "pending") {
       return NextResponse.json(
         { error: "Your account is pending admin approval. Please wait for an administrator to review your registration." },
         { status: 403 }
       );
     }
 
-    if (agent.status === "rejected") {
+    if (associate.status === "rejected") {
       return NextResponse.json(
-        { error: "Your agent account application was rejected. Please contact support for more details." },
+        { error: "Your associate account application was rejected. Please contact support for more details." },
         { status: 403 }
       );
     }
 
     const token = jwt.sign(
       {
-        id: agent._id,
-        email: agent.email,
-        name: agent.name,
-        agentCode: agent.agentCode,
-        role: "agent",
+        id: associate._id,
+        email: associate.email,
+        name: associate.name,
+        agentCode: associate.agentCode,
+        role: "associate",
       },
       JWT_SECRET,
       { expiresIn: "7d" }
     );
 
     const cookieStore = await cookies();
-    cookieStore.set("agent_token", token, {
+    cookieStore.set("associate_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
@@ -64,16 +64,22 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: "Agent logged in successfully",
+      message: "Associate logged in successfully",
       agent: {
-        id: agent._id,
-        name: agent.name,
-        email: agent.email,
-        agentCode: agent.agentCode,
+        id: associate._id,
+        name: associate.name,
+        email: associate.email,
+        agentCode: associate.agentCode,
+      },
+      associate: {
+        id: associate._id,
+        name: associate.name,
+        email: associate.email,
+        associateCode: associate.agentCode,
       },
     });
   } catch (error: any) {
-    console.error("Agent Login Error:", error);
-    return NextResponse.json({ error: error.message || "Failed to authenticate agent" }, { status: 500 });
+    console.error("Associate Login Error:", error);
+    return NextResponse.json({ error: error.message || "Failed to authenticate associate" }, { status: 500 });
   }
 }

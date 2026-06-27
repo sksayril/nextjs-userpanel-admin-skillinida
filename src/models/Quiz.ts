@@ -15,6 +15,8 @@ export interface IQuiz extends Document {
   duration: number; // in minutes
   assignedStudents: mongoose.Types.ObjectId[];
   examPassword?: string;
+  showResultToStudent: boolean;
+  enableCertificate: boolean;
   createdAt: Date;
 }
 
@@ -33,6 +35,8 @@ const QuizSchema = new Schema<IQuiz>({
   duration: { type: Number, required: true, default: 30 },
   assignedStudents: [{ type: Schema.Types.ObjectId, ref: "Candidate" }],
   examPassword: { type: String },
+  showResultToStudent: { type: Boolean, default: true },
+  enableCertificate: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
 });
 

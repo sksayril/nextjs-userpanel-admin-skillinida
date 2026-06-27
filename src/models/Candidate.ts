@@ -12,6 +12,7 @@ export interface ICandidate extends Document {
   admitUrl: string;
   qualificationUrl: string;
   extraQualificationUrl?: string;
+  signatureUrl?: string;
   course: string;
   category: string;
   gender: string;
@@ -21,6 +22,7 @@ export interface ICandidate extends Document {
   agentCode?: string | null;
   profilePicUrl?: string | null;
   isPaid: boolean;
+  isActive: boolean;
   paymentDetails?: {
     orderId: string;
     paymentId: string;
@@ -36,13 +38,14 @@ const CandidateSchema = new Schema<ICandidate>({
   fatherName: { type: String, required: true },
   motherName: { type: String, required: true },
   dob: { type: Date, required: true },
-  email: { type: String, required: true, unique: true, index: true },
+  email: { type: String, required: true, index: true },
   phone: { type: String, required: true },
   address: { type: String, required: true },
   district: { type: String, required: true },
   admitUrl: { type: String, required: true },
   qualificationUrl: { type: String, required: true },
   extraQualificationUrl: { type: String },
+  signatureUrl: { type: String },
   course: { type: String, required: true },
   category: { type: String, default: "GEN", enum: ["GEN", "OBC", "SC", "ST"] },
   gender: { type: String, default: "MALE", enum: ["MALE", "FEMALE", "OTHER"] },
@@ -52,6 +55,7 @@ const CandidateSchema = new Schema<ICandidate>({
   agentCode: { type: String, default: null, index: true },
   profilePicUrl: { type: String, default: null },
   isPaid: { type: Boolean, default: false },
+  isActive: { type: Boolean, default: true },
   paymentDetails: {
     orderId: { type: String },
     paymentId: { type: String },
@@ -61,5 +65,8 @@ const CandidateSchema = new Schema<ICandidate>({
   },
   createdAt: { type: Date, default: Date.now },
 });
+
+// Compound index: same email can register for different courses, but not the same course twice
+CandidateSchema.index({ email: 1, course: 1 }, { unique: true });
 
 export const Candidate = models.Candidate || model<ICandidate>("Candidate", CandidateSchema);

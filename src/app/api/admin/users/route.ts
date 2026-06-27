@@ -92,10 +92,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Please select a valid West Bengal district" }, { status: 400 });
     }
 
-    // Check duplicate email
-    const existingCandidate = await Candidate.findOne({ email: email.toLowerCase().trim() });
+    // Check duplicate email+course combination (same email can register for different courses)
+    const existingCandidate = await Candidate.findOne({ email: email.toLowerCase().trim(), course });
     if (existingCandidate) {
-      return NextResponse.json({ error: "A student with this email has already been registered" }, { status: 400 });
+      return NextResponse.json({ error: "A student with this email is already registered for this course" }, { status: 400 });
     }
 
     // Generate Registration ID

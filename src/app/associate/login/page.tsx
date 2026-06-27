@@ -10,7 +10,7 @@ import {
   Sparkles,
 } from "lucide-react";
 
-export default function AgentLoginPage() {
+export default function AssociateLoginPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     email: "",
@@ -38,7 +38,7 @@ export default function AgentLoginPage() {
     setSuccessMsg("");
 
     try {
-      const res = await fetch("/api/agent/login", {
+      const res = await fetch("/api/associate/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -47,7 +47,7 @@ export default function AgentLoginPage() {
       if (res.ok && result.success) {
         setSuccessMsg("Success! Redirecting to dashboard...");
         setTimeout(() => {
-          router.push("/agent/dashboard");
+          router.push("/associate/dashboard");
         }, 1000);
       } else {
         setErrorMsg(result.error || "Login failed");
@@ -79,7 +79,7 @@ export default function AgentLoginPage() {
             <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 bg-gradient-to-r from-slate-900 via-deepskyblue-dark to-sky-600 bg-clip-text text-transparent">
               Associate Partner Login
             </h1>
-            <p className="mt-1.5 text-sm text-slate-500">
+            <p className="mt-1.5 text-sm text-slate-505">
               Support Mission India — Sign in to manage referred candidates
             </p>
           </div>
@@ -110,7 +110,7 @@ export default function AgentLoginPage() {
                   id="email"
                   type="email"
                   required
-                  placeholder="agent@example.com"
+                  placeholder="associate@example.com"
                   value={formData.email}
                   onChange={handleChange}
                   className="block w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/10"
@@ -157,8 +157,8 @@ export default function AgentLoginPage() {
           </form>
 
           <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-            <Link href="/agent/signup" className="text-sm font-semibold text-slate-500 hover:text-deepskyblue transition-all">
-              Don&apos;t have an agent account? Sign Up
+            <Link href="/associate/signup" className="text-sm font-semibold text-slate-500 hover:text-deepskyblue transition-all">
+              Don&apos;t have an associate account? Sign Up
             </Link>
           </div>
         </div>

@@ -75,7 +75,7 @@ const ADMIN_NAV_ITEMS = [
   { id: "papers", label: "Question Papers", Icon: FileText },
   { id: "quizzes", label: "Create Exam", Icon: Award },
   { id: "results", label: "Exam Results", Icon: CheckCircle },
-  { id: "agents", label: "Manage Agents", Icon: Users },
+  { id: "associates", label: "Manage Associates", Icon: Users },
   { id: "payments", label: "Payment Ledger", Icon: CreditCard },
   { id: "settings", label: "Payment Settings", Icon: Settings },
 ] as const;
@@ -207,12 +207,13 @@ export default function AdminDashboardPage() {
 
   // Data Lists
   const [studentsList, setStudentsList] = useState<any[]>([]);
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "deactivated">("all");
   const [coursesList, setCoursesList] = useState<any[]>([]);
   const [papersList, setPapersList] = useState<any[]>([]);
   const [quizzesList, setQuizzesList] = useState<any[]>([]);
   const [attendanceList, setAttendanceList] = useState<any[]>([]);
   const [resultsList, setResultsList] = useState<any[]>([]);
-  const [agentsList, setAgentsList] = useState<any[]>([]);
+  const [associatesList, setAssociatesList] = useState<any[]>([]);
 
   // Messages
   const [successMsg, setSuccessMsg] = useState("");
@@ -222,11 +223,36 @@ export default function AdminDashboardPage() {
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [studentDetails, setStudentDetails] = useState<any>(null);
   const [loadingDetails, setLoadingDetails] = useState<boolean>(false);
+  const [isEditingStudent, setIsEditingStudent] = useState<boolean>(false);
+  const [studentEditForm, setStudentEditForm] = useState<any>({
+    name: "",
+    fatherName: "",
+    motherName: "",
+    dob: "",
+    gender: "MALE",
+    email: "",
+    phone: "",
+    district: "",
+    course: "",
+    category: "GEN",
+    address: "",
+    password: ""
+  });
+
+  const [editingAssociate, setEditingAssociate] = useState<any | null>(null);
+  const [associateEditForm, setAssociateEditForm] = useState<any>({
+    name: "",
+    email: "",
+    phone: "",
+    status: "pending",
+    password: ""
+  });
   const [modalActiveTab, setModalActiveTab] = useState<string>("profile");
   const [printTarget, setPrintTarget] = useState<any>(null);
 
   // ================= FORM STATES =================
   // 1. Create Course
+  const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
   const [courseForm, setCourseForm] = useState({
     title: "",
     code: "",
@@ -259,9 +285,14 @@ export default function AdminDashboardPage() {
   const [uploadingExtra, setUploadingExtra] = useState(false);
 
   // 3. Log Attendance
+  const [selectedAttendanceCourse, setSelectedAttendanceCourse] = useState("");
   const [attendanceForm, setAttendanceForm] = useState({
     candidateId: "",
-    date: new Date().toISOString().split("T")[0],
+    date: (() => {
+      const now = new Date();
+      const tzOffset = now.getTimezoneOffset() * 60000;
+      return new Date(now.getTime() - tzOffset).toISOString().slice(0, 16);
+    })(),
     status: "present",
     googleMeetLink: ""
   });
@@ -393,11 +424,11 @@ export default function AdminDashboardPage() {
       const results = dataResults.results || [];
       setResultsList(results);
 
-      // Fetch Agents
-      const resAgents = await fetch("/api/admin/agents");
-      const dataAgents = await resAgents.json();
-      const agents = dataAgents.agents || [];
-      setAgentsList(agents);
+      // Fetch Associates
+      const resAssociates = await fetch("/api/admin/associates");
+      const dataAssociates = await resAssociates.json();
+      const associates = dataAssociates.associates || dataAssociates.agents || [];
+      setAssociatesList(associates);
 
       // Fetch Settings
       try {
@@ -526,6 +557,185 @@ export default function AdminDashboardPage() {
     } catch (err) {
       setErrorMsg("Network error creating course.");
     }
+  };
+
+  const handleEditCourseClick = (course: any) => {
+    setEditingCourseId(course._id);
+    setCourseForm({
+      title: course.title,
+      code: course.code,
+      description: course.description,
+      duration: course.duration,
+      isPaid: !!course.isPaid,
+      price: course.price || 0,
+    });
+  };
+
+  const handleCancelEditCourse = () => {
+    setEditingCourseId(null);
+    setCourseForm({ title: "", code: "", description: "", duration: "1 Year", isPaid: false, price: 0 });
+  };
+
+  const handleUpdateCourse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+    setSuccessMsg("");
+    if (!editingCourseId) return;
+
+    try {
+      const res = await fetch(`/api/admin/courses/${editingCourseId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(courseForm)
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSuccessMsg("Course updated successfully!");
+        setCourseForm({ title: "", code: "", description: "", duration: "1 Year", isPaid: false, price: 0 });
+        setEditingCourseId(null);
+        await fetchAllData();
+        setTimeout(() => setSuccessMsg(""), 4000);
+      } else {
+        setErrorMsg(data.error || "Failed to update course.");
+      }
+    } catch (err) {
+      setErrorMsg("Network error updating course.");
+    }
+  };
+
+  const handleDeleteCourse = async (courseId: string) => {
+    if (!confirm("Are you sure you want to delete this course program? All associated candidates and study materials may lose access to it.")) return;
+    setErrorMsg("");
+    setSuccessMsg("");
+    try {
+      const res = await fetch(`/api/admin/courses/${courseId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSuccessMsg("Course deleted successfully!");
+        await fetchAllData();
+        setTimeout(() => setSuccessMsg(""), 4000);
+      } else {
+        setErrorMsg(data.error || "Failed to delete course.");
+      }
+    } catch (err) {
+      setErrorMsg("Network error deleting course.");
+    }
+  };
+
+  const exportStudentsToCSV = () => {
+    if (studentsList.length === 0) {
+      toast.error("No student registrations available to export.");
+      return;
+    }
+
+    const headers = [
+      "Registration ID",
+      "Candidate Name",
+      "Father Name",
+      "Mother Name",
+      "Date of Birth",
+      "Email ID",
+      "Phone Number",
+      "District",
+      "Enrolled Course",
+      "Social Category",
+      "Gender",
+      "Payment Status",
+      "Profile Status",
+      "Registration Date"
+    ];
+
+    const rows = studentsList.map(s => {
+      const dob = s.dob ? new Date(s.dob).toLocaleDateString() : "N/A";
+      const createdAt = s.createdAt ? new Date(s.createdAt).toLocaleDateString() : "N/A";
+      const paymentStatus = s.isPaid ? "Paid" : "Pending/Unpaid";
+      const profileStatus = s.isActive !== false ? "Active" : "Deactivated";
+
+      return [
+        s.registrationId || "N/A",
+        s.name || "N/A",
+        s.fatherName || "N/A",
+        s.motherName || "N/A",
+        dob,
+        s.email || "N/A",
+        s.phone || "N/A",
+        s.district || "N/A",
+        s.course || "N/A",
+        s.category || "GEN",
+        s.gender || "MALE",
+        paymentStatus,
+        profileStatus,
+        createdAt
+      ];
+    });
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `student_registrations_report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Student registration report exported successfully!");
+  };
+
+  const exportAttendanceToCSV = () => {
+    if (attendanceList.length === 0) {
+      toast.error("No attendance logs available to export.");
+      return;
+    }
+
+    const headers = [
+      "Date",
+      "Registration ID",
+      "Student Name",
+      "Course",
+      "Attendance Status",
+      "Google Meet Link"
+    ];
+
+    const rows = attendanceList.map(att => {
+      const dateStr = att.date ? new Date(att.date).toLocaleDateString() : "N/A";
+      const regId = att.candidateId?.registrationId || "N/A";
+      const name = att.candidateId?.name || "N/A";
+      const course = att.candidateId?.course || "N/A";
+      const status = att.status || "N/A";
+      const meetLink = att.googleMeetLink || "N/A";
+
+      return [
+        dateStr,
+        regId,
+        name,
+        course,
+        status,
+        meetLink
+      ];
+    });
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `attendance_report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Attendance history report exported successfully!");
   };
 
   const handleSaveSettings = async (e: React.FormEvent) => {
@@ -884,36 +1094,155 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleAgentStatus = async (agentId: string, status: "approved" | "rejected") => {
+  const handleToggleStudentAccess = async (studentId: string) => {
+    try {
+      const res = await fetch(`/api/admin/users/${studentId}/toggle-access`, {
+        method: "PATCH",
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(data.message || "Student access status updated successfully!");
+
+        // Update studentsList in state
+        setStudentsList((prev: any[]) =>
+          prev.map((s: any) =>
+            s._id === studentId ? { ...s, isActive: data.isActive } : s
+          )
+        );
+
+        // Also update studentDetails if currently open
+        setStudentDetails((prev: any) => {
+          if (!prev || !prev.student || prev.student._id !== studentId) return prev;
+          return {
+            ...prev,
+            student: { ...prev.student, isActive: data.isActive }
+          };
+        });
+      } else {
+        toast.error(data.error || "Failed to update student access status");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Network error updating student status");
+    }
+  };
+
+  const handleStartEditStudent = () => {
+    if (!studentDetails?.student) return;
+    const s = studentDetails.student;
+    const dobFormatted = s.dob ? new Date(s.dob).toISOString().split('T')[0] : "";
+    setStudentEditForm({
+      name: s.name || "",
+      fatherName: s.fatherName || "",
+      motherName: s.motherName || "",
+      dob: dobFormatted,
+      gender: s.gender || "MALE",
+      email: s.email || "",
+      phone: s.phone || "",
+      district: s.district || "",
+      course: s.course || "",
+      category: s.category || "GEN",
+      address: s.address || "",
+      password: ""
+    });
+    setIsEditingStudent(true);
+  };
+
+  const handleSaveStudentEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedStudentId) return;
+
+    try {
+      const res = await fetch(`/api/admin/users/${selectedStudentId}/details`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(studentEditForm)
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(data.message || "Student profile updated successfully!");
+        setStudentDetails((prev: any) => ({
+          ...prev,
+          student: data.student
+        }));
+        setStudentsList((prev: any[]) =>
+          prev.map((s: any) => (s._id === selectedStudentId ? data.student : s))
+        );
+        setIsEditingStudent(false);
+      } else {
+        toast.error(data.error || "Failed to update student profile.");
+      }
+    } catch (err) {
+      toast.error("Network error updating student profile.");
+    }
+  };
+
+  const handleStartEditAssociate = (associate: any) => {
+    setEditingAssociate(associate);
+    setAssociateEditForm({
+      name: associate.name || "",
+      email: associate.email || "",
+      phone: associate.phone || "",
+      status: associate.status || "pending",
+      password: ""
+    });
+  };
+
+  const handleSaveAssociateEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAssociate) return;
+
+    try {
+      const res = await fetch(`/api/admin/associates/${editingAssociate.id || editingAssociate._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(associateEditForm)
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(data.message || "Associate updated successfully!");
+        const resAssociates = await fetch("/api/admin/associates");
+        const dataAssociates = await resAssociates.json();
+        setAssociatesList(dataAssociates.associates || dataAssociates.agents || []);
+        setEditingAssociate(null);
+      } else {
+        toast.error(data.error || "Failed to update associate details.");
+      }
+    } catch (err) {
+      toast.error("Network error updating associate details.");
+    }
+  };
+
+  const handleAssociateStatus = async (associateId: string, status: "approved" | "rejected") => {
     setErrorMsg("");
     setSuccessMsg("");
     try {
-      const res = await fetch(`/api/admin/agents/${agentId}/approve`, {
+      const res = await fetch(`/api/admin/associates/${associateId}/approve`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status })
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setSuccessMsg(`Agent status successfully set to ${status}!`);
-        // Refresh agents list
-        const resAgents = await fetch("/api/admin/agents");
-        const dataAgents = await resAgents.json();
-        setAgentsList(dataAgents.agents || []);
-        setTimeout(() => setSuccessMsg(""), 5000);
+        setSuccessMsg(`Associate status successfully set to ${status}!`);
+        // Refresh associates list
+        const resAssociates = await fetch("/api/admin/associates");
+        const dataAssociates = await resAssociates.json();
+        setAssociatesList(dataAssociates.associates || dataAssociates.agents || []);
+        setTimeout(() => setSuccessMsg(""), 5050);
       } else {
-        setErrorMsg(data.error || "Failed to update agent status.");
-        setTimeout(() => setErrorMsg(""), 5000);
+        setErrorMsg(data.error || "Failed to update associate status.");
+        setTimeout(() => setErrorMsg(""), 5050);
       }
     } catch (err) {
-      setErrorMsg("Network error updating agent status.");
-      setTimeout(() => setErrorMsg(""), 5000);
+      setErrorMsg("Network error updating associate status.");
+      setTimeout(() => setErrorMsg(""), 5050);
     }
   };
 
   const handleToggleResultApproval = async (resultId: string, type: "marksheet" | "certificate", currentVal: boolean) => {
     try {
-      const payload = type === "marksheet" 
+      const payload = type === "marksheet"
         ? { isApproved: !currentVal }
         : { isCertificateApproved: !currentVal };
 
@@ -925,7 +1254,7 @@ export default function AdminDashboardPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         toast.success(data.message || "Result status updated successfully!");
-        
+
         // Update resultsList in state dynamically
         setResultsList((prev: any[]) => prev.map((r: any) => r._id === resultId ? { ...r, ...payload } : r));
 
@@ -970,13 +1299,13 @@ export default function AdminDashboardPage() {
 
     const joinedDate = formatDate(student.createdAt);
     const expireDate = formatDate(
-      student.createdAt 
+      student.createdAt
         ? new Date(new Date(student.createdAt).setFullYear(new Date(student.createdAt).getFullYear() + 1))
         : new Date(new Date().setFullYear(new Date().getFullYear() + 1))
     );
 
     return (
-      <div 
+      <div
         className="w-[210mm] h-[297mm] bg-white hidden print:flex flex-row items-start justify-center gap-10 pt-24 absolute inset-0 z-50 font-sans"
         style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}
       >
@@ -1025,7 +1354,7 @@ export default function AdminDashboardPage() {
           <div className="px-4 pt-4 pb-12 flex-1 flex flex-col items-center z-10 relative">
             <h3 className="text-[11px] font-black text-[#00BFFF] uppercase tracking-tight text-center">{student.name}</h3>
             <p className="text-[7.5px] text-[#0C2340] font-black tracking-wider uppercase mt-0.5 text-center">{student.course}</p>
-            
+
             <div className="w-full mt-3 space-y-1 text-[7px] font-semibold text-slate-700 bg-slate-50/50 p-2 rounded-xl border border-slate-100">
               <div className="flex justify-between border-b border-slate-100 pb-0.5">
                 <span className="text-slate-400 font-bold uppercase text-[5.5px]">ID No</span>
@@ -1330,9 +1659,15 @@ export default function AdminDashboardPage() {
                   )}
                 </div>
                 {/* Signature line */}
-                <div className="w-full text-center border-t border-slate-200 mt-2 pt-1">
-                  <div style={{ fontFamily: "'Dancing Script', 'Pacifico', 'Brush Script MT', cursive", fontSize: "14px", color: "#1e3a8a" }} className="h-5 flex items-center justify-center font-extrabold select-none italic">
-                    {student.name}
+                <div className="w-full text-center border-t border-slate-200 mt-2 pt-1 flex flex-col items-center justify-center">
+                  <div className="h-6 w-full flex items-center justify-center overflow-hidden">
+                    {student.signatureUrl ? (
+                      <img src={resolveFileUrl(student.signatureUrl)} className="h-full object-contain" alt="Candidate Signature" />
+                    ) : (
+                      <div style={{ fontFamily: "'Dancing Script', 'Pacifico', 'Brush Script MT', cursive", fontSize: "12px", color: "#1e3a8a" }} className="font-extrabold select-none italic">
+                        {student.name}
+                      </div>
+                    )}
                   </div>
                   <div className="h-[1px] bg-slate-400 w-[85%] mx-auto mt-0.5"></div>
                   <span className="text-[7px] font-black uppercase text-slate-400 tracking-wider block mt-0.5">Candidate Signature</span>
@@ -1851,13 +2186,21 @@ export default function AdminDashboardPage() {
 
   const courseOptions = coursesList.map(c => c.title);
 
-  // Filter students based on search query
-  const filteredStudents = studentsList.filter(s =>
-    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.registrationId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.course.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter students based on search query and status filter
+  const filteredStudents = studentsList.filter(s => {
+    const matchesSearch =
+      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.registrationId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.course.toLowerCase().includes(searchQuery.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    const studentActive = s.isActive !== false;
+    if (statusFilter === "active") return studentActive;
+    if (statusFilter === "deactivated") return !studentActive;
+    return true;
+  });
 
   // ================= CHARTS DATA COMPUTATION =================
   // 1. Get monthly registration trend (6 months back to current)
@@ -2543,12 +2886,58 @@ export default function AdminDashboardPage() {
 
                 </div>
 
-                {/* ACTIVE STUDENTS DATABASE */}
+                {/* STUDENTS DATABASE */}
                 <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-5">
-                  <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b border-slate-100 pb-4 gap-4">
                     <div>
-                      <h3 className="text-sm font-bold text-slate-900">Active Students Database</h3>
+                      <h3 className="text-sm font-bold text-slate-900">
+                        {statusFilter === "all" && "All Students Database"}
+                        {statusFilter === "active" && "Active Students Database"}
+                        {statusFilter === "deactivated" && "Deactivated Students Database"}
+                      </h3>
                       <p className="text-[10px] text-slate-400 mt-0.5">Listing of portal verified registrations</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200/60 text-[10px] font-bold">
+                        <button
+                          type="button"
+                          onClick={() => setStatusFilter("all")}
+                          className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${statusFilter === "all"
+                              ? "bg-white text-slate-900 shadow-sm font-black border border-slate-200/50"
+                              : "text-slate-450 hover:text-slate-700"
+                            }`}
+                        >
+                          All
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setStatusFilter("active")}
+                          className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${statusFilter === "active"
+                              ? "bg-white text-emerald-650 shadow-sm font-black border border-slate-200/50"
+                              : "text-slate-450 hover:text-slate-700"
+                            }`}
+                        >
+                          Active
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setStatusFilter("deactivated")}
+                          className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${statusFilter === "deactivated"
+                              ? "bg-white text-rose-600 shadow-sm font-black border border-slate-200/50"
+                              : "text-slate-450 hover:text-slate-700"
+                            }`}
+                        >
+                          Deactivated
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={exportStudentsToCSV}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-650 hover:bg-emerald-600 hover:text-white border border-emerald-200 font-extrabold text-[10px] transition-all cursor-pointer shadow-sm shadow-emerald-500/5 shrink-0"
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                        <span>Export Excel</span>
+                      </button>
                     </div>
                   </div>
 
@@ -2574,10 +2963,18 @@ export default function AdminDashboardPage() {
                               <td className="py-3.5 pl-2 font-bold text-deepskyblue-dark">{stud.registrationId}</td>
                               <td className="py-3.5 font-semibold">
                                 <div className="flex items-center gap-2.5">
-                                  <div className="h-7 w-7 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-deepskyblue-dark select-none animate-pulse">
+                                  <div className={`h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold select-none ${stud.isActive !== false ? "bg-slate-100 text-deepskyblue-dark animate-pulse" : "bg-slate-200 text-slate-405"
+                                    }`}>
                                     {stud.name[0].toUpperCase()}
                                   </div>
-                                  <span>{stud.name}</span>
+                                  <div className="flex flex-col">
+                                    <span className={stud.isActive !== false ? "text-slate-700" : "text-slate-400 line-through"}>
+                                      {stud.name}
+                                    </span>
+                                    {stud.isActive === false && (
+                                      <span className="text-[8px] font-black text-rose-500 uppercase tracking-wider leading-none mt-0.5">Deactivated</span>
+                                    )}
+                                  </div>
                                 </div>
                               </td>
                               <td className="py-3.5 text-slate-500 font-medium">{stud.course}</td>
@@ -2589,10 +2986,10 @@ export default function AdminDashboardPage() {
                                     return <span className="px-2 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider bg-slate-100 text-slate-500 border border-slate-200/60">Free</span>;
                                   }
                                   return (
-                                    <span className={`px-2 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${stud.isPaid 
-                                      ? "bg-emerald-50 text-emerald-650 border border-emerald-100" 
+                                    <span className={`px-2 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${stud.isPaid
+                                      ? "bg-emerald-50 text-emerald-650 border border-emerald-100"
                                       : "bg-amber-50 text-amber-655 border border-amber-100"
-                                    }`}>
+                                      }`}>
                                       {stud.isPaid ? "Success" : "Pending"}
                                     </span>
                                   );
@@ -2602,12 +2999,23 @@ export default function AdminDashboardPage() {
                                 {new Date(stud.createdAt).toLocaleDateString()}
                               </td>
                               <td className="py-3.5 text-right pr-2">
-                                <button
-                                  onClick={() => handleViewStudentDetails(stud._id)}
-                                  className="px-3 py-1.5 rounded-xl bg-deepskyblue/10 text-deepskyblue-dark text-[10px] font-extrabold hover:bg-deepskyblue hover:text-white transition cursor-pointer"
-                                >
-                                  View Details
-                                </button>
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    onClick={() => handleViewStudentDetails(stud._id)}
+                                    className="px-2.5 py-1.5 rounded-xl bg-deepskyblue/10 text-deepskyblue-dark text-[10px] font-extrabold hover:bg-deepskyblue hover:text-white transition cursor-pointer shrink-0"
+                                  >
+                                    View Details
+                                  </button>
+                                  <button
+                                    onClick={() => handleToggleStudentAccess(stud._id)}
+                                    className={`px-2.5 py-1.5 rounded-xl text-[10px] font-extrabold transition cursor-pointer shrink-0 ${stud.isActive !== false
+                                        ? "bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white"
+                                        : "bg-emerald-50 text-emerald-650 border border-emerald-250 hover:bg-emerald-650 hover:text-white"
+                                      }`}
+                                  >
+                                    {stud.isActive !== false ? "Deactivate" : "Activate"}
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -2624,9 +3032,9 @@ export default function AdminDashboardPage() {
             {activeTab === "courses" && (
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
                 {/* Left Side: Create Form */}
-                <form onSubmit={handleCreateCourse} className="md:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-4">
+                <form onSubmit={editingCourseId ? handleUpdateCourse : handleCreateCourse} className="md:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-4">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-3">
-                    Create Course Program
+                    {editingCourseId ? "Edit Course Program" : "Create Course Program"}
                   </h3>
 
                   <div className="space-y-1">
@@ -2710,13 +3118,24 @@ export default function AdminDashboardPage() {
                     />
                   </div>
 
-                  <button
-                    type="submit"
-                    className="w-full flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-xs shadow-md cursor-pointer"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>Configure Course</span>
-                  </button>
+                  <div className="space-y-2">
+                    <button
+                      type="submit"
+                      className="w-full flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-xs shadow-md cursor-pointer"
+                    >
+                      {editingCourseId ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                      <span>{editingCourseId ? "Update Course" : "Configure Course"}</span>
+                    </button>
+                    {editingCourseId && (
+                      <button
+                        type="button"
+                        onClick={handleCancelEditCourse}
+                        className="w-full flex items-center justify-center gap-1.5 py-2 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-250 font-bold text-slate-700 text-xs transition cursor-pointer"
+                      >
+                        <span>Cancel Edit</span>
+                      </button>
+                    )}
+                  </div>
                 </form>
 
                 {/* Right Side: Catalogue List */}
@@ -2741,8 +3160,8 @@ export default function AdminDashboardPage() {
                                 <div className="flex flex-wrap items-center gap-1.5">
                                   <span className="text-[9px] font-bold bg-deepskyblue/10 text-deepskyblue-dark px-2 py-0.5 rounded-full uppercase tracking-wider">{course.code}</span>
                                   <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${course.isPaid
-                                      ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
-                                      : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                                    ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                                    : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
                                     }`}>
                                     {course.isPaid ? `Paid (₹${course.price})` : "Free"}
                                   </span>
@@ -2769,6 +3188,22 @@ export default function AdminDashboardPage() {
                                 >
                                   {isUploadingThis ? "Cancel" : "Add PDF"}
                                 </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditCourseClick(course)}
+                                  className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-655 hover:text-slate-850 rounded-xl text-[10px] font-bold cursor-pointer transition flex items-center gap-1"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                  <span>Edit</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteCourse(course._id)}
+                                  className="px-2.5 py-1.5 bg-rose-50 border border-rose-150 hover:bg-rose-600 hover:border-transparent text-rose-600 hover:text-white rounded-xl text-[10px] font-bold cursor-pointer transition flex items-center gap-1"
+                                >
+                                  <Trash className="h-3.5 w-3.5" />
+                                  <span>Delete</span>
+                                </button>
                               </div>
                             </div>
 
@@ -2783,7 +3218,7 @@ export default function AdminDashboardPage() {
                                     <div key={pIdx} className="flex justify-between items-center bg-white border border-slate-200 px-3 py-2 rounded-xl text-[10.5px]">
                                       <div className="flex items-center gap-2 min-w-0">
                                         <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase shrink-0 ${pdf.type === "book" ? "bg-sky-50 text-sky-600" :
-                                            pdf.type === "note" ? "bg-emerald-50 text-emerald-600" : "bg-purple-50 text-purple-600"
+                                          pdf.type === "note" ? "bg-emerald-50 text-emerald-600" : "bg-purple-50 text-purple-600"
                                           }`}>
                                           {pdf.type === "book" ? "Book" : pdf.type === "note" ? "Note" : "Paper"}
                                         </span>
@@ -3145,6 +3580,25 @@ export default function AdminDashboardPage() {
                   </h3>
 
                   <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Course</label>
+                    <select
+                      value={selectedAttendanceCourse}
+                      onChange={e => {
+                        setSelectedAttendanceCourse(e.target.value);
+                        setAttendanceForm(prev => ({ ...prev, candidateId: "" }));
+                      }}
+                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                    >
+                      <option value="">All Courses</option>
+                      {coursesList.map((c, idx) => (
+                        <option key={idx} value={c.title} className="bg-white">
+                          {c.title} ({c.code})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Candidate</label>
                     <select
                       required
@@ -3153,18 +3607,20 @@ export default function AdminDashboardPage() {
                       className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
                     >
                       <option value="" disabled>Select Enrolled Student</option>
-                      {studentsList.map((stud, idx) => (
-                        <option key={idx} value={stud._id} className="bg-white">
-                          {stud.name} ({stud.registrationId})
-                        </option>
-                      ))}
+                      {studentsList
+                        .filter(stud => !selectedAttendanceCourse || stud.course === selectedAttendanceCourse)
+                        .map((stud, idx) => (
+                          <option key={idx} value={stud._id} className="bg-white">
+                            {stud.name} ({stud.registrationId}){stud.isActive === false ? " [Deactivated]" : ""}
+                          </option>
+                        ))}
                     </select>
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lecture Date</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lecture Date & Time</label>
                     <input
-                      type="date"
+                      type="datetime-local"
                       required
                       value={attendanceForm.date}
                       onChange={e => setAttendanceForm(prev => ({ ...prev, date: e.target.value }))}
@@ -3210,9 +3666,19 @@ export default function AdminDashboardPage() {
 
                 {/* Attendance Sheet Logs */}
                 <div className="md:col-span-7 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-4">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-3">
-                    Attendance History Sheet
-                  </h3>
+                  <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900">
+                      Attendance History Sheet
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={exportAttendanceToCSV}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-650 hover:bg-emerald-600 hover:text-white border border-emerald-200 font-extrabold text-[10px] transition-all cursor-pointer shadow-sm shadow-emerald-500/5 shrink-0"
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      <span>Export Excel</span>
+                    </button>
+                  </div>
 
                   {attendanceList.length === 0 ? (
                     <p className="text-xs text-slate-450 py-8 text-center font-medium">No presence logs logged in database.</p>
@@ -3228,16 +3694,35 @@ export default function AdminDashboardPage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                          {attendanceList.map((att, idx) => (
+                          {attendanceList
+                            .filter(att => {
+                              const query = searchQuery.toLowerCase();
+                              const name = att.candidateId?.name?.toLowerCase() || "";
+                              const regId = att.candidateId?.registrationId?.toLowerCase() || "";
+                              const course = att.candidateId?.course?.toLowerCase() || "";
+                              const matchesSearch = name.includes(query) || regId.includes(query) || course.includes(query);
+
+                              const matchesCourse = !selectedAttendanceCourse || att.candidateId?.course === selectedAttendanceCourse;
+                              return matchesSearch && matchesCourse;
+                            })
+                            .map((att, idx) => (
                             <tr key={idx} className="text-slate-700 hover:bg-slate-50/50 transition-colors">
-                              <td className="py-3 pl-1 font-semibold text-slate-500">{new Date(att.date).toLocaleDateString()}</td>
+                              <td className="py-3 pl-1 font-semibold text-slate-500">
+                                {new Date(att.date).toLocaleString("en-GB", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </td>
                               <td className="py-3">
                                 <p className="font-bold text-slate-800">{att.candidateId?.name || "N/A"}</p>
                                 <span className="text-[9px] text-slate-400 font-mono">{att.candidateId?.registrationId}</span>
                               </td>
                               <td className="py-3">
                                 <span className={`px-2.5 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${att.status === "present" ? "bg-emerald-50 text-emerald-600" :
-                                    att.status === "absent" ? "bg-rose-55 text-rose-600" : "bg-amber-50 text-amber-600"
+                                  att.status === "absent" ? "bg-rose-55 text-rose-600" : "bg-amber-50 text-amber-600"
                                   }`}>
                                   {att.status}
                                 </span>
@@ -3392,7 +3877,7 @@ export default function AdminDashboardPage() {
 
                           <div className="text-right flex flex-col items-end gap-2">
                             <span className={`px-2.5 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${paper.status === "solved" ? "bg-emerald-50 text-emerald-600" :
-                                paper.status === "pending" ? "bg-deepskyblue/10 text-deepskyblue-dark" : "bg-slate-200 text-slate-500"
+                              paper.status === "pending" ? "bg-deepskyblue/10 text-deepskyblue-dark" : "bg-slate-200 text-slate-500"
                               }`}>
                               {paper.status}
                             </span>
@@ -3563,7 +4048,7 @@ export default function AdminDashboardPage() {
                                       }}
                                       className="accent-deepskyblue rounded border-slate-350 cursor-pointer h-3.5 w-3.5"
                                     />
-                                    <span className="truncate">{student.name} ({student.registrationId})</span>
+                                    <span className={`truncate ${student.isActive !== false ? "" : "text-slate-400 line-through font-normal"}`}>{student.name} ({student.registrationId}){student.isActive === false ? " [Deactivated]" : ""}</span>
                                   </label>
                                 );
                               });
@@ -3584,88 +4069,88 @@ export default function AdminDashboardPage() {
 
                     {quizForm.questions.map((question, qIdx) => (
                       <React.Fragment key={qIdx}>
-                      <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-4 relative">
+                        <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-4 relative">
 
-                        {quizForm.questions.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeQuizQuestion(qIdx)}
-                            className="absolute top-4 right-4 text-slate-400 hover:text-rose-500 p-1.5 transition-colors cursor-pointer"
-                          >
-                            <Trash className="h-4 w-4" />
-                          </button>
-                        )}
+                          {quizForm.questions.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeQuizQuestion(qIdx)}
+                              className="absolute top-4 right-4 text-slate-400 hover:text-rose-500 p-1.5 transition-colors cursor-pointer"
+                            >
+                              <Trash className="h-4 w-4" />
+                            </button>
+                          )}
 
-                        <span className="text-[10px] uppercase font-black text-deepskyblue-dark">Question #{qIdx + 1}</span>
+                          <span className="text-[10px] uppercase font-black text-deepskyblue-dark">Question #{qIdx + 1}</span>
 
-                        <div className="space-y-1">
-                          <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Question Prompt Text</label>
-                          <input
-                            type="text"
-                            required
-                            placeholder="e.g. Which HTML tag is used for injecting external stylesheets?"
-                            value={question.questionText}
-                            onChange={e => handleQuizQuestionChange(qIdx, e.target.value)}
-                            className="block w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue"
-                          />
-                        </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Question Prompt Text</label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="e.g. Which HTML tag is used for injecting external stylesheets?"
+                              value={question.questionText}
+                              onChange={e => handleQuizQuestionChange(qIdx, e.target.value)}
+                              className="block w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue"
+                            />
+                          </div>
 
-                        {/* Options */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {question.options.map((opt, optIdx) => (
-                            <div key={optIdx} className="space-y-1">
-                              <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Option {optIdx + 1}</label>
+                          {/* Options */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {question.options.map((opt, optIdx) => (
+                              <div key={optIdx} className="space-y-1">
+                                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Option {optIdx + 1}</label>
+                                <input
+                                  type="text"
+                                  required
+                                  placeholder={`Option ${optIdx + 1} choice`}
+                                  value={opt}
+                                  onChange={e => handleQuizOptionChange(qIdx, optIdx, e.target.value)}
+                                  className="block w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-750 text-xs focus:outline-none focus:border-deepskyblue"
+                                />
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {/* Correct answer Selection */}
+                            <div className="space-y-1">
+                              <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Correct Choice Index</label>
+                              <select
+                                value={question.correctAnswerIndex}
+                                onChange={e => handleQuizCorrectIndexChange(qIdx, parseInt(e.target.value))}
+                                className="block w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-750 text-xs focus:outline-none focus:border-deepskyblue"
+                              >
+                                <option value={0}>Option 1</option>
+                                <option value={1}>Option 2</option>
+                                <option value={2}>Option 3</option>
+                                <option value={3}>Option 4</option>
+                              </select>
+                            </div>
+
+                            {/* Question Marks Selection */}
+                            <div className="space-y-1">
+                              <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Question Marks</label>
                               <input
-                                type="text"
+                                type="number"
                                 required
-                                placeholder={`Option ${optIdx + 1} choice`}
-                                value={opt}
-                                onChange={e => handleQuizOptionChange(qIdx, optIdx, e.target.value)}
+                                min={1}
+                                value={question.marks || 1}
+                                onChange={e => handleQuizMarksChange(qIdx, parseInt(e.target.value) || 1)}
                                 className="block w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-750 text-xs focus:outline-none focus:border-deepskyblue"
                               />
                             </div>
-                          ))}
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          {/* Correct answer Selection */}
-                          <div className="space-y-1">
-                            <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Correct Choice Index</label>
-                            <select
-                              value={question.correctAnswerIndex}
-                              onChange={e => handleQuizCorrectIndexChange(qIdx, parseInt(e.target.value))}
-                              className="block w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-750 text-xs focus:outline-none focus:border-deepskyblue"
-                            >
-                              <option value={0}>Option 1</option>
-                              <option value={1}>Option 2</option>
-                              <option value={2}>Option 3</option>
-                              <option value={3}>Option 4</option>
-                            </select>
                           </div>
 
-                          {/* Question Marks Selection */}
-                          <div className="space-y-1">
-                            <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Question Marks</label>
-                            <input
-                              type="number"
-                              required
-                              min={1}
-                              value={question.marks || 1}
-                              onChange={e => handleQuizMarksChange(qIdx, parseInt(e.target.value) || 1)}
-                              className="block w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-750 text-xs focus:outline-none focus:border-deepskyblue"
-                            />
-                          </div>
                         </div>
-
-                      </div>
-                      <button
-                        type="button"
-                        onClick={addQuizQuestion}
-                        className="mt-2 flex items-center gap-1.5 py-1.5 px-3.5 rounded-xl bg-deepskyblue hover:bg-deepskyblue-dark text-[10px] font-bold text-white shadow cursor-pointer"
-                      >
-                        <Plus className="h-4 w-4" />
-                        <span>Add Question</span>
-                      </button>
+                        <button
+                          type="button"
+                          onClick={addQuizQuestion}
+                          className="mt-2 flex items-center gap-1.5 py-1.5 px-3.5 rounded-xl bg-deepskyblue hover:bg-deepskyblue-dark text-[10px] font-bold text-white shadow cursor-pointer"
+                        >
+                          <Plus className="h-4 w-4" />
+                          <span>Add Question</span>
+                        </button>
                       </React.Fragment>
                     ))}
                   </div>
@@ -3691,11 +4176,10 @@ export default function AdminDashboardPage() {
                       {quizzesList.map((quiz, idx) => {
                         const totalQuizMarks = quiz.questions.reduce((acc: number, q: any) => acc + (q.marks || 1), 0);
                         return (
-                          <div key={quiz._id || idx} className={`p-4 rounded-2xl border flex justify-between items-center ${
-                            editingQuizId === quiz._id
+                          <div key={quiz._id || idx} className={`p-4 rounded-2xl border flex justify-between items-center ${editingQuizId === quiz._id
                               ? "bg-violet-50 border-violet-200"
                               : "bg-slate-50 border-slate-200/60"
-                          }`}>
+                            }`}>
                             <div className="space-y-1">
                               <span className="text-[9px] font-bold bg-deepskyblue/10 text-deepskyblue-dark px-2 py-0.5 rounded-full uppercase tracking-wider">{quiz.course}</span>
                               <h4 className="text-xs font-bold text-slate-800 mt-1">{quiz.title}</h4>
@@ -3811,11 +4295,10 @@ export default function AdminDashboardPage() {
                               <td className="py-3.5 text-center">
                                 <button
                                   onClick={() => handleToggleResultApproval(res._id, "marksheet", !!res.isApproved)}
-                                  className={`px-2 py-1 rounded-full text-[9px] font-black tracking-wider uppercase transition cursor-pointer ${
-                                    res.isApproved
+                                  className={`px-2 py-1 rounded-full text-[9px] font-black tracking-wider uppercase transition cursor-pointer ${res.isApproved
                                       ? "bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100"
                                       : "bg-amber-50 text-amber-600 border border-amber-250 hover:bg-amber-100"
-                                  }`}
+                                    }`}
                                 >
                                   {res.isApproved ? "Approved / Revealed" : "Pending / Hidden"}
                                 </button>
@@ -3823,11 +4306,10 @@ export default function AdminDashboardPage() {
                               <td className="py-3.5 text-center">
                                 <button
                                   onClick={() => handleToggleResultApproval(res._id, "certificate", !!res.isCertificateApproved)}
-                                  className={`px-2 py-1 rounded-full text-[9px] font-black tracking-wider uppercase transition cursor-pointer ${
-                                    res.isCertificateApproved
+                                  className={`px-2 py-1 rounded-full text-[9px] font-black tracking-wider uppercase transition cursor-pointer ${res.isCertificateApproved
                                       ? "bg-indigo-50 text-indigo-650 border border-indigo-255 hover:bg-indigo-100"
                                       : "bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100"
-                                  }`}
+                                    }`}
                                 >
                                   {res.isCertificateApproved ? "Approved / Assigned" : "Not Assigned"}
                                 </button>
@@ -3858,24 +4340,24 @@ export default function AdminDashboardPage() {
               </div>
             )}
 
-            {/* ================= TAB CONTENT 8: MANAGE AGENTS ================= */}
-            {activeTab === "agents" && (
+            {/* ================= TAB CONTENT 8: MANAGE ASSOCIATES ================= */}
+            {activeTab === "associates" && (
               <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-5 animate-fade-in">
                 <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">Registered Agents Ledger</h3>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Approve agent applications, check original passwords, and trace referrals count</p>
+                    <h3 className="text-sm font-bold text-slate-900">Registered Associates Ledger</h3>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Approve associate partner applications, check original passwords, and trace referrals count</p>
                   </div>
                 </div>
 
-                {agentsList.length === 0 ? (
-                  <p className="text-xs text-slate-400 py-10 text-center font-medium">No agents registered in the database yet.</p>
+                {associatesList.length === 0 ? (
+                  <p className="text-xs text-slate-400 py-10 text-center font-medium">No associates registered in the database yet.</p>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
                         <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] tracking-wider font-bold">
-                          <th className="pb-3 pl-2">Agent Details</th>
+                          <th className="pb-3 pl-2">Associate Details</th>
                           <th className="pb-3">Referral Code</th>
                           <th className="pb-3">Original Password</th>
                           <th className="pb-3 text-center">Referrals Count</th>
@@ -3884,53 +4366,59 @@ export default function AdminDashboardPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {agentsList
-                          .filter(agent => {
+                        {associatesList
+                          .filter(associate => {
                             const query = searchQuery.toLowerCase();
                             return (
-                              agent.name.toLowerCase().includes(query) ||
-                              agent.email.toLowerCase().includes(query) ||
-                              agent.agentCode.toLowerCase().includes(query)
+                              associate.name.toLowerCase().includes(query) ||
+                              associate.email.toLowerCase().includes(query) ||
+                              associate.agentCode.toLowerCase().includes(query)
                             );
                           })
-                          .map((agent, idx) => (
+                          .map((associate, idx) => (
                             <tr key={idx} className="text-slate-700 hover:bg-slate-50/50 hover:text-slate-900 transition-colors">
                               <td className="py-4 pl-2">
-                                <div className="font-bold text-slate-900">{agent.name}</div>
+                                <div className="font-bold text-slate-900">{associate.name}</div>
                                 <div className="text-[10px] text-slate-400 mt-1 flex flex-col space-y-0.5">
-                                  <span>{agent.email}</span>
-                                  <span>{agent.phone}</span>
+                                  <span>{associate.email}</span>
+                                  <span>{associate.phone}</span>
                                 </div>
                               </td>
                               <td className="py-4 font-mono font-bold text-deepskyblue-dark">
-                                {agent.agentCode}
+                                {associate.agentCode}
                               </td>
                               <td className="py-4 font-mono text-slate-505 font-semibold select-all">
-                                {agent.originalPassword || "N/A"}
+                                {associate.originalPassword || "N/A"}
                               </td>
                               <td className="py-4 text-center font-extrabold text-slate-900">
-                                {agent.studentCount} Students
+                                {associate.studentCount} Students
                               </td>
                               <td className="py-4 text-center">
-                                <span className={`px-2.5 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${agent.status === "approved" ? "bg-emerald-50 text-emerald-650 border border-emerald-100" :
-                                    agent.status === "rejected" ? "bg-rose-50 text-rose-650 border border-rose-100" :
-                                      "bg-amber-50 text-amber-650 border border-amber-100"
+                                <span className={`px-2.5 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${associate.status === "approved" ? "bg-emerald-50 text-emerald-650 border border-emerald-100" :
+                                  associate.status === "rejected" ? "bg-rose-50 text-rose-650 border border-rose-100" :
+                                    "bg-amber-50 text-amber-655 border border-amber-100"
                                   }`}>
-                                  {agent.status}
+                                  {associate.status}
                                 </span>
                               </td>
                               <td className="py-4 text-right pr-2 space-x-2">
-                                {agent.status !== "approved" && (
+                                <button
+                                  onClick={() => handleStartEditAssociate(associate)}
+                                  className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-[10px] font-bold text-slate-700 border border-slate-300 transition cursor-pointer"
+                                >
+                                  Edit
+                                </button>
+                                {associate.status !== "approved" && (
                                   <button
-                                    onClick={() => handleAgentStatus(agent.id, "approved")}
+                                    onClick={() => handleAssociateStatus(associate.id, "approved")}
                                     className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-[10px] font-bold text-white shadow shadow-emerald-500/10 transition cursor-pointer"
                                   >
                                     Approve
                                   </button>
                                 )}
-                                {agent.status !== "rejected" && (
+                                {associate.status !== "rejected" && (
                                   <button
-                                    onClick={() => handleAgentStatus(agent.id, "rejected")}
+                                    onClick={() => handleAssociateStatus(associate.id, "rejected")}
                                     className="px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-[10px] font-bold text-white shadow shadow-rose-500/10 transition cursor-pointer"
                                   >
                                     Reject
@@ -4082,16 +4570,21 @@ export default function AdminDashboardPage() {
                               return (
                                 <tr key={idx} className="text-slate-700 hover:bg-slate-50/50 hover:text-slate-900 transition-colors">
                                   <td className="py-3.5 pl-2">
-                                    <div className="font-bold text-slate-900">{stud.name}</div>
-                                    <div className="text-[10px] text-slate-400 mt-0.5">{stud.registrationId}</div>
+                                    <div className={`font-bold ${stud.isActive !== false ? "text-slate-900" : "text-slate-400 line-through"}`}>{stud.name}</div>
+                                    <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1.5">
+                                      <span>{stud.registrationId}</span>
+                                      {stud.isActive === false && (
+                                        <span className="text-[8px] font-black text-rose-500 bg-rose-50 border border-rose-100 px-1 py-0.2 rounded uppercase tracking-wider">Deactivated</span>
+                                      )}
+                                    </div>
                                   </td>
                                   <td className="py-3.5 text-slate-500 font-semibold">{stud.course}</td>
                                   <td className="py-3.5 font-bold text-slate-800">₹{amount}</td>
                                   <td className="py-3.5 text-center">
-                                    <span className={`px-2.5 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${stud.isPaid 
-                                      ? "bg-emerald-50 text-emerald-650 border border-emerald-100" 
+                                    <span className={`px-2.5 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${stud.isPaid
+                                      ? "bg-emerald-50 text-emerald-650 border border-emerald-100"
                                       : "bg-amber-50 text-amber-655 border border-amber-100"
-                                    }`}>
+                                      }`}>
                                       {stud.isPaid ? "SUCCESS / PAID" : "PENDING / UNPAID"}
                                     </span>
                                   </td>
@@ -4140,15 +4633,27 @@ export default function AdminDashboardPage() {
                   </p>
                 )}
               </div>
-              <button
-                onClick={() => {
-                  setSelectedStudentId(null);
-                  setStudentDetails(null);
-                }}
-                className="text-slate-655 hover:text-slate-950 text-xs font-bold bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 cursor-pointer transition-colors"
-              >
-                Close Details
-              </button>
+              <div className="flex gap-2 shrink-0">
+                {studentDetails?.student && !isEditingStudent && modalActiveTab === "profile" && (
+                  <button
+                    onClick={handleStartEditStudent}
+                    className="text-white text-xs font-bold bg-deepskyblue hover:bg-deepskyblue-dark px-3 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-sm"
+                  >
+                    <Pencil className="h-3 w-3" />
+                    <span>Edit Profile</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setSelectedStudentId(null);
+                    setStudentDetails(null);
+                    setIsEditingStudent(false);
+                  }}
+                  className="text-slate-655 hover:text-slate-950 text-xs font-bold bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 cursor-pointer transition-colors"
+                >
+                  Close Details
+                </button>
+              </div>
             </div>
 
             {loadingDetails ? (
@@ -4163,8 +4668,8 @@ export default function AdminDashboardPage() {
                   <button
                     onClick={() => setModalActiveTab("profile")}
                     className={`pb-2.5 px-4 text-xs font-bold transition-all border-b-2 cursor-pointer ${modalActiveTab === "profile"
-                        ? "border-deepskyblue text-deepskyblue-dark font-black"
-                        : "border-transparent text-slate-450 hover:text-slate-700"
+                      ? "border-deepskyblue text-deepskyblue-dark font-black"
+                      : "border-transparent text-slate-450 hover:text-slate-700"
                       }`}
                   >
                     Profile Info
@@ -4172,8 +4677,8 @@ export default function AdminDashboardPage() {
                   <button
                     onClick={() => setModalActiveTab("attendance")}
                     className={`pb-2.5 px-4 text-xs font-bold transition-all border-b-2 cursor-pointer ${modalActiveTab === "attendance"
-                        ? "border-deepskyblue text-deepskyblue-dark font-black"
-                        : "border-transparent text-slate-450 hover:text-slate-700"
+                      ? "border-deepskyblue text-deepskyblue-dark font-black"
+                      : "border-transparent text-slate-450 hover:text-slate-700"
                       }`}
                   >
                     Attendance Sheet ({studentDetails.attendance?.length || 0})
@@ -4181,8 +4686,8 @@ export default function AdminDashboardPage() {
                   <button
                     onClick={() => setModalActiveTab("results")}
                     className={`pb-2.5 px-4 text-xs font-bold transition-all border-b-2 cursor-pointer ${modalActiveTab === "results"
-                        ? "border-deepskyblue text-deepskyblue-dark font-black"
-                        : "border-transparent text-slate-450 hover:text-slate-700"
+                      ? "border-deepskyblue text-deepskyblue-dark font-black"
+                      : "border-transparent text-slate-450 hover:text-slate-700"
                       }`}
                   >
                     Quiz Results ({studentDetails.results?.length || 0})
@@ -4191,100 +4696,302 @@ export default function AdminDashboardPage() {
 
                 {/* Tab content 1: Profile Info */}
                 {modalActiveTab === "profile" && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-xs text-slate-700">
-                    {studentDetails.student.profilePicUrl && (
-                      <div className="sm:col-span-2 flex justify-center pb-4">
-                        <img
-                          src={resolveFileUrl(studentDetails.student.profilePicUrl)}
-                          alt="Student Profile"
-                          className="h-24 w-24 rounded-full object-cover border-2 border-slate-200 shadow-sm"
+                  isEditingStudent ? (
+                    <form onSubmit={handleSaveStudentEdit} className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-xs w-full bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                      {/* Name */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Candidate Name</label>
+                        <input
+                          type="text"
+                          required
+                          value={studentEditForm.name}
+                          onChange={e => setStudentEditForm((prev: any) => ({ ...prev, name: e.target.value }))}
+                          className="block w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-deepskyblue"
                         />
                       </div>
-                    )}
-                    <div className="py-2.5 border-b border-slate-100 flex justify-between">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Father&apos;s Name</span>
-                      <span className="font-semibold text-slate-800">{studentDetails.student.fatherName}</span>
-                    </div>
-                    <div className="py-2.5 border-b border-slate-100 flex justify-between">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Mother&apos;s Name</span>
-                      <span className="font-semibold text-slate-800">{studentDetails.student.motherName}</span>
-                    </div>
-                    <div className="py-2.5 border-b border-slate-100 flex justify-between">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Date of Birth</span>
-                      <span className="font-semibold text-slate-800">{new Date(studentDetails.student.dob).toLocaleDateString()}</span>
-                    </div>
-                    <div className="py-2.5 border-b border-slate-100 flex justify-between">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Gender</span>
-                      <span className="font-semibold text-slate-800">{studentDetails.student.gender || "MALE"}</span>
-                    </div>
-                    <div className="py-2.5 border-b border-slate-100 flex justify-between">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Email ID</span>
-                      <span className="font-semibold text-slate-800">{studentDetails.student.email}</span>
-                    </div>
-                    <div className="py-2.5 border-b border-slate-100 flex justify-between">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Phone Number</span>
-                      <span className="font-semibold text-slate-800">{studentDetails.student.phone}</span>
-                    </div>
-                    <div className="py-2.5 border-b border-slate-100 flex justify-between">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">District</span>
-                      <span className="font-semibold text-slate-800">{studentDetails.student.district || "N/A"}</span>
-                    </div>
-                    <div className="py-2.5 border-b border-slate-100 flex justify-between">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Enrolled Course</span>
-                      <span className="font-semibold text-deepskyblue-dark">{studentDetails.student.course}</span>
-                    </div>
-                    <div className="py-2.5 border-b border-slate-100 flex justify-between">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Social Category</span>
-                      <span className="font-semibold text-slate-800">{studentDetails.student.category || "GEN"}</span>
-                    </div>
-                    <div className="py-2.5 border-b border-slate-100 flex justify-between">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Portal Password</span>
-                      <span className="font-semibold text-slate-800">{studentDetails.student.originalPassword || "N/A"}</span>
-                    </div>
-                    <div className="py-2.5 border-b border-slate-100 sm:col-span-2 flex flex-col gap-2">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Address</span>
-                      <span className="text-slate-600 font-medium break-words leading-relaxed">{studentDetails.student.address}</span>
-                    </div>
-                    <div className="sm:col-span-2 space-y-2 pt-2">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px] block">Uploaded Documents (S3 Links)</span>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        {studentDetails.student.admitUrl && (
-                          <a href={resolveFileUrl(studentDetails.student.admitUrl)} target="_blank" rel="noreferrer" className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-[11px] font-bold text-slate-655 hover:bg-slate-100 transition">
-                            <span>Uploaded Admit Card</span>
-                            <span className="text-deepskyblue-dark font-black hover:underline">Open link</span>
-                          </a>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => triggerPrint("admitcard", studentDetails.student)}
-                          className="flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 text-[11px] font-bold text-white shadow shadow-deepskyblue/20 transition-all cursor-pointer"
+
+                      {/* Father Name */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Father&apos;s Name</label>
+                        <input
+                          type="text"
+                          required
+                          value={studentEditForm.fatherName}
+                          onChange={e => setStudentEditForm((prev: any) => ({ ...prev, fatherName: e.target.value }))}
+                          className="block w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-deepskyblue"
+                        />
+                      </div>
+
+                      {/* Mother Name */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Mother&apos;s Name</label>
+                        <input
+                          type="text"
+                          required
+                          value={studentEditForm.motherName}
+                          onChange={e => setStudentEditForm((prev: any) => ({ ...prev, motherName: e.target.value }))}
+                          className="block w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-deepskyblue"
+                        />
+                      </div>
+
+                      {/* Dob */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Date of Birth</label>
+                        <input
+                          type="date"
+                          required
+                          value={studentEditForm.dob}
+                          onChange={e => setStudentEditForm((prev: any) => ({ ...prev, dob: e.target.value }))}
+                          className="block w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-deepskyblue"
+                        />
+                      </div>
+
+                      {/* Gender */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Gender</label>
+                        <select
+                          value={studentEditForm.gender}
+                          onChange={e => setStudentEditForm((prev: any) => ({ ...prev, gender: e.target.value }))}
+                          className="block w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-deepskyblue"
                         >
-                          <Printer className="h-3.5 w-3.5" />
-                          <span>Admit Card</span>
+                          <option value="MALE">MALE</option>
+                          <option value="FEMALE">FEMALE</option>
+                          <option value="OTHER">OTHER</option>
+                        </select>
+                      </div>
+
+                      {/* Category */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Social Category</label>
+                        <select
+                          value={studentEditForm.category}
+                          onChange={e => setStudentEditForm((prev: any) => ({ ...prev, category: e.target.value }))}
+                          className="block w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-deepskyblue"
+                        >
+                          <option value="GEN">GEN</option>
+                          <option value="OBC">OBC</option>
+                          <option value="SC">SC</option>
+                          <option value="ST">ST</option>
+                        </select>
+                      </div>
+
+                      {/* Email */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Email ID</label>
+                        <input
+                          type="email"
+                          required
+                          value={studentEditForm.email}
+                          onChange={e => setStudentEditForm((prev: any) => ({ ...prev, email: e.target.value }))}
+                          className="block w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-deepskyblue"
+                        />
+                      </div>
+
+                      {/* Phone */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Phone Number</label>
+                        <input
+                          type="tel"
+                          required
+                          value={studentEditForm.phone}
+                          onChange={e => setStudentEditForm((prev: any) => ({ ...prev, phone: e.target.value }))}
+                          className="block w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-deepskyblue"
+                        />
+                      </div>
+
+                      {/* District */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">District (West Bengal)</label>
+                        <select
+                          value={studentEditForm.district}
+                          onChange={e => setStudentEditForm((prev: any) => ({ ...prev, district: e.target.value }))}
+                          className="block w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-deepskyblue"
+                        >
+                          <option value="" disabled>Select District</option>
+                          {WEST_BENGAL_DISTRICTS.map((dist, idx) => (
+                            <option key={idx} value={dist}>{dist}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Course */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Enrolled Course</label>
+                        <select
+                          value={studentEditForm.course}
+                          onChange={e => setStudentEditForm((prev: any) => ({ ...prev, course: e.target.value }))}
+                          className="block w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-deepskyblue"
+                        >
+                          <option value="" disabled>Select Program</option>
+                          {coursesList.map((course, idx) => (
+                            <option key={idx} value={course.title}>{course.title}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Password */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Portal Password (Leave blank to keep current)</label>
+                        <input
+                          type="text"
+                          placeholder="Update password..."
+                          value={studentEditForm.password}
+                          onChange={e => setStudentEditForm((prev: any) => ({ ...prev, password: e.target.value }))}
+                          className="block w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-805 placeholder-slate-400 focus:outline-none focus:border-deepskyblue"
+                        />
+                      </div>
+
+                      {/* Address */}
+                      <div className="sm:col-span-2 space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Address</label>
+                        <textarea
+                          required
+                          rows={2}
+                          value={studentEditForm.address}
+                          onChange={e => setStudentEditForm((prev: any) => ({ ...prev, address: e.target.value }))}
+                          className="block w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-deepskyblue resize-none"
+                        />
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="sm:col-span-2 flex gap-3 pt-3">
+                        <button
+                          type="submit"
+                          className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 text-xs font-bold text-white shadow shadow-deepskyblue/10 transition-all cursor-pointer text-center"
+                        >
+                          Save Changes
                         </button>
                         <button
                           type="button"
-                          onClick={() => triggerPrint("idcard", studentDetails.student)}
-                          className="flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-[11px] font-bold text-white shadow shadow-emerald-500/20 transition-all cursor-pointer"
+                          onClick={() => setIsEditingStudent(false)}
+                          className="flex-1 py-2.5 px-4 rounded-xl bg-white border border-slate-250 text-xs font-bold text-slate-700 transition hover:bg-slate-50 cursor-pointer text-center"
                         >
-                          <Printer className="h-3.5 w-3.5" />
-                          <span>ID Card</span>
+                          Cancel
                         </button>
-                        {studentDetails.student.qualificationUrl && (
-                          <a href={resolveFileUrl(studentDetails.student.qualificationUrl)} target="_blank" rel="noreferrer" className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-[11px] font-bold text-slate-655 hover:bg-slate-100 transition">
-                            <span>Last Qualification</span>
-                            <span className="text-deepskyblue-dark font-black hover:underline">Open link</span>
-                          </a>
-                        )}
-                        {studentDetails.student.extraQualificationUrl && (
-                          <a href={resolveFileUrl(studentDetails.student.extraQualificationUrl)} target="_blank" rel="noreferrer" className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-[11px] font-bold text-slate-655 hover:bg-slate-100 transition">
-                            <span>Extra Certificate</span>
-                            <span className="text-deepskyblue-dark font-black hover:underline">Open link</span>
-                          </a>
-                        )}
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-xs text-slate-700 w-full">
+                      {studentDetails.student.profilePicUrl && (
+                        <div className="sm:col-span-2 flex justify-center pb-4">
+                          <img
+                            src={resolveFileUrl(studentDetails.student.profilePicUrl)}
+                            alt="Student Profile"
+                            className="h-24 w-24 rounded-full object-cover border-2 border-slate-200 shadow-sm"
+                          />
+                        </div>
+                      )}
+                      <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Father&apos;s Name</span>
+                        <span className="font-semibold text-slate-800">{studentDetails.student.fatherName}</span>
+                      </div>
+                      <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Mother&apos;s Name</span>
+                        <span className="font-semibold text-slate-800">{studentDetails.student.motherName}</span>
+                      </div>
+                      <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Date of Birth</span>
+                        <span className="font-semibold text-slate-800">{new Date(studentDetails.student.dob).toLocaleDateString()}</span>
+                      </div>
+                      <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Gender</span>
+                        <span className="font-semibold text-slate-800">{studentDetails.student.gender || "MALE"}</span>
+                      </div>
+                      <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Email ID</span>
+                        <span className="font-semibold text-slate-800">{studentDetails.student.email}</span>
+                      </div>
+                      <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Phone Number</span>
+                        <span className="font-semibold text-slate-800">{studentDetails.student.phone}</span>
+                      </div>
+                      <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">District</span>
+                        <span className="font-semibold text-slate-800">{studentDetails.student.district || "N/A"}</span>
+                      </div>
+                      <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Enrolled Course</span>
+                        <span className="font-semibold text-deepskyblue-dark">{studentDetails.student.course}</span>
+                      </div>
+                      <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Social Category</span>
+                        <span className="font-semibold text-slate-800">{studentDetails.student.category || "GEN"}</span>
+                      </div>
+                      <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Portal Password</span>
+                        <span className="font-semibold text-slate-800">{studentDetails.student.originalPassword || "N/A"}</span>
+                      </div>
+                      <div className="py-2.5 border-b border-slate-100 sm:col-span-2 flex flex-col gap-2">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Address</span>
+                        <span className="text-slate-600 font-medium break-words leading-relaxed">{studentDetails.student.address}</span>
+                      </div>
+                      <div className="py-3 px-4 bg-slate-50 border border-slate-200/65 rounded-2xl sm:col-span-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Account Profile Status</span>
+                          <span className="text-[10.5px] text-slate-500 font-medium leading-relaxed">
+                            {studentDetails.student.isActive !== false
+                              ? "Active candidate status. The student has login credentials active and can access their course dashboard."
+                              : "Deactivated candidate status. The student profile is currently disabled. Login access is blocked."}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleStudentAccess(studentDetails.student._id)}
+                          className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer shrink-0 ${studentDetails.student.isActive !== false
+                              ? "bg-rose-50 text-rose-600 border border-rose-250 hover:bg-rose-600 hover:text-white"
+                              : "bg-emerald-50 text-emerald-650 border border-emerald-250 hover:bg-emerald-650 hover:text-white"
+                            }`}
+                        >
+                          {studentDetails.student.isActive !== false ? "Deactivate Profile" : "Activate Profile"}
+                        </button>
+                      </div>
+                      <div className="sm:col-span-2 space-y-2 pt-2">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px] block">Uploaded Documents (S3 Links)</span>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          {studentDetails.student.admitUrl && (
+                            <a href={resolveFileUrl(studentDetails.student.admitUrl)} target="_blank" rel="noreferrer" className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-[11px] font-bold text-slate-655 hover:bg-slate-100 transition">
+                              <span>Uploaded Admit Card</span>
+                              <span className="text-deepskyblue-dark font-black hover:underline">Open link</span>
+                            </a>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => triggerPrint("admitcard", studentDetails.student)}
+                            className="flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 text-[11px] font-bold text-white shadow shadow-deepskyblue/20 transition-all cursor-pointer"
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                            <span>Admit Card</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => triggerPrint("idcard", studentDetails.student)}
+                            className="flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-[11px] font-bold text-white shadow shadow-emerald-500/20 transition-all cursor-pointer"
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                            <span>ID Card</span>
+                          </button>
+                          {studentDetails.student.qualificationUrl && (
+                            <a href={resolveFileUrl(studentDetails.student.qualificationUrl)} target="_blank" rel="noreferrer" className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-[11px] font-bold text-slate-655 hover:bg-slate-100 transition">
+                              <span>Last Qualification</span>
+                              <span className="text-deepskyblue-dark font-black hover:underline">Open link</span>
+                            </a>
+                          )}
+                          {studentDetails.student.extraQualificationUrl && (
+                            <a href={resolveFileUrl(studentDetails.student.extraQualificationUrl)} target="_blank" rel="noreferrer" className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-[11px] font-bold text-slate-655 hover:bg-slate-100 transition">
+                              <span>Extra Certificate</span>
+                              <span className="text-deepskyblue-dark font-black hover:underline">Open link</span>
+                            </a>
+                          )}
+                          {studentDetails.student.signatureUrl && (
+                            <a href={resolveFileUrl(studentDetails.student.signatureUrl)} target="_blank" rel="noreferrer" className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-[11px] font-bold text-slate-655 hover:bg-slate-100 transition">
+                              <span>Candidate Signature</span>
+                              <span className="text-deepskyblue-dark font-black hover:underline">Open link</span>
+                            </a>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )
                 )}
 
                 {/* Tab content 2: Attendance */}
@@ -4336,10 +5043,18 @@ export default function AdminDashboardPage() {
                           <tbody className="divide-y divide-slate-100">
                             {studentDetails.attendance.map((att: any, idx: number) => (
                               <tr key={idx} className="text-slate-700">
-                                <td className="py-2.5 font-semibold text-slate-500">{new Date(att.date).toLocaleDateString()}</td>
+                                <td className="py-2.5 font-semibold text-slate-500">
+                                  {new Date(att.date).toLocaleString("en-GB", {
+                                    day: "numeric",
+                                    month: "short",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </td>
                                 <td className="py-2.5">
                                   <span className={`px-2 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${att.status === "present" ? "bg-emerald-50 text-emerald-600" :
-                                      att.status === "absent" ? "bg-rose-50 text-rose-600" : "bg-amber-50 text-amber-600"
+                                    att.status === "absent" ? "bg-rose-50 text-rose-600" : "bg-amber-50 text-amber-600"
                                     }`}>
                                     {att.status}
                                   </span>
@@ -4393,11 +5108,10 @@ export default function AdminDashboardPage() {
                                 <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-1">Marksheet</span>
                                 <button
                                   onClick={() => handleToggleResultApproval(res._id, "marksheet", !!res.isApproved)}
-                                  className={`px-2 py-1 rounded-xl text-[9px] font-black tracking-wider uppercase transition cursor-pointer ${
-                                    res.isApproved
+                                  className={`px-2 py-1 rounded-xl text-[9px] font-black tracking-wider uppercase transition cursor-pointer ${res.isApproved
                                       ? "bg-emerald-50 text-emerald-600 border border-emerald-250 hover:bg-emerald-100"
                                       : "bg-amber-50 text-amber-600 border border-amber-250 hover:bg-amber-100"
-                                  }`}
+                                    }`}
                                 >
                                   {res.isApproved ? "Approved" : "Pending"}
                                 </button>
@@ -4408,11 +5122,10 @@ export default function AdminDashboardPage() {
                                 <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-1">Certificate</span>
                                 <button
                                   onClick={() => handleToggleResultApproval(res._id, "certificate", !!res.isCertificateApproved)}
-                                  className={`px-2 py-1 rounded-xl text-[9px] font-black tracking-wider uppercase transition cursor-pointer ${
-                                    res.isCertificateApproved
+                                  className={`px-2 py-1 rounded-xl text-[9px] font-black tracking-wider uppercase transition cursor-pointer ${res.isCertificateApproved
                                       ? "bg-indigo-50 text-indigo-650 border border-indigo-250 hover:bg-indigo-100"
                                       : "bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100"
-                                  }`}
+                                    }`}
                                 >
                                   {res.isCertificateApproved ? "Assigned" : "Assign"}
                                 </button>
@@ -4447,6 +5160,108 @@ export default function AdminDashboardPage() {
             ) : (
               <p className="text-xs text-slate-400 text-center py-10 font-semibold">Error rendering student data.</p>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ASSOCIATE PARTNER EDIT MODAL */}
+      {editingAssociate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+          <div className="relative w-full max-w-lg bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 text-left">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">Edit Associate Partner</h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">Referral Code: {editingAssociate.agentCode}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingAssociate(null)}
+                className="text-slate-400 hover:text-slate-700 text-sm font-bold bg-slate-50 hover:bg-slate-100 px-2 py-1 rounded-lg border border-slate-200 cursor-pointer transition"
+              >
+                Cancel
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAssociateEdit} className="space-y-4 text-xs">
+              {/* Full Name */}
+              <div className="space-y-1">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  value={associateEditForm.name}
+                  onChange={e => setAssociateEditForm((prev: any) => ({ ...prev, name: e.target.value }))}
+                  className="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-deepskyblue"
+                />
+              </div>
+
+              {/* Email */}
+              <div className="space-y-1">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={associateEditForm.email}
+                  onChange={e => setAssociateEditForm((prev: any) => ({ ...prev, email: e.target.value }))}
+                  className="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-deepskyblue"
+                />
+              </div>
+
+              {/* Phone */}
+              <div className="space-y-1">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phone Number</label>
+                <input
+                  type="tel"
+                  required
+                  value={associateEditForm.phone}
+                  onChange={e => setAssociateEditForm((prev: any) => ({ ...prev, phone: e.target.value }))}
+                  className="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-deepskyblue"
+                />
+              </div>
+
+              {/* Status */}
+              <div className="space-y-1">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Approval Status</label>
+                <select
+                  value={associateEditForm.status}
+                  onChange={e => setAssociateEditForm((prev: any) => ({ ...prev, status: e.target.value }))}
+                  className="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-deepskyblue"
+                >
+                  <option value="pending">pending</option>
+                  <option value="approved">approved</option>
+                  <option value="rejected">rejected</option>
+                </select>
+              </div>
+
+              {/* Password */}
+              <div className="space-y-1">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Login Password (Leave blank to keep current)</label>
+                <input
+                  type="text"
+                  placeholder="Enter new password..."
+                  value={associateEditForm.password}
+                  onChange={e => setAssociateEditForm((prev: any) => ({ ...prev, password: e.target.value }))}
+                  className="block w-full px-3 py-2 bg-slate-50 border border-slate-205 rounded-xl text-slate-805 placeholder-slate-450 focus:outline-none focus:border-deepskyblue"
+                />
+              </div>
+
+              {/* Submit buttons */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 text-xs font-bold text-white shadow shadow-deepskyblue/10 transition cursor-pointer text-center"
+                >
+                  Save Changes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingAssociate(null)}
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-250 text-xs font-bold text-slate-700 transition cursor-pointer text-center"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -4500,9 +5315,8 @@ export default function AdminDashboardPage() {
                           className={`p-3 rounded-xl border font-bold flex items-center justify-between ${btnStyle}`}
                         >
                           <div className="flex items-center min-w-0">
-                            <span className={`inline-block h-4 w-4 rounded-full border mr-2 text-center text-[9px] font-black uppercase leading-4 shrink-0 select-none ${
-                              isCorrectChoice ? "bg-emerald-100 border-emerald-300 text-emerald-750" : "bg-slate-50 border-slate-300 text-slate-500"
-                            }`}>
+                            <span className={`inline-block h-4 w-4 rounded-full border mr-2 text-center text-[9px] font-black uppercase leading-4 shrink-0 select-none ${isCorrectChoice ? "bg-emerald-100 border-emerald-300 text-emerald-750" : "bg-slate-50 border-slate-300 text-slate-500"
+                              }`}>
                               {String.fromCharCode(65 + optIdx)}
                             </span>
                             <span className="truncate pr-2">{opt}</span>
