@@ -54,6 +54,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required registration fields (Name, Documents, Profile Picture, Signature, etc.)" }, { status: 400 });
     }
 
+    const cleanPhone = phone.replace(/\D/g, "");
+    if (cleanPhone.length !== 10) {
+      return NextResponse.json({ error: "Phone number must be exactly 10 digits" }, { status: 400 });
+    }
+
     if (password.length < 6) {
       return NextResponse.json({ error: "Password must be at least 6 characters long" }, { status: 400 });
     }
@@ -123,7 +128,7 @@ export async function POST(request: Request) {
       motherName,
       dob: new Date(dob),
       email,
-      phone,
+      phone: cleanPhone,
       address,
       district,
       admitUrl,

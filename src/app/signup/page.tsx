@@ -240,6 +240,11 @@ export default function SignupPage() {
         setErrorMsg("Please fill in all personal details fields");
         return;
       }
+      const cleanPhone = formData.phone.replace(/\D/g, "");
+      if (cleanPhone.length !== 10) {
+        setErrorMsg("Phone number must be exactly 10 digits");
+        return;
+      }
     }
     if (step === 2) {
       if (!formData.course || !formData.admitUrl || !formData.qualificationUrl || !formData.profilePicUrl || !formData.signatureUrl) {

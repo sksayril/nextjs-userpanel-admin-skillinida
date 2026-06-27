@@ -38,6 +38,11 @@ export default function AssociateSignupPage() {
       setErrorMsg("Please fill in all registration fields");
       return;
     }
+    const cleanPhone = formData.phone.replace(/\D/g, "");
+    if (cleanPhone.length !== 10) {
+      setErrorMsg("Phone number must be exactly 10 digits");
+      return;
+    }
     if (formData.password.length < 6) {
       setErrorMsg("Password must be at least 6 characters long");
       return;
