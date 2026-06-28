@@ -46,7 +46,8 @@ import {
   Settings,
   Palette,
   CreditCard,
-  DollarSign
+  DollarSign,
+  Copy
 } from "lucide-react";
 
 // ── Sidebar Theme Definitions ────────────────────────────────────────────────
@@ -76,6 +77,7 @@ const ADMIN_NAV_ITEMS = [
   { id: "quizzes", label: "Create Exam", Icon: Award },
   { id: "results", label: "Exam Results", Icon: CheckCircle },
   { id: "associates", label: "Manage Associates", Icon: Users },
+  { id: "classes", label: "Live Classes", Icon: LinkIcon },
   { id: "payments", label: "Payment Ledger", Icon: CreditCard },
   { id: "settings", label: "Payment Settings", Icon: Settings },
 ] as const;
@@ -196,6 +198,8 @@ export default function AdminDashboardPage() {
 
   // Search input state
   const [searchQuery, setSearchQuery] = useState("");
+  const [courseFilter, setCourseFilter] = useState("");
+  const [districtFilter, setDistrictFilter] = useState("");
 
   // Stats
   const [stats, setStats] = useState({
@@ -214,6 +218,19 @@ export default function AdminDashboardPage() {
   const [attendanceList, setAttendanceList] = useState<any[]>([]);
   const [resultsList, setResultsList] = useState<any[]>([]);
   const [associatesList, setAssociatesList] = useState<any[]>([]);
+
+  // Live Classes States
+  const [classesList, setClassesList] = useState<any[]>([]);
+  const [classForm, setClassForm] = useState({
+    className: "",
+    course: "",
+    students: [] as string[],
+    startTime: "",
+    endTime: "",
+    meetLink: ""
+  });
+  const [submittingClass, setSubmittingClass] = useState(false);
+  const [searchStudentTerm, setSearchStudentTerm] = useState("");
 
   // Messages
   const [successMsg, setSuccessMsg] = useState("");
@@ -444,6 +461,16 @@ export default function AdminDashboardPage() {
         console.error("Error loading settings:", err);
       }
 
+      // Fetch Live Classes
+      try {
+        const resClasses = await fetch("/api/admin/live-classes");
+        const dataClasses = await resClasses.json();
+        const classes = dataClasses.classes || [];
+        setClassesList(classes);
+      } catch (err) {
+        console.error("Error fetching live classes:", err);
+      }
+
       // Update Stats
       setStats({
         studentsCount: students.length,
@@ -453,6 +480,64 @@ export default function AdminDashboardPage() {
       });
     } catch (err) {
       console.error("Failed to load admin data:", err);
+    }
+  };
+
+  const handleSaveLiveClass = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+    setSuccessMsg("");
+    setSubmittingClass(true);
+
+    try {
+      const res = await fetch("/api/admin/live-classes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(classForm),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSuccessMsg("Live class scheduled successfully!");
+        setClassForm({
+          className: "",
+          course: "",
+          students: [] as string[],
+          startTime: "",
+          endTime: "",
+          meetLink: ""
+        });
+        setSearchStudentTerm("");
+        await fetchAllData();
+        setTimeout(() => setSuccessMsg(""), 4000);
+      } else {
+        setErrorMsg(data.error || "Failed to schedule live class.");
+      }
+    } catch (err) {
+      setErrorMsg("Network error scheduling live class.");
+    } finally {
+      setSubmittingClass(false);
+    }
+  };
+
+  const handleDeleteLiveClass = async (classId: string) => {
+    if (!confirm("Are you sure you want to cancel/delete this live class?")) return;
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    try {
+      const res = await fetch(`/api/admin/live-classes/${classId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSuccessMsg("Live class deleted successfully!");
+        await fetchAllData();
+        setTimeout(() => setSuccessMsg(""), 4000);
+      } else {
+        setErrorMsg(data.error || "Failed to delete live class.");
+      }
+    } catch (err) {
+      setErrorMsg("Network error deleting live class.");
     }
   };
 
@@ -967,10 +1052,135 @@ export default function AdminDashboardPage() {
     }));
   };
 
+  const duplicateQuizQuestion = (qIndex: number) => {
+    const questionToDuplicate = quizForm.questions[qIndex];
+    if (!questionToDuplicate) return;
+    
+    const duplicatedQuestion = {
+      questionText: questionToDuplicate.questionText,
+      options: [...questionToDuplicate.options],
+      correctAnswerIndex: questionToDuplicate.correctAnswerIndex,
+      marks: questionToDuplicate.marks
+    };
+
+    const updatedQuestions = [...quizForm.questions];
+    updatedQuestions.splice(qIndex + 1, 0, duplicatedQuestion);
+
+    setQuizForm(prev => ({
+      ...prev,
+      questions: updatedQuestions
+    }));
+  };
+
   const removeQuizQuestion = (qIndex: number) => {
     if (quizForm.questions.length <= 1) return;
     const updatedQuestions = quizForm.questions.filter((_, idx) => idx !== qIndex);
     setQuizForm(prev => ({ ...prev, questions: updatedQuestions }));
+  };
+
+  const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const XLSX = await import("xlsx");
+      const reader = new FileReader();
+      
+      reader.onload = async (evt) => {
+        try {
+          const ab = evt.target?.result;
+          if (!ab) return;
+          
+          const wb = XLSX.read(ab, { type: "array" });
+          const sheetName = wb.SheetNames[0];
+          const sheet = wb.Sheets[sheetName];
+          
+          const data: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+          
+          if (data.length <= 1) {
+            toast.error("Excel sheet is empty or has only headers.");
+            return;
+          }
+
+          const parsedQuestions: any[] = [];
+          
+          for (let i = 1; i < data.length; i++) {
+            const row = data[i];
+            if (!row || !row[0]) continue;
+
+            const questionText = String(row[0]).trim();
+            const option1 = row[1] !== undefined ? String(row[1]).trim() : "";
+            const option2 = row[2] !== undefined ? String(row[2]).trim() : "";
+            const option3 = row[3] !== undefined ? String(row[3]).trim() : "";
+            const option4 = row[4] !== undefined ? String(row[4]).trim() : "";
+            
+            let correctVal = parseInt(row[5]);
+            if (isNaN(correctVal)) {
+              correctVal = 0;
+            } else if (correctVal >= 1 && correctVal <= 4) {
+              correctVal = correctVal - 1;
+            } else if (correctVal < 0 || correctVal > 3) {
+              correctVal = 0;
+            }
+            
+            const marks = parseInt(row[6]) || 1;
+
+            parsedQuestions.push({
+              questionText,
+              options: [option1, option2, option3, option4],
+              correctAnswerIndex: correctVal,
+              marks,
+            });
+          }
+
+          if (parsedQuestions.length === 0) {
+            toast.error("No valid questions found in Excel sheet.");
+            return;
+          }
+
+          setQuizForm(prev => {
+            const hasOnlyOneEmpty = prev.questions.length === 1 && 
+              !prev.questions[0].questionText && 
+              prev.questions[0].options.every(o => !o);
+
+            return {
+              ...prev,
+              questions: hasOnlyOneEmpty ? parsedQuestions : [...prev.questions, ...parsedQuestions]
+            };
+          });
+
+          toast.success(`Successfully uploaded ${parsedQuestions.length} questions from Excel!`);
+        } catch (err) {
+          console.error("Error reading sheet:", err);
+          toast.error("Failed to parse Excel sheet contents.");
+        }
+      };
+
+      reader.readAsArrayBuffer(file);
+    } catch (err) {
+      console.error(err);
+      toast.error("Error loading Excel parser library.");
+    } finally {
+      e.target.value = "";
+    }
+  };
+
+  const downloadExcelTemplate = async () => {
+    try {
+      const XLSX = await import("xlsx");
+      const header = ["Question Text", "Option 1", "Option 2", "Option 3", "Option 4", "Correct Choice Index (1 to 4)", "Question Marks"];
+      const sampleRow = ["e.g. Which HTML tag is used for stylesheet injections?", "<link>", "<style>", "<script>", "<a>", "1", "1"];
+      
+      const ws = XLSX.utils.aoa_to_sheet([header, sampleRow]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Questions Template");
+      
+      XLSX.writeFile(wb, "exam_questions_template.xlsx");
+      toast.success("Excel template download started!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to generate Excel template.");
+    }
   };
 
   const handleSaveQuiz = async (e: React.FormEvent) => {
@@ -1048,9 +1258,6 @@ export default function AdminDashboardPage() {
   };
 
   const handleDeleteQuiz = async (quizId: string) => {
-    if (!window.confirm("Are you sure you want to delete this exam? This action cannot be undone.")) {
-      return;
-    }
     try {
       const res = await fetch(`/api/admin/quizzes/${quizId}`, {
         method: "DELETE"
@@ -1065,6 +1272,52 @@ export default function AdminDashboardPage() {
     } catch (err) {
       console.error("Delete exam error:", err);
       toast.error("Network error deleting exam.");
+    }
+  };
+ 
+  const handleDuplicateQuiz = async (quizId: string) => {
+    try {
+      const res = await fetch(`/api/admin/quizzes/${quizId}`);
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        toast.error(data.error || "Failed to load exam for duplicating.");
+        return;
+      }
+
+      const quiz = data.quiz;
+      
+      const duplicatePayload = {
+        title: quiz.title ? `${quiz.title} - Copy` : "New Exam Copy",
+        course: quiz.course || "",
+        scheduledAt: quiz.scheduledAtUtc || quiz.scheduledAt,
+        duration: quiz.duration || 30,
+        assignedStudents: (quiz.assignedStudents || []).map((id: string) => id.toString()),
+        examPassword: quiz.examPassword || "",
+        questions: (quiz.questions || []).map((question: any) => ({
+          questionText: question.questionText || "",
+          options: [...(question.options || ["", "", "", ""])],
+          correctAnswerIndex: question.correctAnswerIndex ?? 0,
+          marks: question.marks ?? 1,
+        })),
+      };
+
+      const saveRes = await fetch("/api/admin/quizzes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(duplicatePayload),
+      });
+      const saveData = await saveRes.json();
+
+      if (saveRes.ok && saveData.success) {
+        toast.success("Exam duplicated successfully!");
+        await fetchAllData();
+      } else {
+        toast.error(saveData.error || "Failed to save duplicate exam.");
+      }
+    } catch (err) {
+      console.error("Duplicate exam error:", err);
+      toast.error("Network error duplicating exam.");
     }
   };
 
@@ -1471,23 +1724,22 @@ export default function AdminDashboardPage() {
     if (!student) return null;
 
     // Extract ID details dynamically
-    const regId = student.registrationId || "AGR/INSTR/2026/120033";
+    const regId = student.registrationId || "WBCS/MCBT/2026/120033";
     const match = regId.match(/\d+$/);
     const lastDigits = match ? match[0] : "000000";
     const appId = regId;
-    const rollNumber = `INSTR2026/${lastDigits}`;
-    const acSuffix = lastDigits.length >= 3 ? lastDigits.slice(-3) : lastDigits;
-    const admitCardNo = `AGR/INSTR/2026/AC000${acSuffix}`;
+    const rollNumber = `WBCS/MCBT/2026/${lastDigits}`;
+    const admitCardNo = `WBCS/MCBT/2026/${lastDigits}`;
 
     const formattedDob = student.dob
-      ? new Date(student.dob).toLocaleDateString("en-GB").replace(/\//g, "-")
-      : "14-02-1997";
+      ? new Date(student.dob).toLocaleDateString("en-GB").replace(/\//g, " / ")
+      : "14 / 09 / 2003";
 
     const examDate = student.examDate
       ? new Date(student.examDate).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
-      : "25 June 2025 (Thursday)";
-    const loginTime = student.loginTime || "09:30AM";
-    const startTime = student.startTime || "10:00AM";
+      : "25 June 2026 (Thursday)";
+    const loginTime = student.loginTime || "09:30 AM";
+    const startTime = student.startTime || "10:00 AM";
 
     // Fallback QR code data
     const verifyUrl = `https://smi.in.net/verify?reg=${student.registrationId || "N/A"}`;
@@ -1495,7 +1747,7 @@ export default function AdminDashboardPage() {
 
     return (
       <div
-        className="w-[297mm] h-[210mm] bg-white relative overflow-hidden box-border text-slate-800 p-[7mm] flex flex-col justify-between font-sans border-[6px] border-double border-[#0c3e8a]"
+        className="w-[297mm] h-[210mm] bg-white relative overflow-hidden box-border text-slate-800 p-[6mm] flex flex-col justify-between font-sans border-[3px] border-[#0c3e8a] rounded-lg"
         style={{
           WebkitPrintColorAdjust: "exact",
           printColorAdjust: "exact"
@@ -1513,287 +1765,283 @@ export default function AdminDashboardPage() {
         `}</style>
 
         {/* Top Header Section */}
-        <div className="flex justify-between items-start pb-2 border-b border-slate-300">
-          {/* Left: SMI circular logo & Subtitle */}
-          <div className="flex flex-col items-center w-[22%] text-center">
-            <img src="/smi-logo.png" className="h-16 w-16 object-contain" alt="SMI Logo" />
-            <span className="text-[7px] font-bold text-emerald-700 italic mt-1 leading-tight block">Sabka Saath, Sabka Vikas, Sabka Mission.</span>
-          </div>
-
-          {/* Center: Main Titles & Partner Logos */}
-          <div className="flex flex-col items-center w-[53%] text-center">
-            <h1 className="text-xl font-black tracking-tight text-[#0c3e8a] font-serif uppercase leading-none">SUPPORT MISSION INDIA</h1>
-            <span className="text-[9px] font-bold text-slate-500 italic mt-0.5">(A National Development Initiative)</span>
-
-            {/* Partnership divider */}
-            <div className="w-full flex items-center justify-center gap-2 my-1">
-              <div className="h-[1px] bg-slate-300 flex-1"></div>
-              <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider">IN partnership with</span>
-              <div className="h-[1px] bg-slate-300 flex-1"></div>
+        <div className="relative flex justify-between items-center border-b border-slate-300 pb-2 mb-1">
+          {/* Left & Center Header */}
+          <div className="flex-1 flex flex-col items-center relative">
+            {/* Horizontal line behind the ADMIT CARD title */}
+            <div className="absolute top-[20px] left-0 right-0 h-[2px] bg-[#0c3e8a] z-0"></div>
+            
+            {/* ADMIT CARD Title Badge */}
+            <div className="relative z-10 bg-[#0c3e8a] text-white text-2xl font-black px-12 py-1 rounded-full uppercase tracking-wider shadow-md">
+              ADMIT CARD
             </div>
-
-            {/* Partner Logos side by side */}
-            <div className="flex items-center gap-6 mt-1">
-              <div className="flex flex-col items-center">
-                <img
-                  src="https://vidyanjali.education.gov.in/assets/public/logo.png"
-                  className="h-9 object-contain"
-                  alt="Vidyanjali Logo"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = "/smi-logo.png";
-                  }}
-                />
-                <span className="text-[6px] font-bold text-slate-500 mt-0.5">(A School Volunteer Programme)</span>
-              </div>
-              <div className="flex flex-col items-center">
-                <img
-                  src="https://pmshrischools.education.gov.in/assets/logo192.png"
-                  className="h-9 object-contain"
-                  alt="PM SHRI Logo"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = "/smi-logo.png";
-                  }}
-                />
-              </div>
+            
+            <div className="text-xs font-black text-slate-800 mt-2 z-10 bg-white px-4">
+              Issued By: <span className="text-[#0c3e8a]">SUPPORT MISSION INDIA</span>
             </div>
           </div>
-
-          {/* Right: Identifiers Table & QR Code */}
-          <div className="w-[25%] flex flex-col items-end gap-1.5 pl-3">
-            {/* Identifiers Table */}
-            <table className="w-full text-[8.5px] border-collapse border border-slate-300 bg-white">
-              <tbody>
-                <tr>
-                  <td className="border border-slate-300 px-1.5 py-0.5 font-bold text-slate-500 uppercase tracking-wider text-[6.5px]">Admit Card No.</td>
-                  <td className="border border-slate-300 px-1.5 py-0.5 font-mono font-bold text-rose-600">{admitCardNo}</td>
-                </tr>
-                <tr>
-                  <td className="border border-slate-300 px-1.5 py-0.5 font-bold text-slate-500 uppercase tracking-wider text-[6.5px]">Application ID</td>
-                  <td className="border border-slate-300 px-1.5 py-0.5 font-mono font-bold text-slate-700">{appId}</td>
-                </tr>
-                <tr>
-                  <td className="border border-slate-300 px-1.5 py-0.5 font-bold text-slate-500 uppercase tracking-wider text-[6.5px]">Roll Number</td>
-                  <td className="border border-slate-300 px-1.5 py-0.5 font-mono font-bold text-slate-700">{rollNumber}</td>
-                </tr>
-              </tbody>
-            </table>
-
-            {/* QR code and text */}
-            <div className="flex items-center gap-2 border border-slate-200 p-1 rounded bg-white w-full">
-              <img src={qrCodeUrl} className="h-11 w-11 object-contain shrink-0" alt="Verification QR" />
-              <div className="text-left leading-normal">
-                <span className="text-[7.5px] font-black text-[#0c3e8a] block uppercase tracking-wide">Scan QR Code</span>
-                <span className="text-[6.5px] text-slate-400 font-semibold block leading-tight">to verify candidate details</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Title Banner Section */}
-        <div className="flex flex-col items-center my-1 text-center">
-          <div className="bg-[#0c3e8a] text-white text-[9px] font-extrabold px-3 py-0.5 rounded-sm uppercase tracking-wider shadow-sm">
-            AGRAGAMI - 52 WEEK INTEGRATED SKILL DEVELOPMENT PROGRAMME
-          </div>
-          <h2 className="text-lg font-black text-[#0c3e8a] tracking-tight uppercase mt-0.5">
-            INSTRUCTOR ADMIT CARD
-          </h2>
-          <div className="bg-[#0c3e8a] text-white text-[7.5px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider mt-0.5">
-            (ONLINE INTERVIEW / ASSESSMENT)
+          
+          {/* Right Header Logo */}
+          <div className="flex flex-col items-center text-center shrink-0 pl-4 w-[180px]">
+            <img src="/smi-logo.png" className="h-14 w-auto object-contain" alt="SMI Logo" />
+            <span className="text-[7px] font-black text-emerald-700 italic mt-0.5 leading-tight block">
+              Sabka Saath, Sabka Vikas, Sabka Mission.
+            </span>
           </div>
         </div>
 
         {/* Main Content Sections (Candidate Details, Photo, Exam details) */}
-        <div className="grid grid-cols-12 gap-3 items-stretch my-1.5 text-left">
-          {/* Left Column (Candidate details, photo and login info) (span 9) */}
-          <div className="col-span-9 flex flex-col justify-between gap-3 border-r border-slate-250 pr-3">
-
-            {/* Top row of Left Column (Candidate Info & Photo) */}
-            <div className="grid grid-cols-12 gap-3 items-stretch">
-              {/* Candidate Info (Col span 8) */}
-              <div className="col-span-8 flex flex-col">
-                <div className="bg-[#0c3e8a] text-white text-[8.5px] font-bold px-2 py-0.5 uppercase tracking-wide rounded-sm mb-1.5">
-                  CANDIDATE DETAILS
+        <div className="grid grid-cols-12 gap-3 items-stretch my-1 text-left">
+          {/* 1. Candidate Details Box (Col span 5) */}
+          <div className="col-span-5 border border-slate-300 rounded-lg overflow-hidden flex flex-col bg-white">
+            <div className="bg-[#0c3e8a] text-white text-[8.5px] font-bold px-3 py-1 flex items-center gap-1.5 uppercase tracking-wider">
+              <User className="h-3 w-3" />
+              <span>Candidate Details</span>
+            </div>
+            <div className="p-2 flex-1 flex flex-col justify-between text-[9.5px] leading-relaxed">
+              <div className="space-y-1">
+                <div className="flex items-center">
+                  <span className="w-[38%] text-slate-700 font-bold">Admit Card No.</span>
+                  <span className="w-[4%] font-bold text-slate-500">:</span>
+                  <span className="w-[58%] font-mono font-bold text-rose-600">{admitCardNo}</span>
                 </div>
-                <table className="w-full text-[9.5px] leading-relaxed">
-                  <tbody>
-                    <tr>
-                      <td className="text-slate-400 font-bold uppercase tracking-wider text-[7px] py-0.5 w-[35%]">Candidate Name</td>
-                      <td className="font-extrabold text-[#0c3e8a] py-0.5 w-[65%]">{student.name}</td>
-                    </tr>
-                    <tr>
-                      <td className="text-slate-400 font-bold uppercase tracking-wider text-[7px] py-0.5">Father's / Guardian's Name</td>
-                      <td className="font-semibold text-slate-700 py-0.5">{student.fatherName}</td>
-                    </tr>
-                    <tr>
-                      <td className="text-slate-400 font-bold uppercase tracking-wider text-[7px] py-0.5">Date of Birth</td>
-                      <td className="font-semibold text-slate-700 py-0.5">{formattedDob}</td>
-                    </tr>
-                    <tr>
-                      <td className="text-slate-400 font-bold uppercase tracking-wider text-[7px] py-0.5">Gender</td>
-                      <td className="font-semibold text-slate-700 py-0.5">{student.gender || "MALE"}</td>
-                    </tr>
-                    <tr>
-                      <td className="text-slate-400 font-bold uppercase tracking-wider text-[7px] py-0.5">Category</td>
-                      <td className="font-semibold text-slate-700 py-0.5">{student.category || "GEN"}</td>
-                    </tr>
-                    <tr>
-                      <td className="text-slate-400 font-bold uppercase tracking-wider text-[7px] py-0.5">Mobile Number</td>
-                      <td className="font-semibold text-slate-700 py-0.5">{student.phone}</td>
-                    </tr>
-                    <tr>
-                      <td className="text-slate-400 font-bold uppercase tracking-wider text-[7px] py-0.5">Email ID</td>
-                      <td className="font-semibold text-slate-700 py-0.5 truncate max-w-[170px]">{student.email}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Photo & Signature (Col span 4) */}
-              <div className="col-span-4 flex flex-col items-center justify-between border border-slate-200 p-2 rounded bg-white text-center">
-                {/* Photo container */}
-                <div className="h-[75px] w-[60px] border border-slate-300 rounded overflow-hidden flex items-center justify-center bg-slate-50 shadow-inner">
-                  {student.profilePicUrl ? (
-                    <img src={resolveFileUrl(student.profilePicUrl)} className="h-full w-full object-cover" alt="Candidate Photo" />
-                  ) : (
-                    <span className="text-[7px] text-slate-400 text-center font-bold">PASTE PHOTO</span>
-                  )}
+                <div className="flex items-center">
+                  <span className="w-[38%] text-slate-700 font-bold">Roll Number</span>
+                  <span className="w-[4%] font-bold text-slate-500">:</span>
+                  <span className="w-[58%] font-mono font-semibold text-slate-800">{rollNumber}</span>
                 </div>
-                {/* Signature line */}
-                <div className="w-full text-center border-t border-slate-200 mt-2 pt-1 flex flex-col items-center justify-center">
-                  <div className="h-6 w-full flex items-center justify-center overflow-hidden">
-                    {student.signatureUrl ? (
-                      <img src={resolveFileUrl(student.signatureUrl)} className="h-full object-contain" alt="Candidate Signature" />
-                    ) : (
-                      <div style={{ fontFamily: "'Dancing Script', 'Pacifico', 'Brush Script MT', cursive", fontSize: "12px", color: "#1e3a8a" }} className="font-extrabold select-none italic">
-                        {student.name}
-                      </div>
-                    )}
-                  </div>
-                  <div className="h-[1px] bg-slate-400 w-[85%] mx-auto mt-0.5"></div>
-                  <span className="text-[7px] font-black uppercase text-slate-400 tracking-wider block mt-0.5">Candidate Signature</span>
+                <div className="flex items-center">
+                  <span className="w-[38%] text-slate-700 font-bold">Candidate Name</span>
+                  <span className="w-[4%] font-bold text-slate-500">:</span>
+                  <span className="w-[58%] font-extrabold text-[#0c3e8a] uppercase">{student.name}</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="w-[38%] text-slate-700 font-bold">Father's & Mother's Name</span>
+                  <span className="w-[4%] font-bold text-slate-500">:</span>
+                  <span className="w-[58%] font-semibold text-slate-800 truncate">{student.fatherName} / {student.motherName || "—"}</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="w-[38%] text-slate-700 font-bold">Date of Birth</span>
+                  <span className="w-[4%] font-bold text-slate-500">:</span>
+                  <span className="w-[58%] font-semibold text-slate-800">{formattedDob}</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="w-[38%] text-slate-700 font-bold">Gender</span>
+                  <span className="w-[4%] font-bold text-slate-500">:</span>
+                  <span className="w-[58%] font-semibold text-slate-800 uppercase">{student.gender || "MALE"}</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="w-[38%] text-slate-700 font-bold">Category</span>
+                  <span className="w-[4%] font-bold text-slate-500">:</span>
+                  <span className="w-[58%] font-semibold text-slate-800 uppercase">{student.category || "GEN"}</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="w-[38%] text-slate-700 font-bold">Educational Qualification</span>
+                  <span className="w-[4%] font-bold text-slate-500">:</span>
+                  <span className="w-[58%] font-semibold text-slate-800">Graduate</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="w-[38%] text-slate-700 font-bold">Application ID</span>
+                  <span className="w-[4%] font-bold text-slate-500">:</span>
+                  <span className="w-[58%] font-mono font-semibold text-slate-800">{appId}</span>
                 </div>
               </div>
             </div>
-
-            {/* Exam Details (Middle section) */}
-            <div className="flex flex-col">
-              <div className="bg-[#0c3e8a] text-white text-[8.5px] font-bold px-2 py-0.5 uppercase tracking-wide rounded-sm mb-1.5">
-                INTERVIEW DETAILS
-              </div>
-              <table className="w-full text-[9px] leading-relaxed">
-                <tbody>
-                  <tr className="grid grid-cols-12 w-full gap-x-2">
-                    <td className="col-span-4"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Post Applied For</span><span className="font-extrabold text-[#0c3e8a]">{student.course || "Instructor"}</span></td>
-                    <td className="col-span-4"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Interview Mode</span><span className="font-semibold text-slate-700">Online (Remote Proctored)</span></td>
-                    <td className="col-span-4"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Interview Date</span><span className="font-semibold text-slate-700">As per Schedule</span></td>
-                  </tr>
-                  <tr className="grid grid-cols-12 w-full gap-x-2 mt-1">
-                    <td className="col-span-3"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Login Time</span><span className="font-semibold text-slate-700">As per Schedule</span></td>
-                    <td className="col-span-3"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Exam Start Time</span><span className="font-semibold text-slate-700">As per Schedule</span></td>
-                    <td className="col-span-2"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Duration</span><span className="font-semibold text-slate-700">As per Schedule</span></td>
-                    <td className="col-span-4"><span className="text-slate-400 font-bold uppercase tracking-wider text-[7px] block">Platform / Portal</span><span className="font-semibold text-slate-700">www.smi.in.net</span></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            {/* Bottom Row grid: Login Info, Requirements, Documents */}
-            <div className="grid grid-cols-3 gap-3">
-              {/* Login Information */}
-              <div className="flex flex-col">
-                <div className="bg-[#0c3e8a] text-white text-[8.5px] font-bold px-2 py-0.5 uppercase tracking-wide rounded-sm mb-1">
-                  LOGIN INFORMATION
-                </div>
-                <div className="border border-slate-200 p-1.5 rounded bg-slate-50/50 text-[8.5px] space-y-1 flex-1">
-                  <p className="font-bold text-slate-600">User ID/ Registration No. : <span className="font-mono font-extrabold text-[#0c3e8a] block">{student.registrationId}</span></p>
-                  <p className="font-bold text-slate-500">Password : <span className="text-rose-600 font-extrabold font-mono tracking-wide">{student.originalPassword || "(Your portal login password)"}</span></p>
-                </div>
-              </div>
-
-              {/* Technical Requirements */}
-              <div className="flex flex-col">
-                <div className="bg-[#0c3e8a] text-white text-[8.5px] font-bold px-2 py-0.5 uppercase tracking-wide rounded-sm mb-1">
-                  TECHNICAL REQUIREMENTS
-                </div>
-                <div className="border border-slate-200 p-1.5 rounded bg-slate-50/50 text-[7.5px] leading-tight space-y-0.5 text-slate-500 font-semibold flex-1">
-                  <p>• Laptop/Desktop/Smartphone stable net</p>
-                  <p>• Working Webcam (front facing)</p>
-                  <p>• Working Microphone & clear audio</p>
-                  <p>• Quiet and well-lit environment</p>
-                  <p>• Latest Chrome / Firefox / Edge</p>
-                  <p>• Do not use any VPN or proxy</p>
-                </div>
-              </div>
-
-              {/* Documents Required */}
-              <div className="flex flex-col">
-                <div className="bg-[#0c3e8a] text-white text-[8.5px] font-bold px-2 py-0.5 uppercase tracking-wide rounded-sm mb-1">
-                  DOCUMENTS REQUIRED
-                </div>
-                <div className="border border-slate-200 p-1.5 rounded bg-slate-50/50 text-[7px] leading-tight space-y-0.5 text-slate-500 font-semibold flex-1">
-                  <p>• Aadhaar Card / Valid Photo ID (Original)</p>
-                  <p>• Admit Card (Soft Copy or Print)</p>
-                  <p>• Recent Passport Size Photograph</p>
-                  <p className="text-slate-400 mt-0.5 leading-none">Note: Show original ID on camera for verification.</p>
-                </div>
-              </div>
-            </div>
-
           </div>
 
-          {/* Right Column (span 3) - Instructions and Authorised Signatory */}
-          <div className="col-span-3 flex flex-col justify-between pl-1">
-            <div className="flex flex-col flex-1">
-              <div className="bg-[#0c3e8a] text-white text-[8.5px] font-bold px-2 py-0.5 uppercase tracking-wide rounded-sm mb-1.5 text-center">
-                IMPORTANT INSTRUCTIONS
+          {/* 2. Photo Column (Col span 2) */}
+          <div className="col-span-2 border border-slate-300 rounded-lg p-2 flex flex-col items-center justify-between bg-white text-center">
+            <div className="flex-1 flex flex-col items-center justify-center">
+              <div className="h-[95px] w-[75px] border border-dashed border-slate-400 rounded flex items-center justify-center bg-slate-50 overflow-hidden relative">
+                {student.profilePicUrl ? (
+                  <img src={resolveFileUrl(student.profilePicUrl)} className="h-full w-full object-cover" alt="Candidate Photo" />
+                ) : (
+                  <svg className="w-10 h-10 text-slate-300" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0 1 12.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 1 1-8 0 4 4 0 0 1 8 0z" />
+                  </svg>
+                )}
               </div>
-              <div className="text-[7.5px] leading-snug space-y-1.5 text-slate-600 font-medium">
-                <p>1. Please login at least 15 minutes before the scheduled time.</p>
-                <p>2. Keep your webcam and microphone ON throughout the session.</p>
-                <p>3. No other person is allowed in the room during the interview.</p>
-                <p>4. Do not use mobile phone, smartwatch, or any other electronic device.</p>
-                <p>5. Do not take screenshots, screen recordings or share the interview link.</p>
-                <p>6. Ensure stable internet connection. In case of disconnection, re-login immediately.</p>
-                <p>7. Any misconduct or use of unfair means will lead to disqualification.</p>
-                <p>8. The decision of the panel willbe final and binding.</p>
+              <span className="text-[7px] font-bold text-slate-500 uppercase tracking-wider mt-2 block leading-tight">
+                Recent Passport<br />Size Photograph
+              </span>
+            </div>
+          </div>
+
+          {/* 3. Examination Details Box & QR Code (Col span 5) */}
+          <div className="col-span-5 grid grid-cols-12 gap-2 items-stretch">
+            {/* Exam Details (Col span 9) */}
+            <div className="col-span-9 border border-slate-300 rounded-lg overflow-hidden flex flex-col bg-white">
+              <div className="bg-[#0c3e8a] text-white text-[8.5px] font-bold px-3 py-1 flex items-center gap-1.5 uppercase tracking-wider">
+                <Calendar className="h-3 w-3" />
+                <span>Examination Details</span>
+              </div>
+              <div className="p-2 flex-1 flex flex-col justify-between text-[9.5px] leading-relaxed">
+                <div className="space-y-1">
+                  <div className="flex items-start">
+                    <span className="w-[38%] text-slate-700 font-bold shrink-0">Examination Name</span>
+                    <span className="w-[4%] font-bold text-slate-500 shrink-0">:</span>
+                    <span className="w-[58%] font-semibold text-slate-800 leading-tight">WBCS Mock CBT Examination - 2026</span>
+                  </div>
+                  <div className="flex items-start">
+                    <span className="w-[38%] text-slate-700 font-bold shrink-0">Examination Type</span>
+                    <span className="w-[4%] font-bold text-slate-500 shrink-0">:</span>
+                    <span className="w-[58%] font-semibold text-slate-800 leading-tight">Computer Based Test (Mock Assessment)</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="w-[38%] text-slate-700 font-bold">Examination Date</span>
+                    <span className="w-[4%] font-bold text-slate-500">:</span>
+                    <span className="w-[58%] font-bold text-[#0c3e8a]">{examDate}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="w-[38%] text-slate-700 font-bold">Reporting Time</span>
+                    <span className="w-[4%] font-bold text-slate-500">:</span>
+                    <span className="w-[58%] font-semibold text-slate-800">{loginTime}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="w-[38%] text-slate-700 font-bold">Gate Closing Time</span>
+                    <span className="w-[4%] font-bold text-slate-500">:</span>
+                    <span className="w-[58%] font-semibold text-slate-800">09:45 AM</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="w-[38%] text-slate-700 font-bold">Examination Time</span>
+                    <span className="w-[4%] font-bold text-slate-500">:</span>
+                    <span className="w-[58%] font-semibold text-slate-800">{startTime}</span>
+                  </div>
+                  <div className="flex items-start">
+                    <span className="w-[38%] text-slate-700 font-bold shrink-0">Examination Centre</span>
+                    <span className="w-[4%] font-bold text-slate-500 shrink-0">:</span>
+                    <span className="w-[58%] font-semibold text-slate-800 leading-tight">Online (Remote Proctored)</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="w-[38%] text-slate-700 font-bold">Centre Code</span>
+                    <span className="w-[4%] font-bold text-slate-500">:</span>
+                    <span className="w-[58%] font-semibold text-slate-800">ONLINE-01</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="w-[38%] text-slate-700 font-bold">District</span>
+                    <span className="w-[4%] font-bold text-slate-500">:</span>
+                    <span className="w-[58%] font-semibold text-slate-800 uppercase">{student.district || "—"}</span>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Authorised Signatory Signature stamp */}
-            <div className="text-center mt-2 border-t border-slate-200 pt-1.5 flex flex-col items-center">
-              <div className="h-6 w-24 relative flex items-center justify-center">
-                <img src="/admit-signature.png" alt="Authorized Signature" className="max-h-full max-w-full object-contain mix-blend-multiply" />
+            {/* QR Code Container (Col span 3) */}
+            <div className="col-span-3 border border-slate-300 rounded-lg overflow-hidden flex flex-col bg-white">
+              <div className="bg-[#0c3e8a] text-white text-[8px] font-bold py-1 text-center uppercase tracking-wider">
+                QR Code
               </div>
-              <div className="h-[1px] bg-slate-400 w-[80%] my-0.5"></div>
-              <span className="text-[6.5px] font-extrabold text-slate-500 leading-tight uppercase block">Authorised Signatory</span>
-              <span className="text-[6px] font-bold text-slate-400 leading-none block">Programme Coordinator</span>
-              <span className="text-[6px] font-bold text-slate-400 leading-none block">Support Mission India</span>
+              <div className="p-1 flex-1 flex flex-col items-center justify-center text-center">
+                <img src={qrCodeUrl} className="h-14 w-14 object-contain" alt="QR Code" />
+                <span className="text-[6px] font-bold text-slate-500 mt-1 block leading-tight">
+                  Scan to Verify<br />Admit Card
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Section (Declaration, Instructions, Disclaimer) */}
+        <div className="grid grid-cols-12 gap-3 items-stretch my-1">
+          {/* Candidate Declaration (Col span 3) */}
+          <div className="col-span-3 border border-slate-300 rounded-lg overflow-hidden flex flex-col bg-white">
+            <div className="bg-[#0c3e8a] text-white text-[8.5px] font-bold px-2 py-1 flex items-center gap-1.5 uppercase tracking-wider">
+              <FileText className="h-3 w-3" />
+              <span>Candidate Declaration</span>
+            </div>
+            <div className="p-2 flex-1 flex flex-col justify-between">
+              <p className="text-[7px] leading-relaxed text-slate-600">
+                I hereby declare that all information furnished by me is true and correct. I agree to abide by all examination rules and instructions issued by the organizers.
+              </p>
+              <div className="border-t border-slate-300 mt-4 pt-1 flex flex-col items-center">
+                <div className="h-5 w-full flex items-center justify-center overflow-hidden">
+                  {student.signatureUrl ? (
+                    <img src={resolveFileUrl(student.signatureUrl)} className="h-full object-contain" alt="Signature" />
+                  ) : (
+                    <div style={{ fontFamily: "'Dancing Script', cursive", fontSize: "11px", color: "#1c3d5a" }} className="italic font-bold select-none">
+                      {student.name}
+                    </div>
+                  )}
+                </div>
+                <span className="text-[7px] font-bold text-slate-500 uppercase tracking-wider block mt-0.5">Candidate Signature</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Important Instructions (Col span 5) */}
+          <div className="col-span-5 border border-slate-300 rounded-lg overflow-hidden flex flex-col bg-white">
+            <div className="bg-[#0c3e8a] text-white text-[8.5px] font-bold px-2 py-1 flex items-center gap-1.5 uppercase tracking-wider">
+              <AlertCircle className="h-3 w-3" />
+              <span>Important Instructions</span>
+            </div>
+            <div className="p-2 flex-1 text-[6.5px] leading-snug text-slate-600 space-y-0.5">
+              <p>1. Candidates must carry a printed copy of this Admit Card along with a valid Photo Identity Proof.</p>
+              <p>2. Entry to the examination hall will not be permitted after the gate closing time.</p>
+              <p>3. Mobile phones, smart watches, Bluetooth devices, calculators and any electronic gadgets are strictly prohibited.</p>
+              <p>4. Candidates must occupy only their allotted seats.</p>
+              <p>5. Any form of unfair practice, impersonation or misconduct may lead to cancellation of candidature.</p>
+              <p>6. Candidates are advised to reach the examination venue at least 30 minutes before the reporting time.</p>
+              <p>7. The decision of the Examination Authority shall be final and binding in all matters related to the examination.</p>
+            </div>
+          </div>
+
+          {/* Disclaimer (Col span 4) */}
+          <div className="col-span-4 border border-slate-300 rounded-lg overflow-hidden flex flex-col bg-white">
+            <div className="bg-[#0c3e8a] text-white text-[8.5px] font-bold px-2 py-1 flex items-center gap-1.5 uppercase tracking-wider">
+              <Shield className="h-3 w-3" />
+              <span>Disclaimer</span>
+            </div>
+            <div className="p-2 flex-1 text-[6px] leading-relaxed text-slate-500 text-justify">
+              This Admit Card has been issued solely for participation in the Mock CBT Examination organized by Support Mission India for educational, assessment and practice purposes. This is NOT an Admit Card for any Government Recruitment Examination, WBCS Examination conducted by the Public Service Commission, UPSC Examination, Railway Examination, Banking Examination or any other official recruitment process. The examination is intended only to help candidates assess their preparation level and gain experience in a Computer Based Test (CBT) environment. If any individual reproduces, modifies, circulates, presents or uses this Admit Card for any unauthorized, fraudulent, misleading, illegal or dishonest purpose, Support Mission India shall not be held responsible or liable in any manner whatsoever. The entire responsibility for such misuse shall rest solely with the concerned individual. By appearing in this Mock CBT Examination, the candidate acknowledges and accepts all the above terms, conditions and disclaimers.
             </div>
           </div>
         </div>
 
         {/* Footer Area */}
-        <div className="border-t border-[#0c3e8a] pt-1 flex justify-between items-end text-[7.5px] text-slate-400 font-semibold font-mono shrink-0">
-          <div className="text-left">
-            <p className="font-extrabold text-slate-600">HELPDESK SUPPORT: +91 9878543210 | info@smi.in.net | www.smi.in.net</p>
-          </div>
-
-          <div className="text-center flex flex-col items-center">
-            <span className="text-[7.5px] font-extrabold text-slate-500 uppercase leading-none block">PROGRAMME IMPLEMENTED BY</span>
-            <span className="text-[10px] font-black text-[#0c3e8a] tracking-tight leading-none uppercase mt-0.5 border-b border-[#0c3e8a]">SUPPORT MISSION INDIA</span>
-            <span className="text-[6px] text-slate-400 font-bold mt-0.5 block">Empowering India, Enriching Lives</span>
-          </div>
-
-          <div className="text-right flex flex-col items-end gap-0.5">
-            <span className="text-[7px] font-bold text-rose-600 border border-rose-200 px-1.5 py-0.5 rounded bg-rose-50/50">
-              * This Admit Card is valid only for the above mentioned date and time.
+        <div className="border-t border-slate-300 pt-2 mt-1 flex justify-between items-center text-[10px]">
+          {/* Left: For Office Use Only */}
+          <div className="border border-slate-300 rounded p-1.5 bg-slate-50/50 w-[280px]">
+            <span className="text-[7.5px] font-black uppercase text-[#0c3e8a] tracking-wider block mb-1">
+              ★ For Office Use Only
             </span>
+            <div className="flex justify-between items-end gap-3 text-[9px]">
+              <div className="flex-1 flex flex-col justify-end">
+                <div className="flex items-center gap-1.5 h-6">
+                  <span className="text-slate-500 font-semibold shrink-0">Invigilator Signature:</span>
+                  <div className="h-5 flex-1 relative overflow-hidden">
+                    <img src="/admit-signature.png" alt="Signature" className="max-h-full object-contain mix-blend-multiply" />
+                  </div>
+                </div>
+                <div className="h-[1px] bg-slate-400 w-full mt-0.5"></div>
+              </div>
+              <div className="shrink-0 text-slate-700 font-bold pb-0.5">
+                Attendance Status : <span className="text-slate-400 font-normal">Present / Absent</span>
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* Computer generated disclaimer at the very bottom */}
-        <div className="text-[7px] text-slate-400 text-center w-full mt-0.5 leading-none">
-          This is a computer generated document and does not require any physical signature.
+          {/* Center: Stamp Logo & Text */}
+          <div className="flex items-center gap-2">
+            <div className="h-10 w-10 rounded-full border border-emerald-600 p-0.5 flex items-center justify-center bg-emerald-50 shrink-0">
+              <img src="/smi-logo.png" className="h-8 w-8 object-contain" alt="Stamp Logo" />
+            </div>
+            <div className="text-left leading-none">
+              <span className="text-xs font-black text-slate-800 block">SUPPORT MISSION INDIA</span>
+              <span className="text-[8px] font-bold text-slate-500 block mt-0.5">Examination & Assessment Cell</span>
+              <span className="text-[8px] font-black text-emerald-700 tracking-wider block mt-0.5 border border-emerald-600 px-1 py-0.5 rounded bg-emerald-50 text-center uppercase">
+                MOCK EXAM ADMIT
+              </span>
+            </div>
+          </div>
+
+          {/* Right: Computer Generated Message */}
+          <div className="flex items-center gap-2 text-slate-500 text-[8px] leading-tight">
+            <FileText className="h-6 w-6 text-slate-400 shrink-0" />
+            <div>
+              <p className="font-bold">This Admit Card is computer generated.</p>
+              <p>No signature is required.</p>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -2195,6 +2443,9 @@ export default function AdminDashboardPage() {
       s.course.toLowerCase().includes(searchQuery.toLowerCase());
 
     if (!matchesSearch) return false;
+
+    if (courseFilter && s.course !== courseFilter) return false;
+    if (districtFilter && s.district !== districtFilter) return false;
 
     const studentActive = s.isActive !== false;
     if (statusFilter === "active") return studentActive;
@@ -2940,6 +3191,68 @@ export default function AdminDashboardPage() {
                       </button>
                     </div>
                   </div>
+
+                  {/* Search and Filters Bar */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200/60">
+                    <div className="relative">
+                      <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <Search className="h-4 w-4" />
+                      </span>
+                      <input
+                        type="text"
+                        placeholder="Search name, registration ID, email..."
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/5 transition-all font-semibold placeholder-slate-400"
+                      />
+                    </div>
+
+                    <div>
+                      <select
+                        value={courseFilter}
+                        onChange={e => setCourseFilter(e.target.value)}
+                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-750 focus:outline-none focus:border-deepskyblue font-semibold cursor-pointer"
+                      >
+                        <option value="">All Courses</option>
+                        {coursesList.map((course, cIdx) => (
+                          <option key={cIdx} value={course.title}>
+                            {course.title}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <select
+                        value={districtFilter}
+                        onChange={e => setDistrictFilter(e.target.value)}
+                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-750 focus:outline-none focus:border-deepskyblue font-semibold cursor-pointer"
+                      >
+                        <option value="">All Districts</option>
+                        {WEST_BENGAL_DISTRICTS.map((dist, dIdx) => (
+                          <option key={dIdx} value={dist}>
+                            {dist}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {(searchQuery || courseFilter || districtFilter) && (
+                    <div className="flex justify-end pr-2 text-[10px] -mt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearchQuery("");
+                          setCourseFilter("");
+                          setDistrictFilter("");
+                        }}
+                        className="text-rose-500 hover:text-rose-700 font-bold underline cursor-pointer"
+                      >
+                        Clear Active Filters
+                      </button>
+                    </div>
+                  )}
 
                   {filteredStudents.length === 0 ? (
                     <p className="text-xs text-slate-400 py-10 text-center font-medium">No candidate accounts found matching search.</p>
@@ -4061,25 +4374,58 @@ export default function AdminDashboardPage() {
 
                   {/* Questions Array */}
                   <div className="space-y-6 pt-4">
-                    <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b border-slate-100 pb-3 gap-2">
                       <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900">
                         Questions List ({quizForm.questions.length})
                       </h3>
+                      <div className="flex items-center gap-2">
+                        <label className="text-[10px] font-bold text-deepskyblue hover:text-deepskyblue-dark border border-deepskyblue/25 bg-deepskyblue/5 hover:bg-deepskyblue/10 px-3 py-1.5 rounded-xl cursor-pointer transition-all flex items-center gap-1.5 select-none">
+                          <Upload className="h-3.5 w-3.5" />
+                          <span>Upload Excel</span>
+                          <input
+                            type="file"
+                            accept=".xlsx, .xls"
+                            className="hidden"
+                            onChange={handleExcelUpload}
+                          />
+                        </label>
+                        <a
+                          href="#"
+                          onClick={e => {
+                            e.preventDefault();
+                            downloadExcelTemplate();
+                          }}
+                          className="text-[9px] font-bold text-slate-400 hover:text-slate-650 underline select-none"
+                        >
+                          Template
+                        </a>
+                      </div>
                     </div>
 
                     {quizForm.questions.map((question, qIdx) => (
                       <React.Fragment key={qIdx}>
                         <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-4 relative">
 
-                          {quizForm.questions.length > 1 && (
+                          <div className="absolute top-4 right-4 flex items-center gap-1.5">
                             <button
                               type="button"
-                              onClick={() => removeQuizQuestion(qIdx)}
-                              className="absolute top-4 right-4 text-slate-400 hover:text-rose-500 p-1.5 transition-colors cursor-pointer"
+                              onClick={() => duplicateQuizQuestion(qIdx)}
+                              className="text-slate-400 hover:text-deepskyblue p-1.5 transition-colors cursor-pointer"
+                              title="Duplicate Question"
                             >
-                              <Trash className="h-4 w-4" />
+                              <Copy className="h-4 w-4" />
                             </button>
-                          )}
+                            {quizForm.questions.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeQuizQuestion(qIdx)}
+                                className="text-slate-400 hover:text-rose-500 p-1.5 transition-colors cursor-pointer"
+                                title="Delete Question"
+                              >
+                                <Trash className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
 
                           <span className="text-[10px] uppercase font-black text-deepskyblue-dark">Question #{qIdx + 1}</span>
 
@@ -4091,7 +4437,7 @@ export default function AdminDashboardPage() {
                               placeholder="e.g. Which HTML tag is used for injecting external stylesheets?"
                               value={question.questionText}
                               onChange={e => handleQuizQuestionChange(qIdx, e.target.value)}
-                              className="block w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue"
+                              className="block w-full px-4 py-4 bg-white border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/10 transition-all font-semibold"
                             />
                           </div>
 
@@ -4106,7 +4452,7 @@ export default function AdminDashboardPage() {
                                   placeholder={`Option ${optIdx + 1} choice`}
                                   value={opt}
                                   onChange={e => handleQuizOptionChange(qIdx, optIdx, e.target.value)}
-                                  className="block w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-750 text-xs focus:outline-none focus:border-deepskyblue"
+                                  className="block w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-750 text-sm focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/10 transition-all font-semibold"
                                 />
                               </div>
                             ))}
@@ -4119,7 +4465,7 @@ export default function AdminDashboardPage() {
                               <select
                                 value={question.correctAnswerIndex}
                                 onChange={e => handleQuizCorrectIndexChange(qIdx, parseInt(e.target.value))}
-                                className="block w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-750 text-xs focus:outline-none focus:border-deepskyblue"
+                                className="block w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-slate-750 text-sm focus:outline-none focus:border-deepskyblue font-semibold"
                               >
                                 <option value={0}>Option 1</option>
                                 <option value={1}>Option 2</option>
@@ -4137,7 +4483,7 @@ export default function AdminDashboardPage() {
                                 min={1}
                                 value={question.marks || 1}
                                 onChange={e => handleQuizMarksChange(qIdx, parseInt(e.target.value) || 1)}
-                                className="block w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-750 text-xs focus:outline-none focus:border-deepskyblue"
+                                className="block w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-slate-750 text-sm focus:outline-none focus:border-deepskyblue font-semibold"
                               />
                             </div>
                           </div>
@@ -4197,6 +4543,13 @@ export default function AdminDashboardPage() {
                                 Total Marks: {totalQuizMarks}
                               </span>
                               <div className="flex gap-2 mt-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDuplicateQuiz(quiz._id)}
+                                  className="px-2.5 py-1 bg-amber-50 hover:bg-amber-600 text-amber-705 hover:text-white rounded-xl text-[10px] font-bold cursor-pointer transition shadow shadow-amber-500/5"
+                                >
+                                  Duplicate
+                                </button>
                                 <button
                                   type="button"
                                   onClick={() => handleEditQuiz(quiz._id)}
@@ -4608,6 +4961,260 @@ export default function AdminDashboardPage() {
                                 </tr>
                               );
                             })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ================= TAB CONTENT: LIVE CLASSES ================= */}
+            {activeTab === "classes" && (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start animate-fade-in">
+                {/* Left Column: Create Live Class Form */}
+                <form onSubmit={handleSaveLiveClass} className="md:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-6">
+                  <div className="border-b border-slate-100 pb-3">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900">
+                      Live Class Scheduler
+                    </h3>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Class Name</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Introduction to Javascript"
+                        value={classForm.className}
+                        onChange={e => setClassForm(prev => ({ ...prev, className: e.target.value }))}
+                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Enrolled Course</label>
+                      <select
+                        required
+                        value={classForm.course}
+                        onChange={e => {
+                          const nextCourse = e.target.value;
+                          setClassForm(prev => ({ ...prev, course: nextCourse, students: [] }));
+                        }}
+                        disabled={courseOptions.length === 0}
+                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white disabled:opacity-60"
+                      >
+                        <option value="" disabled>
+                          {courseOptions.length === 0 ? "No courses created yet. Go to Courses tab." : "Select Enrolled Course"}
+                        </option>
+                        {courseOptions.map((co, idx) => (
+                          <option key={idx} value={co} className="bg-white">{co}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {classForm.course && (
+                      <div className="space-y-2 border-t border-slate-100 pt-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                            Target Students ({classForm.students.length} selected)
+                          </label>
+                          <div className="relative w-full sm:w-48">
+                            <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center text-slate-400 pointer-events-none">
+                              <Search className="h-3 w-3" />
+                            </span>
+                            <input
+                              type="text"
+                              placeholder="Search student..."
+                              value={searchStudentTerm}
+                              onChange={e => setSearchStudentTerm(e.target.value)}
+                              className="block w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-[10px] focus:outline-none focus:border-deepskyblue focus:bg-white"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="max-h-40 overflow-y-auto border border-slate-100 rounded-xl p-2.5 bg-slate-50/50 space-y-1.5">
+                          {studentsList.filter(s => s.course === classForm.course).length === 0 ? (
+                            <p className="text-[10px] text-slate-400 italic py-2 text-center">No students registered in this course.</p>
+                          ) : (
+                            (() => {
+                              const filtered = studentsList
+                                .filter(s => s.course === classForm.course)
+                                .filter(s => s.name.toLowerCase().includes(searchStudentTerm.toLowerCase()) || s.registrationId.toLowerCase().includes(searchStudentTerm.toLowerCase()));
+
+                              if (filtered.length === 0) {
+                                return <p className="text-[10px] text-slate-400 italic py-2 text-center">No matching students.</p>;
+                              }
+
+                              return (
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-2 pb-1.5 mb-1.5 border-b border-slate-200/60">
+                                    <input
+                                      type="checkbox"
+                                      id="select-all-students"
+                                      checked={filtered.length > 0 && filtered.every(s => classForm.students.includes(s._id))}
+                                      onChange={e => {
+                                        if (e.target.checked) {
+                                          const allIds = filtered.map(s => s._id);
+                                          setClassForm(prev => ({
+                                            ...prev,
+                                            students: Array.from(new Set([...prev.students, ...allIds]))
+                                          }));
+                                        } else {
+                                          const allIds = filtered.map(s => s._id);
+                                          setClassForm(prev => ({
+                                            ...prev,
+                                            students: prev.students.filter(id => !allIds.includes(id))
+                                          }));
+                                        }
+                                      }}
+                                      className="rounded border-slate-300 text-deepskyblue focus:ring-deepskyblue h-3.5 w-3.5"
+                                    />
+                                    <label htmlFor="select-all-students" className="text-[10px] font-bold text-slate-600 cursor-pointer select-none">
+                                      Select All Filtered ({filtered.length})
+                                    </label>
+                                  </div>
+
+                                  {filtered.map(s => {
+                                    const isChecked = classForm.students.includes(s._id);
+                                    return (
+                                      <div key={s._id} className="flex items-center gap-2">
+                                        <input
+                                          type="checkbox"
+                                          id={`class-stud-${s._id}`}
+                                          checked={isChecked}
+                                          onChange={() => {
+                                            if (isChecked) {
+                                              setClassForm(prev => ({
+                                                ...prev,
+                                                students: prev.students.filter(id => id !== s._id)
+                                              }));
+                                            } else {
+                                              setClassForm(prev => ({
+                                                ...prev,
+                                                students: [...prev.students, s._id]
+                                              }));
+                                            }
+                                          }}
+                                          className="rounded border-slate-300 text-deepskyblue focus:ring-deepskyblue h-3.5 w-3.5"
+                                        />
+                                        <label htmlFor={`class-stud-${s._id}`} className="text-[10px] text-slate-600 font-semibold cursor-pointer select-none truncate">
+                                          {s.name} ({s.registrationId})
+                                        </label>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              );
+                            })()
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Start Date & Time</label>
+                        <input
+                          type="datetime-local"
+                          required
+                          value={classForm.startTime}
+                          onChange={e => setClassForm(prev => ({ ...prev, startTime: e.target.value }))}
+                          className="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">End Date & Time</label>
+                        <input
+                          type="datetime-local"
+                          required
+                          value={classForm.endTime}
+                          onChange={e => setClassForm(prev => ({ ...prev, endTime: e.target.value }))}
+                          className="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Google Meet Link</label>
+                      <input
+                        type="url"
+                        required
+                        placeholder="https://meet.google.com/abc-defg-hij"
+                        value={classForm.meetLink}
+                        onChange={e => setClassForm(prev => ({ ...prev, meetLink: e.target.value }))}
+                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={submittingClass}
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-xs shadow-md transition-all disabled:opacity-60 cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    {submittingClass ? (
+                      <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <LinkIcon className="h-4 w-4" />
+                        <span>Schedule Live Class</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+
+                {/* Right Column: Scheduled Classes list */}
+                <div className="md:col-span-7 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-5">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Scheduled Live Classes</h3>
+                    <p className="text-[10px] text-slate-400 mt-0.5">List of active online student classrooms and meet schedules</p>
+                  </div>
+
+                  {classesList.length === 0 ? (
+                    <p className="text-xs text-slate-400 py-12 text-center font-medium">No live classes scheduled yet.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] tracking-wider font-bold">
+                            <th className="pb-3 pl-2">Class Name & Course</th>
+                            <th className="pb-3">Timing Schedule</th>
+                            <th className="pb-3 text-center">Assigned Students</th>
+                            <th className="pb-3 text-right pr-2">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {classesList.map((lc, idx) => (
+                            <tr key={lc._id || idx} className="text-slate-700 hover:bg-slate-50/50 hover:text-slate-900 transition-colors">
+                              <td className="py-3 pl-2">
+                                <div className="font-bold text-slate-900">{lc.className}</div>
+                                <div className="text-[10px] text-slate-400 mt-0.5 font-semibold">{lc.course}</div>
+                              </td>
+                              <td className="py-3">
+                                <div className="font-semibold text-slate-700">
+                                  {new Date(lc.startTime).toLocaleDateString()}
+                                </div>
+                                <div className="text-[10px] text-slate-400 mt-0.5">
+                                  {new Date(lc.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(lc.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                              </td>
+                              <td className="py-3 text-center font-bold text-slate-800">
+                                {lc.students?.length || 0} Students
+                              </td>
+                              <td className="py-3 text-right pr-2">
+                                <button
+                                  onClick={() => handleDeleteLiveClass(lc._id)}
+                                  className="text-[10px] font-bold text-rose-650 hover:text-white border border-rose-200 hover:bg-rose-600 hover:border-rose-600 px-3 py-1.5 rounded-lg transition-all active:scale-95 cursor-pointer inline-flex items-center gap-1"
+                                >
+                                  <Trash className="h-3.5 w-3.5" />
+                                  <span>Cancel</span>
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div>
