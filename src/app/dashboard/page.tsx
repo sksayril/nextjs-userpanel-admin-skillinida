@@ -760,22 +760,61 @@ export default function DashboardPage() {
     if (!student) return null;
     
     // Extract ID details dynamically
-    const regId = student.registrationId || "WBCS/MCBT/2026/120033";
-    const match = regId.match(/\d+$/);
-    const lastDigits = match ? match[0] : "000000";
-    const appId = regId;
-    const rollNumber = `WBCS/MCBT/2026/${lastDigits}`;
-    const admitCardNo = `WBCS/MCBT/2026/${lastDigits}`;
+    const appId = student.registrationId || "";
+    const admitCardNo = appId;
     
     const formattedDob = student.dob 
       ? new Date(student.dob).toLocaleDateString("en-GB").replace(/\//g, " / ") 
       : "14 / 09 / 2003";
       
-    const examDate = student.examDate 
-      ? new Date(student.examDate).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) 
-      : "25 June 2026 (Thursday)";
-    const loginTime = student.loginTime || "09:30 AM";
-    const startTime = student.startTime || "10:00 AM";
+    // Find current quiz assigned to the student for their course
+    const currentQuiz = quizzes.find((q: any) => {
+      const isAssigned = q.assignedStudents?.some((s: any) => {
+        const idStr = typeof s === "object" ? s._id?.toString() : s?.toString();
+        return idStr === student._id?.toString();
+      });
+      return q.course === student.course && isAssigned;
+    }) || quizzes.find((q: any) => q.course === student.course) || quizzes[0] || null;
+
+    let examName = "Mock CBT Examination";
+    let examType = "Computer Based Test (Mock Assessment)";
+    let formattedExamDate = "To Be Announced";
+    let formattedLoginTime = "To Be Announced";
+    let formattedGateClosingTime = "To Be Announced";
+    let formattedStartTime = "To Be Announced";
+
+    if (currentQuiz) {
+      examName = currentQuiz.title;
+      examType = "Computer Based Test";
+      if (currentQuiz.scheduledAt) {
+        const scheduledDate = new Date(currentQuiz.scheduledAt);
+        const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        const dayName = days[scheduledDate.getDay()];
+        const dateStr = scheduledDate.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+        formattedExamDate = `${dateStr} (${dayName})`;
+        
+        formattedStartTime = scheduledDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+        
+        const reportingDate = new Date(scheduledDate.getTime() - 30 * 60 * 1000);
+        formattedLoginTime = reportingDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+        
+        const gateClosingDate = new Date(scheduledDate.getTime() - 15 * 60 * 1000);
+        formattedGateClosingTime = gateClosingDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+      }
+    } else {
+      examName = `${student.course} Exam`;
+      examType = "Computer Based Test";
+      if (student.examDate) {
+        const scheduledDate = new Date(student.examDate);
+        const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        const dayName = days[scheduledDate.getDay()];
+        const dateStr = scheduledDate.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+        formattedExamDate = `${dateStr} (${dayName})`;
+      }
+      formattedStartTime = student.startTime || "To Be Announced";
+      formattedLoginTime = student.loginTime || "To Be Announced";
+      formattedGateClosingTime = "15 Mins Before Exam";
+    }
     
     // Fallback QR code data
     const verifyUrl = `https://smi.in.net/verify?reg=${student.registrationId || "N/A"}`;
@@ -840,11 +879,6 @@ export default function DashboardPage() {
                   <span className="w-[38%] text-slate-700 font-bold">Admit Card No.</span>
                   <span className="w-[4%] font-bold text-slate-500">:</span>
                   <span className="w-[58%] font-mono font-bold text-rose-600">{admitCardNo}</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="w-[38%] text-slate-700 font-bold">Roll Number</span>
-                  <span className="w-[4%] font-bold text-slate-500">:</span>
-                  <span className="w-[58%] font-mono font-semibold text-slate-800">{rollNumber}</span>
                 </div>
                 <div className="flex items-center">
                   <span className="w-[38%] text-slate-700 font-bold">Candidate Name</span>
@@ -916,32 +950,32 @@ export default function DashboardPage() {
                   <div className="flex items-start">
                     <span className="w-[38%] text-slate-700 font-bold shrink-0">Examination Name</span>
                     <span className="w-[4%] font-bold text-slate-500 shrink-0">:</span>
-                    <span className="w-[58%] font-semibold text-slate-800 leading-tight">WBCS Mock CBT Examination - 2026</span>
+                    <span className="w-[58%] font-semibold text-slate-800 leading-tight">{examName}</span>
                   </div>
                   <div className="flex items-start">
                     <span className="w-[38%] text-slate-700 font-bold shrink-0">Examination Type</span>
                     <span className="w-[4%] font-bold text-slate-500 shrink-0">:</span>
-                    <span className="w-[58%] font-semibold text-slate-800 leading-tight">Computer Based Test (Mock Assessment)</span>
+                    <span className="w-[58%] font-semibold text-slate-800 leading-tight">{examType}</span>
                   </div>
                   <div className="flex items-center">
                     <span className="w-[38%] text-slate-700 font-bold">Examination Date</span>
                     <span className="w-[4%] font-bold text-slate-500">:</span>
-                    <span className="w-[58%] font-bold text-[#0c3e8a]">{examDate}</span>
+                    <span className="w-[58%] font-bold text-[#0c3e8a]">{formattedExamDate}</span>
                   </div>
                   <div className="flex items-center">
                     <span className="w-[38%] text-slate-700 font-bold">Reporting Time</span>
                     <span className="w-[4%] font-bold text-slate-500">:</span>
-                    <span className="w-[58%] font-semibold text-slate-800">{loginTime}</span>
+                    <span className="w-[58%] font-semibold text-slate-800">{formattedLoginTime}</span>
                   </div>
                   <div className="flex items-center">
                     <span className="w-[38%] text-slate-700 font-bold">Gate Closing Time</span>
                     <span className="w-[4%] font-bold text-slate-500">:</span>
-                    <span className="w-[58%] font-semibold text-slate-800">09:45 AM</span>
+                    <span className="w-[58%] font-semibold text-slate-800">{formattedGateClosingTime}</span>
                   </div>
                   <div className="flex items-center">
                     <span className="w-[38%] text-slate-700 font-bold">Examination Time</span>
                     <span className="w-[4%] font-bold text-slate-500">:</span>
-                    <span className="w-[58%] font-semibold text-slate-800">{startTime}</span>
+                    <span className="w-[58%] font-semibold text-slate-800">{formattedStartTime}</span>
                   </div>
                   <div className="flex items-start">
                     <span className="w-[38%] text-slate-700 font-bold shrink-0">Examination Centre</span>
