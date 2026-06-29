@@ -491,9 +491,12 @@ export default function DashboardPage() {
 
   const handleSubmitQuiz = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedAnswers.includes(-1)) {
-      toast.error("Please answer all questions before submitting.");
-      return;
+    const unansweredCount = selectedAnswers.filter(a => a === -1).length;
+    if (unansweredCount > 0) {
+      const confirmSubmit = window.confirm(
+        `You have ${unansweredCount} unanswered questions. Are you sure you want to submit?`
+      );
+      if (!confirmSubmit) return;
     }
     await submitQuizAnswers(selectedAnswers, false);
   };
@@ -873,8 +876,8 @@ export default function DashboardPage() {
               <User className="h-3 w-3" />
               <span>Candidate Details</span>
             </div>
-            <div className="p-2 flex-1 flex flex-col justify-between text-[9.5px] leading-relaxed">
-              <div className="space-y-1">
+            <div className="p-2 flex-1 flex flex-col justify-between text-[9px] leading-relaxed">
+              <div className="space-y-0.5">
                 <div className="flex items-center">
                   <span className="w-[38%] text-slate-700 font-bold">Admit Card No.</span>
                   <span className="w-[4%] font-bold text-slate-500">:</span>
@@ -909,6 +912,21 @@ export default function DashboardPage() {
                   <span className="w-[38%] text-slate-700 font-bold">Educational Qualification</span>
                   <span className="w-[4%] font-bold text-slate-500">:</span>
                   <span className="w-[58%] font-semibold text-slate-800">Graduate</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="w-[38%] text-slate-700 font-bold">Course</span>
+                  <span className="w-[4%] font-bold text-slate-500">:</span>
+                  <span className="w-[58%] font-semibold text-slate-800 truncate">{student.course}</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="w-[38%] text-slate-700 font-bold">Email ID</span>
+                  <span className="w-[4%] font-bold text-slate-500">:</span>
+                  <span className="w-[58%] font-semibold text-slate-800 truncate">{student.email}</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="w-[38%] text-slate-700 font-bold">Phone Number</span>
+                  <span className="w-[4%] font-bold text-slate-500">:</span>
+                  <span className="w-[58%] font-semibold text-slate-800">{student.phone}</span>
                 </div>
                 <div className="flex items-center">
                   <span className="w-[38%] text-slate-700 font-bold">Application ID</span>
@@ -960,22 +978,12 @@ export default function DashboardPage() {
                   <div className="flex items-center">
                     <span className="w-[38%] text-slate-700 font-bold">Examination Date</span>
                     <span className="w-[4%] font-bold text-slate-500">:</span>
-                    <span className="w-[58%] font-bold text-[#0c3e8a]">{formattedExamDate}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="w-[38%] text-slate-700 font-bold">Reporting Time</span>
-                    <span className="w-[4%] font-bold text-slate-500">:</span>
-                    <span className="w-[58%] font-semibold text-slate-800">{formattedLoginTime}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="w-[38%] text-slate-700 font-bold">Gate Closing Time</span>
-                    <span className="w-[4%] font-bold text-slate-500">:</span>
-                    <span className="w-[58%] font-semibold text-slate-800">{formattedGateClosingTime}</span>
+                    <span className="w-[58%] font-bold text-[#0c3e8a]">As per Schedule</span>
                   </div>
                   <div className="flex items-center">
                     <span className="w-[38%] text-slate-700 font-bold">Examination Time</span>
                     <span className="w-[4%] font-bold text-slate-500">:</span>
-                    <span className="w-[58%] font-semibold text-slate-800">{formattedStartTime}</span>
+                    <span className="w-[58%] font-semibold text-slate-800">As per Schedule</span>
                   </div>
                   <div className="flex items-start">
                     <span className="w-[38%] text-slate-700 font-bold shrink-0">Examination Centre</span>
@@ -2692,7 +2700,7 @@ export default function DashboardPage() {
 
                 <button
                   type="submit"
-                  disabled={submittingQuiz || selectedAnswers.includes(-1)}
+                  disabled={submittingQuiz}
                   className="flex items-center gap-1.5 py-2.5 px-6 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-xs shadow-md shadow-deepskyblue/15 disabled:opacity-50 cursor-pointer"
                 >
                   {submittingQuiz ? (

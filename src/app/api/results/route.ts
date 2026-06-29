@@ -96,13 +96,23 @@ export async function POST(request: Request) {
       );
     }
 
-    if (isExamWindowClosed(quiz.scheduledAt, quiz.duration || 30)) {
-      return NextResponse.json(
-        {
-          error: `Exam window has ended. It was open until ${formatExamWindowEnd(quiz.scheduledAt, quiz.duration || 30)}.`,
-        },
-        { status: 403 }
-      );
+    const session = await ExamSession.findOne({
+      candidateId: student.id,
+      quizId,
+    });
+
+    const isWindowClosed = isExamWindowClosed(quiz.scheduledAt, quiz.duration || 30);
+    
+    // If exam window is closed, we only allow submission if the student has an active/expired session that hasn't been submitted yet.
+    if (isWindowClosed) {
+      if (!session || (session.status !== "in_progress" && session.status !== "expired")) {
+        return NextResponse.json(
+          {
+            error: `Exam window has ended. It was open until ${formatExamWindowEnd(quiz.scheduledAt, quiz.duration || 30)}.`,
+          },
+          { status: 403 }
+        );
+      }
     }
 
     const existingResult = await Result.findOne({

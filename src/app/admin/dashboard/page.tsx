@@ -71,7 +71,6 @@ const hexToRgb = (hex: string): string => {
 const ADMIN_NAV_ITEMS = [
   { id: "overview", label: "Overview", Icon: TrendingUp },
   { id: "courses", label: "Manage Courses", Icon: BookOpen },
-  { id: "students", label: "Register Students", Icon: UserPlus },
   { id: "attendance", label: "Manage Attendance", Icon: Calendar },
   { id: "papers", label: "Question Papers", Icon: FileText },
   { id: "quizzes", label: "Create Exam", Icon: Award },
@@ -200,6 +199,8 @@ export default function AdminDashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [courseFilter, setCourseFilter] = useState("");
   const [districtFilter, setDistrictFilter] = useState("");
+  const [resultsSearchQuery, setResultsSearchQuery] = useState("");
+  const [resultsCourseFilter, setResultsCourseFilter] = useState("");
 
   // Stats
   const [stats, setStats] = useState({
@@ -274,7 +275,7 @@ export default function AdminDashboardPage() {
     title: "",
     code: "",
     description: "",
-    duration: "1 Year",
+    duration: "",
     isPaid: false,
     price: 0
   });
@@ -330,7 +331,7 @@ export default function AdminDashboardPage() {
     title: "",
     course: "",
     scheduledAt: toDatetimeLocalValue(),
-    duration: 30,
+    duration: "" as string | number,
     assignedStudents: [] as string[],
     examPassword: "",
     questions: [
@@ -369,7 +370,7 @@ export default function AdminDashboardPage() {
     title: "",
     course: "",
     scheduledAt: toDatetimeLocalValue(),
-    duration: 30,
+    duration: "" as string | number,
     assignedStudents: [] as string[],
     examPassword: "",
     questions: [
@@ -633,7 +634,7 @@ export default function AdminDashboardPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         setSuccessMsg("Course created successfully!");
-        setCourseForm({ title: "", code: "", description: "", duration: "1 Year", isPaid: false, price: 0 });
+        setCourseForm({ title: "", code: "", description: "", duration: "", isPaid: false, price: 0 });
         await fetchAllData();
         setTimeout(() => setSuccessMsg(""), 4000);
       } else {
@@ -658,7 +659,7 @@ export default function AdminDashboardPage() {
 
   const handleCancelEditCourse = () => {
     setEditingCourseId(null);
-    setCourseForm({ title: "", code: "", description: "", duration: "1 Year", isPaid: false, price: 0 });
+    setCourseForm({ title: "", code: "", description: "", duration: "", isPaid: false, price: 0 });
   };
 
   const handleUpdateCourse = async (e: React.FormEvent) => {
@@ -676,7 +677,7 @@ export default function AdminDashboardPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         setSuccessMsg("Course updated successfully!");
-        setCourseForm({ title: "", code: "", description: "", duration: "1 Year", isPaid: false, price: 0 });
+        setCourseForm({ title: "", code: "", description: "", duration: "", isPaid: false, price: 0 });
         setEditingCourseId(null);
         await fetchAllData();
         setTimeout(() => setSuccessMsg(""), 4000);
@@ -1231,7 +1232,7 @@ export default function AdminDashboardPage() {
         title: quiz.title || "",
         course: quiz.course || "",
         scheduledAt: scheduledDate ? toDatetimeLocalValue(scheduledDate) : toDatetimeLocalValue(),
-        duration: quiz.duration || 30,
+        duration: quiz.duration || "",
         assignedStudents: (quiz.assignedStudents || []).map((id: string) => id.toString()),
         examPassword: quiz.examPassword || "",
         questions: (quiz.questions || []).map((question: any) => ({
@@ -1831,14 +1832,13 @@ export default function AdminDashboardPage() {
 
         {/* Main Content Sections (Candidate Details, Photo, Exam details) */}
         <div className="grid grid-cols-12 gap-3 items-stretch my-1 text-left">
-          {/* 1. Candidate Details Box (Col span 5) */}
           <div className="col-span-5 border border-slate-300 rounded-lg overflow-hidden flex flex-col bg-white">
             <div className="bg-[#0c3e8a] text-white text-[8.5px] font-bold px-3 py-1 flex items-center gap-1.5 uppercase tracking-wider">
               <User className="h-3 w-3" />
               <span>Candidate Details</span>
             </div>
-            <div className="p-2 flex-1 flex flex-col justify-between text-[9.5px] leading-relaxed">
-              <div className="space-y-1">
+            <div className="p-2 flex-1 flex flex-col justify-between text-[9px] leading-relaxed">
+              <div className="space-y-0.5">
                 <div className="flex items-center">
                   <span className="w-[38%] text-slate-700 font-bold">Admit Card No.</span>
                   <span className="w-[4%] font-bold text-slate-500">:</span>
@@ -1873,6 +1873,21 @@ export default function AdminDashboardPage() {
                   <span className="w-[38%] text-slate-700 font-bold">Educational Qualification</span>
                   <span className="w-[4%] font-bold text-slate-500">:</span>
                   <span className="w-[58%] font-semibold text-slate-800">Graduate</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="w-[38%] text-slate-700 font-bold">Course</span>
+                  <span className="w-[4%] font-bold text-slate-500">:</span>
+                  <span className="w-[58%] font-semibold text-slate-800 truncate">{student.course}</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="w-[38%] text-slate-700 font-bold">Email ID</span>
+                  <span className="w-[4%] font-bold text-slate-500">:</span>
+                  <span className="w-[58%] font-semibold text-slate-800 truncate">{student.email}</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="w-[38%] text-slate-700 font-bold">Phone Number</span>
+                  <span className="w-[4%] font-bold text-slate-500">:</span>
+                  <span className="w-[58%] font-semibold text-slate-800">{student.phone}</span>
                 </div>
                 <div className="flex items-center">
                   <span className="w-[38%] text-slate-700 font-bold">Application ID</span>
@@ -1924,22 +1939,12 @@ export default function AdminDashboardPage() {
                   <div className="flex items-center">
                     <span className="w-[38%] text-slate-700 font-bold">Examination Date</span>
                     <span className="w-[4%] font-bold text-slate-500">:</span>
-                    <span className="w-[58%] font-bold text-[#0c3e8a]">{formattedExamDate}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="w-[38%] text-slate-700 font-bold">Reporting Time</span>
-                    <span className="w-[4%] font-bold text-slate-500">:</span>
-                    <span className="w-[58%] font-semibold text-slate-800">{formattedLoginTime}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="w-[38%] text-slate-700 font-bold">Gate Closing Time</span>
-                    <span className="w-[4%] font-bold text-slate-500">:</span>
-                    <span className="w-[58%] font-semibold text-slate-800">{formattedGateClosingTime}</span>
+                    <span className="w-[58%] font-bold text-[#0c3e8a]">As per Schedule</span>
                   </div>
                   <div className="flex items-center">
                     <span className="w-[38%] text-slate-700 font-bold">Examination Time</span>
                     <span className="w-[4%] font-bold text-slate-500">:</span>
-                    <span className="w-[58%] font-semibold text-slate-800">{formattedStartTime}</span>
+                    <span className="w-[58%] font-semibold text-slate-800">As per Schedule</span>
                   </div>
                   <div className="flex items-start">
                     <span className="w-[38%] text-slate-700 font-bold shrink-0">Examination Centre</span>
@@ -3354,6 +3359,20 @@ export default function AdminDashboardPage() {
                                     View Details
                                   </button>
                                   <button
+                                    onClick={() => triggerPrint("admitcard", stud)}
+                                    className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 text-[10px] font-extrabold text-white shadow shadow-deepskyblue/20 transition cursor-pointer shrink-0 inline-flex items-center gap-1"
+                                  >
+                                    <Printer className="h-3 w-3" />
+                                    <span>Admit Card</span>
+                                  </button>
+                                  <button
+                                    onClick={() => triggerPrint("idcard", stud)}
+                                    className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-[10px] font-extrabold text-white shadow shadow-emerald-500/20 transition cursor-pointer shrink-0 inline-flex items-center gap-1"
+                                  >
+                                    <Printer className="h-3 w-3" />
+                                    <span>ID Card</span>
+                                  </button>
+                                  <button
                                     onClick={() => handleToggleStudentAccess(stud._id)}
                                     className={`px-2.5 py-1.5 rounded-xl text-[10px] font-extrabold transition cursor-pointer shrink-0 ${stud.isActive !== false
                                         ? "bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white"
@@ -3410,16 +3429,14 @@ export default function AdminDashboardPage() {
 
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Program Duration</label>
-                    <select
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. 1 Year, 6 Months"
                       value={courseForm.duration}
                       onChange={e => setCourseForm(prev => ({ ...prev, duration: e.target.value }))}
                       className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
-                    >
-                      <option value="3 Months">3 Months</option>
-                      <option value="6 Months">6 Months</option>
-                      <option value="1 Year">1 Year</option>
-                      <option value="2 Years">2 Years</option>
-                    </select>
+                    />
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -4323,7 +4340,7 @@ export default function AdminDashboardPage() {
                           required
                           min={1}
                           value={quizForm.duration}
-                          onChange={e => setQuizForm(prev => ({ ...prev, duration: parseInt(e.target.value) || 30 }))}
+                          onChange={e => setQuizForm(prev => ({ ...prev, duration: e.target.value ? parseInt(e.target.value) || "" : "" }))}
                           className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white"
                         />
                       </div>
@@ -4616,8 +4633,7 @@ export default function AdminDashboardPage() {
               </div>
             )}
 
-            {/* ================= TAB CONTENT 7: EXAM RESULTS ================= */}
-            {activeTab === "results" && (
+             {activeTab === "results" && (
               <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-5">
                 <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                   <div>
@@ -4625,6 +4641,56 @@ export default function AdminDashboardPage() {
                     <p className="text-[10px] text-slate-400 mt-0.5">Master ledger of completed student examinations</p>
                   </div>
                 </div>
+
+                {resultsList.length > 0 && (
+                  <>
+                    {/* Search and Filters Bar */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200/60">
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                          <Search className="h-4 w-4" />
+                        </span>
+                        <input
+                          type="text"
+                          placeholder="Search candidate, registration ID, exam title..."
+                          value={resultsSearchQuery}
+                          onChange={e => setResultsSearchQuery(e.target.value)}
+                          className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/5 transition-all font-semibold placeholder-slate-400"
+                        />
+                      </div>
+
+                      <div>
+                        <select
+                          value={resultsCourseFilter}
+                          onChange={e => setResultsCourseFilter(e.target.value)}
+                          className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-750 focus:outline-none focus:border-deepskyblue font-semibold cursor-pointer"
+                        >
+                          <option value="">All Courses</option>
+                          {coursesList.map((course, cIdx) => (
+                            <option key={cIdx} value={course.title}>
+                              {course.title}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {(resultsSearchQuery || resultsCourseFilter) && (
+                      <div className="flex justify-end pr-2 text-[10px] -mt-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setResultsSearchQuery("");
+                            setResultsCourseFilter("");
+                          }}
+                          className="text-rose-500 hover:text-rose-700 font-bold underline cursor-pointer"
+                        >
+                          Clear Active Filters
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
 
                 {resultsList.length === 0 ? (
                   <p className="text-xs text-slate-400 py-10 text-center font-medium">No exam results recorded in the database yet.</p>
@@ -4649,12 +4715,23 @@ export default function AdminDashboardPage() {
                       <tbody className="divide-y divide-slate-100">
                         {resultsList
                           .filter(res => {
-                            const query = searchQuery.toLowerCase();
-                            const studentName = res.candidateId?.name?.toLowerCase() || "";
-                            const regId = res.candidateId?.registrationId?.toLowerCase() || "";
-                            const course = res.candidateId?.course?.toLowerCase() || "";
-                            const examTitle = res.quizTitle?.toLowerCase() || "";
-                            return studentName.includes(query) || regId.includes(query) || course.includes(query) || examTitle.includes(query);
+                            // Filter by resultsCourseFilter if selected
+                            if (resultsCourseFilter && res.candidateId?.course !== resultsCourseFilter) {
+                              return false;
+                            }
+                            
+                            // Filter by resultsSearchQuery if entered
+                            if (resultsSearchQuery) {
+                              const query = resultsSearchQuery.toLowerCase();
+                              const studentName = res.candidateId?.name?.toLowerCase() || "";
+                              const regId = res.candidateId?.registrationId?.toLowerCase() || "";
+                              const course = res.candidateId?.course?.toLowerCase() || "";
+                              const examTitle = res.quizTitle?.toLowerCase() || "";
+                              
+                              return studentName.includes(query) || regId.includes(query) || course.includes(query) || examTitle.includes(query);
+                            }
+                            
+                            return true;
                           })
                           .map((res, idx) => (
                             <tr key={idx} className="text-slate-700 hover:bg-slate-50/50 hover:text-slate-900 transition-colors">
