@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import { LiveClass } from "@/models/LiveClass";
+import { parseScheduledAt } from "@/lib/examSchedule";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
@@ -59,8 +60,8 @@ export async function POST(request: Request) {
       className,
       course,
       students,
-      startTime: new Date(startTime),
-      endTime: new Date(endTime),
+      startTime: parseScheduledAt(startTime),
+      endTime: parseScheduledAt(endTime),
       meetLink,
     });
 

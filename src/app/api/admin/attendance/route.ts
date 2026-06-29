@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import { Attendance } from "@/models/Attendance";
 import { Candidate } from "@/models/Candidate";
+import { parseScheduledAt } from "@/lib/examSchedule";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
@@ -62,21 +63,22 @@ export async function POST(request: Request) {
     }
 
     // Check if attendance already logged for this student at this exact time
+    const parsedDate = parseScheduledAt(date);
     const duplicate = await Attendance.findOne({
       candidateId,
-      date: new Date(date),
+      date: parsedDate,
     });
 
     if (duplicate) {
       return NextResponse.json(
-        { error: `Attendance already logged for this candidate at ${new Date(date).toLocaleString()}` },
+        { error: `Attendance already logged for this candidate at ${parsedDate.toLocaleString()}` },
         { status: 400 }
       );
     }
 
     const record = new Attendance({
       candidateId,
-      date: new Date(date),
+      date: parsedDate,
       status,
       googleMeetLink: googleMeetLink || undefined,
     });
