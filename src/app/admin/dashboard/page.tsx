@@ -1098,7 +1098,7 @@ export default function AdminDashboardPage() {
   const duplicateQuizQuestion = (qIndex: number) => {
     const questionToDuplicate = quizForm.questions[qIndex];
     if (!questionToDuplicate) return;
-    
+
     const duplicatedQuestion = {
       questionText: questionToDuplicate.questionText,
       options: [...questionToDuplicate.options],
@@ -1128,25 +1128,25 @@ export default function AdminDashboardPage() {
     try {
       const XLSX = await import("xlsx");
       const reader = new FileReader();
-      
+
       reader.onload = async (evt) => {
         try {
           const ab = evt.target?.result;
           if (!ab) return;
-          
+
           const wb = XLSX.read(ab, { type: "array" });
           const sheetName = wb.SheetNames[0];
           const sheet = wb.Sheets[sheetName];
-          
+
           const data: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-          
+
           if (data.length <= 1) {
             toast.error("Excel sheet is empty or has only headers.");
             return;
           }
 
           const parsedQuestions: any[] = [];
-          
+
           for (let i = 1; i < data.length; i++) {
             const row = data[i];
             if (!row || !row[0]) continue;
@@ -1156,7 +1156,7 @@ export default function AdminDashboardPage() {
             const option2 = row[2] !== undefined ? String(row[2]).trim() : "";
             const option3 = row[3] !== undefined ? String(row[3]).trim() : "";
             const option4 = row[4] !== undefined ? String(row[4]).trim() : "";
-            
+
             let correctVal = parseInt(row[5]);
             if (isNaN(correctVal)) {
               correctVal = 0;
@@ -1165,7 +1165,7 @@ export default function AdminDashboardPage() {
             } else if (correctVal < 0 || correctVal > 3) {
               correctVal = 0;
             }
-            
+
             const marks = parseInt(row[6]) || 1;
 
             parsedQuestions.push({
@@ -1182,8 +1182,8 @@ export default function AdminDashboardPage() {
           }
 
           setQuizForm(prev => {
-            const hasOnlyOneEmpty = prev.questions.length === 1 && 
-              !prev.questions[0].questionText && 
+            const hasOnlyOneEmpty = prev.questions.length === 1 &&
+              !prev.questions[0].questionText &&
               prev.questions[0].options.every(o => !o);
 
             return {
@@ -1213,11 +1213,11 @@ export default function AdminDashboardPage() {
       const XLSX = await import("xlsx");
       const header = ["Question Text", "Option 1", "Option 2", "Option 3", "Option 4", "Correct Choice Index (1 to 4)", "Question Marks"];
       const sampleRow = ["e.g. Which HTML tag is used for stylesheet injections?", "<link>", "<style>", "<script>", "<a>", "1", "1"];
-      
+
       const ws = XLSX.utils.aoa_to_sheet([header, sampleRow]);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Questions Template");
-      
+
       XLSX.writeFile(wb, "exam_questions_template.xlsx");
       toast.success("Excel template download started!");
     } catch (err) {
@@ -1317,7 +1317,7 @@ export default function AdminDashboardPage() {
       toast.error("Network error deleting exam.");
     }
   };
- 
+
   const handleDuplicateQuiz = async (quizId: string) => {
     try {
       const res = await fetch(`/api/admin/quizzes/${quizId}`);
@@ -1329,7 +1329,7 @@ export default function AdminDashboardPage() {
       }
 
       const quiz = data.quiz;
-      
+
       const duplicatePayload = {
         title: quiz.title ? `${quiz.title} - Copy` : "New Exam Copy",
         course: quiz.course || "",
@@ -1801,12 +1801,12 @@ export default function AdminDashboardPage() {
         const dayName = days[scheduledDate.getDay()];
         const dateStr = scheduledDate.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
         formattedExamDate = `${dateStr} (${dayName})`;
-        
+
         formattedStartTime = scheduledDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
-        
+
         const reportingDate = new Date(scheduledDate.getTime() - 30 * 60 * 1000);
         formattedLoginTime = reportingDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
-        
+
         const gateClosingDate = new Date(scheduledDate.getTime() - 15 * 60 * 1000);
         formattedGateClosingTime = gateClosingDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
       }
@@ -1854,17 +1854,17 @@ export default function AdminDashboardPage() {
           <div className="flex-1 flex flex-col items-center relative">
             {/* Horizontal line behind the ADMIT CARD title */}
             <div className="absolute top-[20px] left-0 right-0 h-[2px] bg-[#0c3e8a] z-0"></div>
-            
+
             {/* ADMIT CARD Title Badge */}
             <div className="relative z-10 bg-[#0c3e8a] text-white text-2xl font-black px-12 py-1 rounded-full uppercase tracking-wider shadow-md">
               ADMIT CARD
             </div>
-            
+
             <div className="text-xs font-black text-slate-800 mt-2 z-10 bg-white px-4">
               Issued By: <span className="text-[#0c3e8a]">SUPPORT MISSION INDIA</span>
             </div>
           </div>
-          
+
           {/* Right Header Logo */}
           <div className="flex flex-col items-center text-center shrink-0 pl-4 w-[180px]">
             <img src="/smi-logo.png" className="h-14 w-auto object-contain" alt="SMI Logo" />
@@ -2172,7 +2172,6 @@ export default function AdminDashboardPage() {
               <img src="/smi-logo.png" className="h-16 w-16 object-contain" alt="SMI Logo" />
               <div className="text-left">
                 <h1 className="text-lg font-black tracking-tight text-[#0a1c3a] font-serif">SUPPORT MISSION INDIA</h1>
-                <p className="text-[9px] uppercase font-bold text-[#b89047] tracking-widest leading-none">Sarkari Skill Certification Authority</p>
               </div>
             </div>
             <h2 className="text-xl font-extrabold text-[#0a1c3a] tracking-wide uppercase font-serif mt-2">
@@ -2193,11 +2192,7 @@ export default function AdminDashboardPage() {
             </p>
           </div>
 
-          {/* Grade Display */}
-          <div className="flex flex-col items-center justify-center">
-            <span className="text-[9px] uppercase font-bold tracking-widest text-[#b89047]">Grade Obtained</span>
-            <span className="text-3xl font-black text-[#9b7a2f] font-serif tracking-wide mt-1">{res.grade}</span>
-          </div>
+
 
           {/* Signatures & Verification Info */}
           <div className="flex justify-between items-end px-8 mt-2">
@@ -2274,9 +2269,7 @@ export default function AdminDashboardPage() {
             <img src="/smi-logo.png" className="h-16 w-16 object-contain" alt="SMI Logo" />
             <div>
               <h1 className="text-xl font-black tracking-tight text-slate-900">SUPPORT MISSION INDIA</h1>
-              <p className="text-[10px] uppercase font-bold text-deepskyblue-dark tracking-widest mt-1">
-                Sarkari Skill Certification Authority
-              </p>
+
               <h2 className="text-sm font-bold text-slate-700 mt-3">EXAM EVALUATION MARKSHEET</h2>
             </div>
           </div>
@@ -2327,14 +2320,10 @@ export default function AdminDashboardPage() {
           </div>
 
           {/* Summary Performance Section */}
-          <div className="mt-8 grid grid-cols-3 gap-4 bg-slate-55 p-4 rounded-xl border border-slate-200/60">
+          <div className="mt-8 grid grid-cols-2 gap-4 bg-slate-55 p-4 rounded-xl border border-slate-200/60">
             <div className="text-center">
               <span className="text-slate-400 block font-bold uppercase tracking-wider text-[8px]">Obtained Percentage</span>
               <span className="text-lg font-black text-slate-900 mt-1 block">{res.percentage}%</span>
-            </div>
-            <div className="text-center">
-              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[8px]">Assigned Grade</span>
-              <span className="text-lg font-black text-deepskyblue-dark mt-1 block">{res.grade}</span>
             </div>
             <div className="text-center">
               <span className="text-slate-400 block font-bold uppercase tracking-wider text-[8px]">Evaluation Status</span>
@@ -2349,7 +2338,6 @@ export default function AdminDashboardPage() {
         <div className="flex justify-between items-end border-t border-slate-200/80 pt-6">
           <div className="space-y-1 text-[10px] text-slate-500">
             <p>Verification Code: <span className="font-mono text-slate-700 font-bold">{res._id}</span></p>
-            <p>Generated by Sarkari Skill Portal on {new Date().toLocaleString()}</p>
           </div>
           <div className="text-center w-36 space-y-1">
             <p className="font-serif italic text-xs text-slate-655 h-6">Dr. K. Verma</p>
@@ -2397,9 +2385,7 @@ export default function AdminDashboardPage() {
             <img src="/smi-logo.png" className="h-16 w-16 object-contain" alt="SMI Logo" />
             <div>
               <h1 className="text-xl font-black tracking-tight text-slate-900">SUPPORT MISSION INDIA</h1>
-              <p className="text-[10px] uppercase font-bold text-deepskyblue-dark tracking-widest mt-1">
-                Sarkari Skill Certification Authority
-              </p>
+
               <h2 className="text-sm font-bold text-slate-700 mt-3">SEMESTER CUMULATIVE MARK SHEET</h2>
             </div>
           </div>
@@ -2435,13 +2421,12 @@ export default function AdminDashboardPage() {
                   <th className="py-3 px-4 border-b border-slate-200 text-center">Ext (70)</th>
                   <th className="py-3 px-4 border-b border-slate-200 text-center">Total Score</th>
                   <th className="py-3 px-4 border-b border-slate-200 text-center">Percentage</th>
-                  <th className="py-3 px-4 border-b border-slate-200 text-right">Grade</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {list.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-6 text-center text-slate-400">No assessment records found in portal database.</td>
+                    <td colSpan={5} className="py-6 text-center text-slate-400">No assessment records found in portal database.</td>
                   </tr>
                 ) : (
                   list.map((res, i) => {
@@ -2454,7 +2439,6 @@ export default function AdminDashboardPage() {
                         <td className="py-3 px-4 text-center">{external > 70 ? 70 : external}</td>
                         <td className="py-3 px-4 text-center font-bold">{res.score} / {res.total}</td>
                         <td className="py-3 px-4 text-center">{res.percentage}%</td>
-                        <td className="py-3 px-4 text-right font-black text-deepskyblue-dark">{res.grade}</td>
                       </tr>
                     );
                   })
@@ -2474,9 +2458,9 @@ export default function AdminDashboardPage() {
               <span className="text-lg font-black text-slate-900 mt-1 block">{averagePercentage}%</span>
             </div>
             <div className="text-center">
-              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[8px]">Aggregate Grade / Result</span>
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[8px]">Overall Result</span>
               <span className={`text-lg font-black mt-1 block ${overallStatus === "PASS" ? "text-emerald-600" : "text-rose-600"}`}>
-                {overallGrade} ({overallStatus})
+                {overallStatus}
               </span>
             </div>
           </div>
@@ -2486,7 +2470,6 @@ export default function AdminDashboardPage() {
         <div className="flex justify-between items-end border-t border-slate-200/80 pt-6">
           <div className="space-y-1 text-[10px] text-slate-500">
             <p>Support Mission India Skill Program Registration: <span className="font-mono text-slate-700 font-bold">{regId}</span></p>
-            <p>Generated by Sarkari Skill Portal on {new Date().toLocaleString()}</p>
           </div>
           <div className="text-center w-36 space-y-1">
             <p className="font-serif italic text-xs text-slate-655 h-6">Dr. K. Verma</p>
@@ -3237,8 +3220,8 @@ export default function AdminDashboardPage() {
                           type="button"
                           onClick={() => setStatusFilter("all")}
                           className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${statusFilter === "all"
-                              ? "bg-white text-slate-900 shadow-sm font-black border border-slate-200/50"
-                              : "text-slate-450 hover:text-slate-700"
+                            ? "bg-white text-slate-900 shadow-sm font-black border border-slate-200/50"
+                            : "text-slate-450 hover:text-slate-700"
                             }`}
                         >
                           All
@@ -3247,8 +3230,8 @@ export default function AdminDashboardPage() {
                           type="button"
                           onClick={() => setStatusFilter("active")}
                           className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${statusFilter === "active"
-                              ? "bg-white text-emerald-650 shadow-sm font-black border border-slate-200/50"
-                              : "text-slate-450 hover:text-slate-700"
+                            ? "bg-white text-emerald-650 shadow-sm font-black border border-slate-200/50"
+                            : "text-slate-450 hover:text-slate-700"
                             }`}
                         >
                           Active
@@ -3257,8 +3240,8 @@ export default function AdminDashboardPage() {
                           type="button"
                           onClick={() => setStatusFilter("deactivated")}
                           className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${statusFilter === "deactivated"
-                              ? "bg-white text-rose-600 shadow-sm font-black border border-slate-200/50"
-                              : "text-slate-450 hover:text-slate-700"
+                            ? "bg-white text-rose-600 shadow-sm font-black border border-slate-200/50"
+                            : "text-slate-450 hover:text-slate-700"
                             }`}
                         >
                           Deactivated
@@ -3419,8 +3402,8 @@ export default function AdminDashboardPage() {
                                   <button
                                     onClick={() => handleToggleStudentAccess(stud._id)}
                                     className={`px-2.5 py-1.5 rounded-xl text-[10px] font-extrabold transition cursor-pointer shrink-0 ${stud.isActive !== false
-                                        ? "bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white"
-                                        : "bg-emerald-50 text-emerald-650 border border-emerald-250 hover:bg-emerald-650 hover:text-white"
+                                      ? "bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white"
+                                      : "bg-emerald-50 text-emerald-650 border border-emerald-250 hover:bg-emerald-650 hover:text-white"
                                       }`}
                                   >
                                     {stud.isActive !== false ? "Deactivate" : "Activate"}
@@ -4137,36 +4120,36 @@ export default function AdminDashboardPage() {
                               return matchesSearch && matchesCourse;
                             })
                             .map((att, idx) => (
-                            <tr key={idx} className="text-slate-700 hover:bg-slate-50/50 transition-colors">
-                              <td className="py-3 pl-1 font-semibold text-slate-500">
-                                {new Date(att.date).toLocaleString("en-GB", {
-                                  day: "numeric",
-                                  month: "short",
-                                  year: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
-                              </td>
-                              <td className="py-3">
-                                <p className="font-bold text-slate-800">{att.candidateId?.name || "N/A"}</p>
-                                <span className="text-[9px] text-slate-400 font-mono">{att.candidateId?.registrationId}</span>
-                              </td>
-                              <td className="py-3">
-                                <span className={`px-2.5 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${att.status === "present" ? "bg-emerald-50 text-emerald-600" :
-                                  att.status === "absent" ? "bg-rose-55 text-rose-600" : "bg-amber-50 text-amber-600"
-                                  }`}>
-                                  {att.status}
-                                </span>
-                              </td>
-                              <td className="py-3 text-right pr-1">
-                                {att.googleMeetLink ? (
-                                  <a href={att.googleMeetLink} target="_blank" rel="noreferrer" className="text-deepskyblue-dark hover:text-deepskyblue hover:underline inline-flex items-center gap-0.5 font-bold text-[10px]">
-                                    <span>Join class</span>
-                                  </a>
-                                ) : <span className="text-slate-300 font-bold">—</span>}
-                              </td>
-                            </tr>
-                          ))}
+                              <tr key={idx} className="text-slate-700 hover:bg-slate-50/50 transition-colors">
+                                <td className="py-3 pl-1 font-semibold text-slate-500">
+                                  {new Date(att.date).toLocaleString("en-GB", {
+                                    day: "numeric",
+                                    month: "short",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </td>
+                                <td className="py-3">
+                                  <p className="font-bold text-slate-800">{att.candidateId?.name || "N/A"}</p>
+                                  <span className="text-[9px] text-slate-400 font-mono">{att.candidateId?.registrationId}</span>
+                                </td>
+                                <td className="py-3">
+                                  <span className={`px-2.5 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${att.status === "present" ? "bg-emerald-50 text-emerald-600" :
+                                    att.status === "absent" ? "bg-rose-55 text-rose-600" : "bg-amber-50 text-amber-600"
+                                    }`}>
+                                    {att.status}
+                                  </span>
+                                </td>
+                                <td className="py-3 text-right pr-1">
+                                  {att.googleMeetLink ? (
+                                    <a href={att.googleMeetLink} target="_blank" rel="noreferrer" className="text-deepskyblue-dark hover:text-deepskyblue hover:underline inline-flex items-center gap-0.5 font-bold text-[10px]">
+                                      <span>Join class</span>
+                                    </a>
+                                  ) : <span className="text-slate-300 font-bold">—</span>}
+                                </td>
+                              </tr>
+                            ))}
                         </tbody>
                       </table>
                     </div>
@@ -4427,9 +4410,58 @@ export default function AdminDashboardPage() {
                     {quizForm.course && (
                       <div className="space-y-2 border-t border-slate-100 pt-3">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                            Assign Candidates ({quizForm.assignedStudents.length} selected)
-                          </label>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                              Assign Candidates ({quizForm.assignedStudents.length} selected)
+                            </label>
+                            <span className="text-slate-200 hidden sm:inline">|</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const matchedIds = studentsList
+                                  .filter(s => s.course === quizForm.course)
+                                  .filter(student => {
+                                    if (!assignSearchQuery) return true;
+                                    const query = assignSearchQuery.toLowerCase();
+                                    return (
+                                      student.name.toLowerCase().includes(query) ||
+                                      student.registrationId.toLowerCase().includes(query)
+                                    );
+                                  })
+                                  .map(s => s._id);
+                                setQuizForm(prev => ({
+                                  ...prev,
+                                  assignedStudents: Array.from(new Set([...prev.assignedStudents, ...matchedIds]))
+                                }));
+                              }}
+                              className="text-[9px] font-bold text-deepskyblue hover:underline cursor-pointer bg-deepskyblue/5 px-2 py-0.5 rounded border border-deepskyblue/10"
+                            >
+                              Select All
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const matchedIds = studentsList
+                                  .filter(s => s.course === quizForm.course)
+                                  .filter(student => {
+                                    if (!assignSearchQuery) return true;
+                                    const query = assignSearchQuery.toLowerCase();
+                                    return (
+                                      student.name.toLowerCase().includes(query) ||
+                                      student.registrationId.toLowerCase().includes(query)
+                                    );
+                                  })
+                                  .map(s => s._id);
+                                setQuizForm(prev => ({
+                                  ...prev,
+                                  assignedStudents: prev.assignedStudents.filter(id => !matchedIds.includes(id))
+                                }));
+                              }}
+                              className="text-[9px] font-bold text-slate-500 hover:underline cursor-pointer bg-slate-100 px-2 py-0.5 rounded border border-slate-200"
+                            >
+                              Deselect All
+                            </button>
+                          </div>
                           <div className="relative w-full sm:w-48">
                             <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center text-slate-400 pointer-events-none">
                               <Search className="h-3 w-3" />
@@ -4641,8 +4673,8 @@ export default function AdminDashboardPage() {
                         const totalQuizMarks = quiz.questions.reduce((acc: number, q: any) => acc + (q.marks || 1), 0);
                         return (
                           <div key={quiz._id || idx} className={`p-4 rounded-2xl border flex justify-between items-center ${editingQuizId === quiz._id
-                              ? "bg-violet-50 border-violet-200"
-                              : "bg-slate-50 border-slate-200/60"
+                            ? "bg-violet-50 border-violet-200"
+                            : "bg-slate-50 border-slate-200/60"
                             }`}>
                             <div className="space-y-1">
                               <span className="text-[9px] font-bold bg-deepskyblue/10 text-deepskyblue-dark px-2 py-0.5 rounded-full uppercase tracking-wider">{quiz.course}</span>
@@ -4700,7 +4732,7 @@ export default function AdminDashboardPage() {
               </div>
             )}
 
-             {activeTab === "results" && (
+            {activeTab === "results" && (
               <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-5">
                 <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                   <div>
@@ -4772,7 +4804,6 @@ export default function AdminDashboardPage() {
                           <th className="pb-3">Exam Title</th>
                           <th className="pb-3 text-center">Score</th>
                           <th className="pb-3 text-center">Percentage</th>
-                          <th className="pb-3 text-center">Grade</th>
                           <th className="pb-3 text-center">Marksheet Reveal</th>
                           <th className="pb-3 text-center">Certificate Status</th>
                           <th className="pb-3">Date Taken</th>
@@ -4786,7 +4817,7 @@ export default function AdminDashboardPage() {
                             if (resultsCourseFilter && res.candidateId?.course !== resultsCourseFilter) {
                               return false;
                             }
-                            
+
                             // Filter by resultsSearchQuery if entered
                             if (resultsSearchQuery) {
                               const query = resultsSearchQuery.toLowerCase();
@@ -4794,10 +4825,10 @@ export default function AdminDashboardPage() {
                               const regId = res.candidateId?.registrationId?.toLowerCase() || "";
                               const course = res.candidateId?.course?.toLowerCase() || "";
                               const examTitle = res.quizTitle?.toLowerCase() || "";
-                              
+
                               return studentName.includes(query) || regId.includes(query) || course.includes(query) || examTitle.includes(query);
                             }
-                            
+
                             return true;
                           })
                           .map((res, idx) => (
@@ -4820,15 +4851,12 @@ export default function AdminDashboardPage() {
                               <td className="py-3.5 text-center font-extrabold text-slate-900">
                                 {res.percentage}%
                               </td>
-                              <td className="py-3.5 text-center font-black text-deepskyblue-dark">
-                                {res.grade}
-                              </td>
                               <td className="py-3.5 text-center">
                                 <button
                                   onClick={() => handleToggleResultApproval(res._id, "marksheet", !!res.isApproved)}
                                   className={`px-2 py-1 rounded-full text-[9px] font-black tracking-wider uppercase transition cursor-pointer ${res.isApproved
-                                      ? "bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100"
-                                      : "bg-amber-50 text-amber-600 border border-amber-250 hover:bg-amber-100"
+                                    ? "bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100"
+                                    : "bg-amber-50 text-amber-600 border border-amber-250 hover:bg-amber-100"
                                     }`}
                                 >
                                   {res.isApproved ? "Approved / Revealed" : "Pending / Hidden"}
@@ -4838,8 +4866,8 @@ export default function AdminDashboardPage() {
                                 <button
                                   onClick={() => handleToggleResultApproval(res._id, "certificate", !!res.isCertificateApproved)}
                                   className={`px-2 py-1 rounded-full text-[9px] font-black tracking-wider uppercase transition cursor-pointer ${res.isCertificateApproved
-                                      ? "bg-indigo-50 text-indigo-650 border border-indigo-255 hover:bg-indigo-100"
-                                      : "bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100"
+                                    ? "bg-indigo-50 text-indigo-650 border border-indigo-255 hover:bg-indigo-100"
+                                    : "bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100"
                                     }`}
                                 >
                                   {res.isCertificateApproved ? "Approved / Assigned" : "Not Assigned"}
@@ -5760,8 +5788,8 @@ export default function AdminDashboardPage() {
                           type="button"
                           onClick={() => handleToggleStudentAccess(studentDetails.student._id)}
                           className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer shrink-0 ${studentDetails.student.isActive !== false
-                              ? "bg-rose-50 text-rose-600 border border-rose-250 hover:bg-rose-600 hover:text-white"
-                              : "bg-emerald-50 text-emerald-650 border border-emerald-250 hover:bg-emerald-650 hover:text-white"
+                            ? "bg-rose-50 text-rose-600 border border-rose-250 hover:bg-rose-600 hover:text-white"
+                            : "bg-emerald-50 text-emerald-650 border border-emerald-250 hover:bg-emerald-650 hover:text-white"
                             }`}
                         >
                           {studentDetails.student.isActive !== false ? "Deactivate Profile" : "Activate Profile"}
@@ -5931,8 +5959,8 @@ export default function AdminDashboardPage() {
                                 <button
                                   onClick={() => handleToggleResultApproval(res._id, "marksheet", !!res.isApproved)}
                                   className={`px-2 py-1 rounded-xl text-[9px] font-black tracking-wider uppercase transition cursor-pointer ${res.isApproved
-                                      ? "bg-emerald-50 text-emerald-600 border border-emerald-250 hover:bg-emerald-100"
-                                      : "bg-amber-50 text-amber-600 border border-amber-250 hover:bg-amber-100"
+                                    ? "bg-emerald-50 text-emerald-600 border border-emerald-250 hover:bg-emerald-100"
+                                    : "bg-amber-50 text-amber-600 border border-amber-250 hover:bg-amber-100"
                                     }`}
                                 >
                                   {res.isApproved ? "Approved" : "Pending"}
@@ -5945,8 +5973,8 @@ export default function AdminDashboardPage() {
                                 <button
                                   onClick={() => handleToggleResultApproval(res._id, "certificate", !!res.isCertificateApproved)}
                                   className={`px-2 py-1 rounded-xl text-[9px] font-black tracking-wider uppercase transition cursor-pointer ${res.isCertificateApproved
-                                      ? "bg-indigo-50 text-indigo-650 border border-indigo-250 hover:bg-indigo-100"
-                                      : "bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100"
+                                    ? "bg-indigo-50 text-indigo-650 border border-indigo-250 hover:bg-indigo-100"
+                                    : "bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100"
                                     }`}
                                 >
                                   {res.isCertificateApproved ? "Assigned" : "Assign"}

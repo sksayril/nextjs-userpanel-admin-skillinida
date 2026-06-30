@@ -32,7 +32,7 @@ function seededRandom(seedStr: string) {
   for (let i = 0; i < seedStr.length; i++) {
     h = Math.imul(31, h) + seedStr.charCodeAt(i) | 0;
   }
-  return function() {
+  return function () {
     let t = h += 0x6D2B79F5;
     t = Math.imul(t ^ (t >>> 15), t | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
@@ -541,12 +541,12 @@ export default function DashboardPage() {
   const resultsToDisplay = results.map((r, i) => {
     const code = `QUIZ-${101 + i}`;
     const isApproved = !!r.isApproved;
-    
+
     // If approved, map scores. If not, fallback to placeholders.
     const internal = isApproved ? Math.round((r.score || 0) * (30 / (r.total || 1))) : null;
     const external = isApproved ? Math.round(((r.total || 0) - (r.score || 0)) * (70 / (r.total || 1))) + (r.score || 0) * 5 : null;
     const total = isApproved ? Math.round(((r.score || 0) / (r.total || 1)) * 100) : null;
-    
+
     return {
       code,
       subject: r.quizTitle,
@@ -627,13 +627,13 @@ export default function DashboardPage() {
 
     const joinedDate = formatDate(student.createdAt);
     const expireDate = formatDate(
-      student.createdAt 
+      student.createdAt
         ? new Date(new Date(student.createdAt).setFullYear(new Date(student.createdAt).getFullYear() + 1))
         : new Date(new Date().setFullYear(new Date().getFullYear() + 1))
     );
 
     return (
-      <div 
+      <div
         className="w-[210mm] h-[297mm] bg-white hidden print:flex flex-row items-start justify-center gap-10 pt-24 absolute inset-0 z-50 font-sans"
         style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}
       >
@@ -682,7 +682,7 @@ export default function DashboardPage() {
           <div className="px-4 pt-4 pb-12 flex-1 flex flex-col items-center z-10 relative">
             <h3 className="text-[11px] font-black text-[#00BFFF] uppercase tracking-tight text-center">{student.name}</h3>
             <p className="text-[7.5px] text-[#0C2340] font-black tracking-wider uppercase mt-0.5 text-center">{student.course}</p>
-            
+
             <div className="w-full mt-3 space-y-1 text-[7px] font-semibold text-slate-700 bg-slate-50/50 p-2 rounded-xl border border-slate-100">
               <div className="flex justify-between border-b border-slate-100 pb-0.5">
                 <span className="text-slate-400 font-bold uppercase text-[5.5px]">ID No</span>
@@ -797,15 +797,15 @@ export default function DashboardPage() {
 
   const renderPrintAdmitCard = (student: any) => {
     if (!student) return null;
-    
+
     // Extract ID details dynamically
     const appId = student.registrationId || "";
     const admitCardNo = appId;
-    
-    const formattedDob = student.dob 
-      ? new Date(student.dob).toLocaleDateString("en-GB").replace(/\//g, " / ") 
+
+    const formattedDob = student.dob
+      ? new Date(student.dob).toLocaleDateString("en-GB").replace(/\//g, " / ")
       : "14 / 09 / 2003";
-      
+
     // Find current quiz assigned to the student for their course
     const currentQuiz = quizzes.find((q: any) => {
       const isAssigned = q.assignedStudents?.some((s: any) => {
@@ -831,12 +831,12 @@ export default function DashboardPage() {
         const dayName = days[scheduledDate.getDay()];
         const dateStr = scheduledDate.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
         formattedExamDate = `${dateStr} (${dayName})`;
-        
+
         formattedStartTime = scheduledDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
-        
+
         const reportingDate = new Date(scheduledDate.getTime() - 30 * 60 * 1000);
         formattedLoginTime = reportingDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
-        
+
         const gateClosingDate = new Date(scheduledDate.getTime() - 15 * 60 * 1000);
         formattedGateClosingTime = gateClosingDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
       }
@@ -854,7 +854,7 @@ export default function DashboardPage() {
       formattedLoginTime = student.loginTime || "To Be Announced";
       formattedGateClosingTime = "15 Mins Before Exam";
     }
-    
+
     // Fallback QR code data
     const verifyUrl = `https://smi.in.net/verify?reg=${student.registrationId || "N/A"}`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(verifyUrl)}`;
@@ -884,17 +884,17 @@ export default function DashboardPage() {
           <div className="flex-1 flex flex-col items-center relative">
             {/* Horizontal line behind the ADMIT CARD title */}
             <div className="absolute top-[20px] left-0 right-0 h-[2px] bg-[#0c3e8a] z-0"></div>
-            
+
             {/* ADMIT CARD Title Badge */}
             <div className="relative z-10 bg-[#0c3e8a] text-white text-2xl font-black px-12 py-1 rounded-full uppercase tracking-wider shadow-md">
               ADMIT CARD
             </div>
-            
+
             <div className="text-xs font-black text-slate-800 mt-2 z-10 bg-white px-4">
               Issued By: <span className="text-[#0c3e8a]">SUPPORT MISSION INDIA</span>
             </div>
           </div>
-          
+
           {/* Right Header Logo */}
           <div className="flex flex-col items-center text-center shrink-0 pl-4 w-[180px]">
             <img src="/smi-logo.png" className="h-14 w-auto object-contain" alt="SMI Logo" />
@@ -1202,7 +1202,6 @@ export default function DashboardPage() {
               <img src="/smi-logo.png" className="h-16 w-16 object-contain" alt="SMI Logo" />
               <div className="text-left">
                 <h1 className="text-lg font-black tracking-tight text-[#0a1c3a] font-serif">SUPPORT MISSION INDIA</h1>
-                <p className="text-[9px] uppercase font-bold text-[#b89047] tracking-widest leading-none">Sarkari Skill Certification Authority</p>
               </div>
             </div>
             <h2 className="text-xl font-extrabold text-[#0a1c3a] tracking-wide uppercase font-serif mt-2">
@@ -1223,11 +1222,7 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          {/* Grade Display */}
-          <div className="flex flex-col items-center justify-center">
-            <span className="text-[9px] uppercase font-bold tracking-widest text-[#b89047]">Grade Obtained</span>
-            <span className="text-3xl font-black text-[#9b7a2f] font-serif tracking-wide mt-1">{res.grade}</span>
-          </div>
+
 
           {/* Signatures & Verification Info */}
           <div className="flex justify-between items-end px-8 mt-2">
@@ -1304,9 +1299,7 @@ export default function DashboardPage() {
             <img src="/smi-logo.png" className="h-16 w-16 object-contain" alt="SMI Logo" />
             <div>
               <h1 className="text-xl font-black tracking-tight text-slate-900">SUPPORT MISSION INDIA</h1>
-              <p className="text-[10px] uppercase font-bold text-deepskyblue-dark tracking-widest mt-1">
-                Sarkari Skill Certification Authority
-              </p>
+
               <h2 className="text-sm font-bold text-slate-700 mt-3">EXAM EVALUATION MARKSHEET</h2>
             </div>
           </div>
@@ -1355,16 +1348,10 @@ export default function DashboardPage() {
               </tbody>
             </table>
           </div>
-
-          {/* Summary Performance Section */}
-          <div className="mt-8 grid grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200/60">
+          <div className="mt-8 grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200/60">
             <div className="text-center">
               <span className="text-slate-400 block font-bold uppercase tracking-wider text-[8px]">Obtained Percentage</span>
               <span className="text-lg font-black text-slate-900 mt-1 block">{res.percentage}%</span>
-            </div>
-            <div className="text-center">
-              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[8px]">Assigned Grade</span>
-              <span className="text-lg font-black text-deepskyblue-dark mt-1 block">{res.grade}</span>
             </div>
             <div className="text-center">
               <span className="text-slate-400 block font-bold uppercase tracking-wider text-[8px]">Evaluation Status</span>
@@ -1379,7 +1366,6 @@ export default function DashboardPage() {
         <div className="flex justify-between items-end border-t border-slate-200/80 pt-6">
           <div className="space-y-1 text-[10px] text-slate-500">
             <p>Verification Code: <span className="font-mono text-slate-700 font-bold">{res._id}</span></p>
-            <p>Generated by Sarkari Skill Portal on {new Date().toLocaleString()}</p>
           </div>
           <div className="text-center w-36 space-y-1">
             <p className="font-serif italic text-xs text-slate-600 h-6">Dr. K. Verma</p>
@@ -1427,9 +1413,7 @@ export default function DashboardPage() {
             <img src="/smi-logo.png" className="h-16 w-16 object-contain" alt="SMI Logo" />
             <div>
               <h1 className="text-xl font-black tracking-tight text-slate-900">SUPPORT MISSION INDIA</h1>
-              <p className="text-[10px] uppercase font-bold text-deepskyblue-dark tracking-widest mt-1">
-                Sarkari Skill Certification Authority
-              </p>
+
               <h2 className="text-sm font-bold text-slate-700 mt-3">SEMESTER CUMULATIVE MARK SHEET</h2>
             </div>
           </div>
@@ -1465,13 +1449,12 @@ export default function DashboardPage() {
                   <th className="py-3 px-4 border-b border-slate-200 text-center">Ext (70)</th>
                   <th className="py-3 px-4 border-b border-slate-200 text-center">Total Score</th>
                   <th className="py-3 px-4 border-b border-slate-200 text-center">Percentage</th>
-                  <th className="py-3 px-4 border-b border-slate-200 text-right">Grade</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {list.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-6 text-center text-slate-400">No assessment records found in portal database.</td>
+                    <td colSpan={5} className="py-6 text-center text-slate-400">No assessment records found in portal database.</td>
                   </tr>
                 ) : (
                   list.map((res, i) => {
@@ -1484,7 +1467,6 @@ export default function DashboardPage() {
                         <td className="py-3 px-4 text-center">{external > 70 ? 70 : external}</td>
                         <td className="py-3 px-4 text-center font-bold">{res.score} / {res.total}</td>
                         <td className="py-3 px-4 text-center">{res.percentage}%</td>
-                        <td className="py-3 px-4 text-right font-black text-deepskyblue-dark">{res.grade}</td>
                       </tr>
                     );
                   })
@@ -1504,9 +1486,9 @@ export default function DashboardPage() {
               <span className="text-lg font-black text-slate-900 mt-1 block">{averagePercentage}%</span>
             </div>
             <div className="text-center">
-              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[8px]">Aggregate Grade / Result</span>
+              <span className="text-slate-400 block font-bold uppercase tracking-wider text-[8px]">Overall Result</span>
               <span className={`text-lg font-black mt-1 block ${overallStatus === "PASS" ? "text-emerald-600" : "text-rose-600"}`}>
-                {overallGrade} ({overallStatus})
+                {overallStatus}
               </span>
             </div>
           </div>
@@ -1516,7 +1498,6 @@ export default function DashboardPage() {
         <div className="flex justify-between items-end border-t border-slate-200/80 pt-6">
           <div className="space-y-1 text-[10px] text-slate-500">
             <p>Support Mission India Skill Program Registration: <span className="font-mono text-slate-700 font-bold">{regId}</span></p>
-            <p>Generated by Sarkari Skill Portal on {new Date().toLocaleString()}</p>
           </div>
           <div className="text-center w-36 space-y-1">
             <p className="font-serif italic text-xs text-slate-600 h-6">Dr. K. Verma</p>
@@ -1531,7 +1512,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans select-none overflow-x-hidden relative">
-      
+
       {/* HEADER SECTION (Hidden when printing) */}
       <header className="h-16 border-b border-slate-200/80 backdrop-blur-md bg-white/80 sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 print:hidden">
         <button
@@ -1638,970 +1619,956 @@ export default function DashboardPage() {
         ) : (
           <>
             {/* DESKTOP SIDEBAR NAVIGATION (Hidden when printing & on Mobile view) */}
-        <aside className="w-64 border-r border-slate-200/80 bg-white flex flex-col justify-between py-6 px-4 shrink-0 hidden lg:flex print:hidden">
-          <div className="space-y-6">
-            <div className="px-3">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Main Dashboard</p>
-            </div>
+            <aside className="w-64 border-r border-slate-200/80 bg-white flex flex-col justify-between py-6 px-4 shrink-0 hidden lg:flex print:hidden">
+              <div className="space-y-6">
+                <div className="px-3">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Main Dashboard</p>
+                </div>
 
-            <nav className="space-y-1">
+                <nav className="space-y-1">
+                  <button
+                    onClick={() => setActiveTab("courses")}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer ${activeTab === "courses" ? "bg-deepskyblue/10 text-deepskyblue-dark border-l-2 border-deepskyblue" : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"}`}
+                  >
+                    <BookOpen className="h-4 w-4" />
+                    <span>My Courses</span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab("attendance")}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer ${activeTab === "attendance" ? "bg-deepskyblue/10 text-deepskyblue-dark border-l-2 border-deepskyblue" : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"}`}
+                  >
+                    <Calendar className="h-4 w-4" />
+                    <span>My Attendance</span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab("papers")}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer ${activeTab === "papers" ? "bg-deepskyblue/10 text-deepskyblue-dark border-l-2 border-deepskyblue" : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"}`}
+                  >
+                    <FileText className="h-4 w-4" />
+                    <span>Exam</span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab("results")}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer ${activeTab === "results" ? "bg-deepskyblue/10 text-deepskyblue-dark border-l-2 border-deepskyblue" : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"}`}
+                  >
+                    <Award className="h-4 w-4" />
+                    <span>My Result & Marks</span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab("lectures")}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer ${activeTab === "lectures" ? "bg-deepskyblue/10 text-deepskyblue-dark border-l-2 border-deepskyblue" : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"}`}
+                  >
+                    <BookMarked className="h-4 w-4" />
+                    <span>Lectures & Notes</span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab("profile")}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer ${activeTab === "profile" ? "bg-deepskyblue/10 text-deepskyblue-dark border-l-2 border-deepskyblue" : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"}`}
+                  >
+                    <User className="h-4 w-4" />
+                    <span>My Profile</span>
+                  </button>
+                </nav>
+              </div>
+
+              {/* Sign Out Action */}
               <button
-                onClick={() => setActiveTab("courses")}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer ${activeTab === "courses" ? "bg-deepskyblue/10 text-deepskyblue-dark border-l-2 border-deepskyblue" : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"}`}
+                onClick={handleSignOut}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-all text-left cursor-pointer"
               >
-                <BookOpen className="h-4 w-4" />
-                <span>My Courses</span>
+                <LogOut className="h-4 w-4" />
+                <span>Sign Out</span>
               </button>
+            </aside>
 
-              <button
-                onClick={() => setActiveTab("attendance")}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer ${activeTab === "attendance" ? "bg-deepskyblue/10 text-deepskyblue-dark border-l-2 border-deepskyblue" : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"}`}
-              >
-                <Calendar className="h-4 w-4" />
-                <span>My Attendance</span>
-              </button>
+            {/* MAIN DISPLAY AREA */}
+            <main className="flex-1 p-6 md:p-8 overflow-y-auto mb-20 lg:mb-0 print:p-0 print:mb-0">
 
-              <button
-                onClick={() => setActiveTab("papers")}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer ${activeTab === "papers" ? "bg-deepskyblue/10 text-deepskyblue-dark border-l-2 border-deepskyblue" : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"}`}
-              >
-                <FileText className="h-4 w-4" />
-                <span>Exam</span>
-              </button>
+              {/* Live Classes Card Banner (Red Card) */}
+              {liveClasses && liveClasses.length > 0 && (
+                <div className="mb-6 space-y-3 max-w-4xl">
+                  {liveClasses.map((liveClass: any) => {
+                    const now = new Date();
+                    const start = new Date(liveClass.startTime);
+                    const end = new Date(liveClass.endTime);
+                    const isActive = now >= start && now < end;
 
-              <button
-                onClick={() => setActiveTab("results")}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer ${activeTab === "results" ? "bg-deepskyblue/10 text-deepskyblue-dark border-l-2 border-deepskyblue" : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"}`}
-              >
-                <Award className="h-4 w-4" />
-                <span>My Result & Marks</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab("lectures")}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer ${activeTab === "lectures" ? "bg-deepskyblue/10 text-deepskyblue-dark border-l-2 border-deepskyblue" : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"}`}
-              >
-                <BookMarked className="h-4 w-4" />
-                <span>Lectures & Notes</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab("profile")}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer ${activeTab === "profile" ? "bg-deepskyblue/10 text-deepskyblue-dark border-l-2 border-deepskyblue" : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"}`}
-              >
-                <User className="h-4 w-4" />
-                <span>My Profile</span>
-              </button>
-            </nav>
-          </div>
-
-          {/* Sign Out Action */}
-          <button
-            onClick={handleSignOut}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-all text-left cursor-pointer"
-          >
-            <LogOut className="h-4 w-4" />
-            <span>Sign Out</span>
-          </button>
-        </aside>
-
-        {/* MAIN DISPLAY AREA */}
-        <main className="flex-1 p-6 md:p-8 overflow-y-auto mb-20 lg:mb-0 print:p-0 print:mb-0">
-          
-          {/* Live Classes Card Banner (Red Card) */}
-          {liveClasses && liveClasses.length > 0 && (
-            <div className="mb-6 space-y-3 max-w-4xl">
-              {liveClasses.map((liveClass: any) => {
-                const now = new Date();
-                const start = new Date(liveClass.startTime);
-                const end = new Date(liveClass.endTime);
-                const isActive = now >= start && now < end;
-                
-                return (
-                  <div key={liveClass._id} className="p-5 rounded-2xl bg-gradient-to-br from-rose-500 to-red-600 border border-red-500 text-white shadow-lg relative overflow-hidden animate-pulse-subtle flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="absolute right-0 top-0 h-40 w-40 bg-white/5 blur-2xl rounded-full pointer-events-none" />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-white animate-ping" />
-                        <span className="text-[10px] font-black uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded">
-                          {isActive ? "Live Class Now" : "Upcoming Class"}
-                        </span>
+                    return (
+                      <div key={liveClass._id} className="p-5 rounded-2xl bg-gradient-to-br from-rose-500 to-red-600 border border-red-500 text-white shadow-lg relative overflow-hidden animate-pulse-subtle flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="absolute right-0 top-0 h-40 w-40 bg-white/5 blur-2xl rounded-full pointer-events-none" />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full bg-white animate-ping" />
+                            <span className="text-[10px] font-black uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded">
+                              {isActive ? "Live Class Now" : "Upcoming Class"}
+                            </span>
+                          </div>
+                          <h3 className="text-base font-extrabold mt-2">{liveClass.className}</h3>
+                          <p className="text-xs text-rose-100 font-semibold mt-1">
+                            Timing: {new Date(liveClass.startTime).toLocaleDateString()} {new Date(liveClass.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(liveClass.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                        {isActive ? (
+                          <a
+                            href={liveClass.meetLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="py-2.5 px-6 rounded-xl bg-white text-red-600 font-bold text-xs hover:bg-rose-50 shadow-md active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                            <span>Join Class</span>
+                          </a>
+                        ) : (
+                          <button
+                            disabled
+                            className="py-2.5 px-6 rounded-xl bg-white/25 text-white/80 font-bold text-xs cursor-not-allowed border border-white/10"
+                          >
+                            Waiting for Time
+                          </button>
+                        )}
                       </div>
-                      <h3 className="text-base font-extrabold mt-2">{liveClass.className}</h3>
-                      <p className="text-xs text-rose-100 font-semibold mt-1">
-                        Timing: {new Date(liveClass.startTime).toLocaleDateString()} {new Date(liveClass.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(liveClass.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </p>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* TAB CONTENT: MY COURSES */}
+              {activeTab === "courses" && (
+                <div className="space-y-6 max-w-4xl animate-fade-in">
+                  <div>
+                    <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                      <BookOpen className="h-5 w-5 text-deepskyblue" />
+                      My Enrolled Courses
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-1">Review active syllabus modules and learning progress</p>
+                  </div>
+
+                  {/* Course Title Card */}
+                  <div className="p-6 rounded-2xl bg-gradient-to-br from-deepskyblue/12 to-sky-50/20 border border-deepskyblue/20 shadow-sm relative overflow-hidden">
+                    <div className="absolute right-0 top-0 h-40 w-40 bg-deepskyblue/5 blur-2xl rounded-full" />
+                    <div className="flex flex-wrap gap-2 items-center">
+                      <span className="text-[9px] uppercase font-bold bg-deepskyblue/10 text-deepskyblue-dark border border-deepskyblue/20 px-2 py-0.5 rounded-full">
+                        Primary Program
+                      </span>
+                      {courseData && (
+                        <span className={`text-[9px] uppercase font-bold border px-2 py-0.5 rounded-full ${courseData.isPaid
+                          ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                          : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                          }`}>
+                          {courseData.isPaid ? `Paid (₹${courseData.price})` : "Free Course"}
+                        </span>
+                      )}
                     </div>
-                    {isActive ? (
-                      <a
-                        href={liveClass.meetLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="py-2.5 px-6 rounded-xl bg-white text-red-600 font-bold text-xs hover:bg-rose-50 shadow-md active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                        <span>Join Class</span>
-                      </a>
+                    <h3 className="text-lg font-bold text-slate-900 mt-3">{candidate.course}</h3>
+                    {courseData?.duration && (
+                      <p className="text-[11px] text-deepskyblue-dark font-bold mt-1 flex items-center gap-1.5">
+                        <Calendar className="h-3.5 w-3.5" />
+                        Program Duration: {courseData.duration}
+                      </p>
+                    )}
+                    <p className="text-xs text-slate-500 mt-1 font-semibold">Registered Student ID: {candidate.registrationId}</p>
+
+                    <div className="flex gap-4 items-center mt-6">
+                      <div className="flex-1 bg-slate-200 rounded-full h-2 overflow-hidden border border-slate-300/60">
+                        <div className="h-full bg-gradient-to-r from-deepskyblue to-sky-600" style={{ width: "55%" }} />
+                      </div>
+                      <span className="text-xs font-bold text-slate-700">55% Overall</span>
+                    </div>
+                  </div>
+
+                  {/* Modules Progress Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+                    {modules.map((mod, index) => (
+                      <div key={index} className="p-5 rounded-2xl bg-white border border-slate-200/80 hover:border-slate-350 hover:shadow-md transition-all flex flex-col justify-between shadow-sm shadow-slate-100">
+                        <div>
+                          <div className="flex justify-between items-start">
+                            <h4 className="text-sm font-bold text-slate-800">{mod.title}</h4>
+                            <span className="text-xs font-bold text-deepskyblue-dark bg-deepskyblue/10 px-2 py-0.5 rounded-md">
+                              {mod.progress}%
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 mt-2 leading-relaxed">{mod.topics}</p>
+                        </div>
+
+                        <div className="mt-5 space-y-1.5">
+                          <div className="flex justify-between text-[10px] text-slate-500 font-semibold">
+                            <span>Completion Rate</span>
+                            <span>{mod.progress} / 100</span>
+                          </div>
+                          <div className="bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                            <div className="h-full bg-gradient-to-r from-deepskyblue to-sky-600" style={{ width: `${mod.progress}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Enrolled Course Static PDFs & Study Material */}
+                  <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-sm shadow-slate-100 space-y-4">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-850">Course PDF Study Materials & Textbooks</h3>
+                      <p className="text-[11px] text-slate-450 mt-0.5">Access uploaded books, notes, and static papers assigned to your course program</p>
+                    </div>
+
+                    {papers.length === 0 ? (
+                      <p className="text-xs text-slate-400 italic py-4">No course textbooks or PDF handouts uploaded yet.</p>
                     ) : (
-                      <button
-                        disabled
-                        className="py-2.5 px-6 rounded-xl bg-white/25 text-white/80 font-bold text-xs cursor-not-allowed border border-white/10"
-                      >
-                        Waiting for Time
-                      </button>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {/* Books */}
+                        <div className="space-y-2.5">
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block border-b border-slate-100 pb-1.5">Books & Syllabi</span>
+                          {papers.filter(p => p.type === "book").length === 0 ? (
+                            <p className="text-[10px] text-slate-400 italic">No textbooks loaded.</p>
+                          ) : (
+                            papers.filter(p => p.type === "book").map((pdf, pIdx) => (
+                              <a
+                                key={pIdx}
+                                href={pdf.fileUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-750 transition"
+                              >
+                                <span className="truncate pr-2">{pdf.title}</span>
+                                <span className="text-deepskyblue-dark shrink-0 text-[10px] font-black hover:underline">Open</span>
+                              </a>
+                            ))
+                          )}
+                        </div>
+
+                        {/* Notes */}
+                        <div className="space-y-2.5">
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block border-b border-slate-100 pb-1.5">Lecture Notes</span>
+                          {papers.filter(p => p.type === "note").length === 0 ? (
+                            <p className="text-[10px] text-slate-400 italic">No notes loaded.</p>
+                          ) : (
+                            papers.filter(p => p.type === "note").map((pdf, pIdx) => (
+                              <a
+                                key={pIdx}
+                                href={pdf.fileUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-750 transition"
+                              >
+                                <span className="truncate pr-2">{pdf.title}</span>
+                                <span className="text-deepskyblue-dark shrink-0 text-[10px] font-black hover:underline">Open</span>
+                              </a>
+                            ))
+                          )}
+                        </div>
+
+                        {/* Question Papers */}
+                        <div className="space-y-2.5">
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block border-b border-slate-100 pb-1.5">Exam Sheets</span>
+                          {papers.filter(p => !p.type || p.type === "exam_paper").length === 0 ? (
+                            <p className="text-[10px] text-slate-400 italic">No static papers loaded.</p>
+                          ) : (
+                            papers.filter(p => !p.type || p.type === "exam_paper").map((pdf, pIdx) => (
+                              <a
+                                key={pIdx}
+                                href={pdf.fileUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-750 transition"
+                              >
+                                <span className="truncate pr-2">{pdf.title}</span>
+                                <span className="text-deepskyblue-dark shrink-0 text-[10px] font-black hover:underline">Open</span>
+                              </a>
+                            ))
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
-                );
-              })}
-            </div>
-          )}
-          
-          {/* TAB CONTENT: MY COURSES */}
-          {activeTab === "courses" && (
-            <div className="space-y-6 max-w-4xl animate-fade-in">
-              <div>
-                <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
-                  <BookOpen className="h-5 w-5 text-deepskyblue" />
-                  My Enrolled Courses
-                </h2>
-                <p className="text-xs text-slate-500 mt-1">Review active syllabus modules and learning progress</p>
-              </div>
-
-              {/* Course Title Card */}
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-deepskyblue/12 to-sky-50/20 border border-deepskyblue/20 shadow-sm relative overflow-hidden">
-                <div className="absolute right-0 top-0 h-40 w-40 bg-deepskyblue/5 blur-2xl rounded-full" />
-                <div className="flex flex-wrap gap-2 items-center">
-                  <span className="text-[9px] uppercase font-bold bg-deepskyblue/10 text-deepskyblue-dark border border-deepskyblue/20 px-2 py-0.5 rounded-full">
-                    Primary Program
-                  </span>
-                  {courseData && (
-                    <span className={`text-[9px] uppercase font-bold border px-2 py-0.5 rounded-full ${
-                      courseData.isPaid 
-                        ? "bg-amber-500/10 text-amber-600 border-amber-500/20" 
-                        : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                    }`}>
-                      {courseData.isPaid ? `Paid (₹${courseData.price})` : "Free Course"}
-                    </span>
-                  )}
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 mt-3">{candidate.course}</h3>
-                {courseData?.duration && (
-                  <p className="text-[11px] text-deepskyblue-dark font-bold mt-1 flex items-center gap-1.5">
-                    <Calendar className="h-3.5 w-3.5" />
-                    Program Duration: {courseData.duration}
-                  </p>
-                )}
-                <p className="text-xs text-slate-500 mt-1 font-semibold">Registered Student ID: {candidate.registrationId}</p>
+              )}
 
-                <div className="flex gap-4 items-center mt-6">
-                  <div className="flex-1 bg-slate-200 rounded-full h-2 overflow-hidden border border-slate-300/60">
-                    <div className="h-full bg-gradient-to-r from-deepskyblue to-sky-600" style={{ width: "55%" }} />
+              {/* TAB CONTENT: MY ATTENDANCE */}
+              {activeTab === "attendance" && (
+                <div className="space-y-6 max-w-4xl animate-fade-in">
+                  <div>
+                    <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                      <Calendar className="h-5 w-5 text-deepskyblue" />
+                      My Lecture Attendance
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-1">Monitor classroom presence and log history</p>
                   </div>
-                  <span className="text-xs font-bold text-slate-700">55% Overall</span>
-                </div>
-              </div>
 
-              {/* Modules Progress Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
-                {modules.map((mod, index) => (
-                  <div key={index} className="p-5 rounded-2xl bg-white border border-slate-200/80 hover:border-slate-350 hover:shadow-md transition-all flex flex-col justify-between shadow-sm shadow-slate-100">
-                    <div>
-                      <div className="flex justify-between items-start">
-                        <h4 className="text-sm font-bold text-slate-800">{mod.title}</h4>
-                        <span className="text-xs font-bold text-deepskyblue-dark bg-deepskyblue/10 px-2 py-0.5 rounded-md">
-                          {mod.progress}%
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-500 mt-2 leading-relaxed">{mod.topics}</p>
+                  {/* Summary Stats Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-5">
+                    <div className="p-5 rounded-2xl bg-white border border-slate-200/80 flex flex-col items-center sm:items-start shadow-sm shadow-slate-100">
+                      <span className="text-xs font-semibold text-slate-400">Attendance Rate</span>
+                      <span className="text-2xl font-black text-deepskyblue-dark mt-1">{attendance.percentage}%</span>
                     </div>
-
-                    <div className="mt-5 space-y-1.5">
-                      <div className="flex justify-between text-[10px] text-slate-500 font-semibold">
-                        <span>Completion Rate</span>
-                        <span>{mod.progress} / 100</span>
-                      </div>
-                      <div className="bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-deepskyblue to-sky-600" style={{ width: `${mod.progress}%` }} />
-                      </div>
+                    <div className="p-5 rounded-2xl bg-white border border-slate-200/80 flex flex-col items-center sm:items-start shadow-sm shadow-slate-100">
+                      <span className="text-xs font-semibold text-slate-400">Present Days</span>
+                      <span className="text-2xl font-black text-emerald-600 mt-1">{attendance.present} Lectures</span>
+                    </div>
+                    <div className="p-5 rounded-2xl bg-white border border-slate-200/80 flex flex-col items-center sm:items-start shadow-sm shadow-slate-100">
+                      <span className="text-xs font-semibold text-slate-400">Absent Days</span>
+                      <span className="text-2xl font-black text-rose-650 mt-1">{attendance.absent} Lectures</span>
+                    </div>
+                    <div className="p-5 rounded-2xl bg-white border border-slate-200/80 flex flex-col items-center sm:items-start shadow-sm shadow-slate-100">
+                      <span className="text-xs font-semibold text-slate-400">Approved Leave</span>
+                      <span className="text-2xl font-black text-amber-600 mt-1">{attendance.leave} Session</span>
                     </div>
                   </div>
-                ))}
-              </div>
 
-              {/* Enrolled Course Static PDFs & Study Material */}
-              <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-sm shadow-slate-100 space-y-4">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-850">Course PDF Study Materials & Textbooks</h3>
-                  <p className="text-[11px] text-slate-450 mt-0.5">Access uploaded books, notes, and static papers assigned to your course program</p>
-                </div>
+                  {/* Monthly Calendar View */}
+                  <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-sm shadow-slate-100">
+                    <h3 className="text-sm font-bold text-slate-800 border-b border-slate-100 pb-3 mb-5">
+                      Attendance History Logs
+                    </h3>
 
-                {papers.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic py-4">No course textbooks or PDF handouts uploaded yet.</p>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {/* Books */}
-                    <div className="space-y-2.5">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block border-b border-slate-100 pb-1.5">Books & Syllabi</span>
-                      {papers.filter(p => p.type === "book").length === 0 ? (
-                        <p className="text-[10px] text-slate-400 italic">No textbooks loaded.</p>
-                      ) : (
-                        papers.filter(p => p.type === "book").map((pdf, pIdx) => (
-                          <a
-                            key={pIdx}
-                            href={pdf.fileUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-750 transition"
-                          >
-                            <span className="truncate pr-2">{pdf.title}</span>
-                            <span className="text-deepskyblue-dark shrink-0 text-[10px] font-black hover:underline">Open</span>
-                          </a>
-                        ))
-                      )}
-                    </div>
-
-                    {/* Notes */}
-                    <div className="space-y-2.5">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block border-b border-slate-100 pb-1.5">Lecture Notes</span>
-                      {papers.filter(p => p.type === "note").length === 0 ? (
-                        <p className="text-[10px] text-slate-400 italic">No notes loaded.</p>
-                      ) : (
-                        papers.filter(p => p.type === "note").map((pdf, pIdx) => (
-                          <a
-                            key={pIdx}
-                            href={pdf.fileUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-750 transition"
-                          >
-                            <span className="truncate pr-2">{pdf.title}</span>
-                            <span className="text-deepskyblue-dark shrink-0 text-[10px] font-black hover:underline">Open</span>
-                          </a>
-                        ))
-                      )}
-                    </div>
-
-                    {/* Question Papers */}
-                    <div className="space-y-2.5">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block border-b border-slate-100 pb-1.5">Exam Sheets</span>
-                      {papers.filter(p => !p.type || p.type === "exam_paper").length === 0 ? (
-                        <p className="text-[10px] text-slate-400 italic">No static papers loaded.</p>
-                      ) : (
-                        papers.filter(p => !p.type || p.type === "exam_paper").map((pdf, pIdx) => (
-                          <a
-                            key={pIdx}
-                            href={pdf.fileUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-750 transition"
-                          >
-                            <span className="truncate pr-2">{pdf.title}</span>
-                            <span className="text-deepskyblue-dark shrink-0 text-[10px] font-black hover:underline">Open</span>
-                          </a>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* TAB CONTENT: MY ATTENDANCE */}
-          {activeTab === "attendance" && (
-            <div className="space-y-6 max-w-4xl animate-fade-in">
-              <div>
-                <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-deepskyblue" />
-                  My Lecture Attendance
-                </h2>
-                <p className="text-xs text-slate-500 mt-1">Monitor classroom presence and log history</p>
-              </div>
-
-              {/* Summary Stats Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-5">
-                <div className="p-5 rounded-2xl bg-white border border-slate-200/80 flex flex-col items-center sm:items-start shadow-sm shadow-slate-100">
-                  <span className="text-xs font-semibold text-slate-400">Attendance Rate</span>
-                  <span className="text-2xl font-black text-deepskyblue-dark mt-1">{attendance.percentage}%</span>
-                </div>
-                <div className="p-5 rounded-2xl bg-white border border-slate-200/80 flex flex-col items-center sm:items-start shadow-sm shadow-slate-100">
-                  <span className="text-xs font-semibold text-slate-400">Present Days</span>
-                  <span className="text-2xl font-black text-emerald-600 mt-1">{attendance.present} Lectures</span>
-                </div>
-                <div className="p-5 rounded-2xl bg-white border border-slate-200/80 flex flex-col items-center sm:items-start shadow-sm shadow-slate-100">
-                  <span className="text-xs font-semibold text-slate-400">Absent Days</span>
-                  <span className="text-2xl font-black text-rose-650 mt-1">{attendance.absent} Lectures</span>
-                </div>
-                <div className="p-5 rounded-2xl bg-white border border-slate-200/80 flex flex-col items-center sm:items-start shadow-sm shadow-slate-100">
-                  <span className="text-xs font-semibold text-slate-400">Approved Leave</span>
-                  <span className="text-2xl font-black text-amber-600 mt-1">{attendance.leave} Session</span>
-                </div>
-              </div>
-
-              {/* Monthly Calendar View */}
-              <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-sm shadow-slate-100">
-                <h3 className="text-sm font-bold text-slate-800 border-b border-slate-100 pb-3 mb-5">
-                  Attendance History Logs
-                </h3>
-
-                {attendance.days.length === 0 ? (
-                  <p className="text-xs text-slate-500 text-center py-6 font-medium">No lecture logs found in the database. Active attendance updates will be posted here by admin.</p>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
-                    {attendance.days.map((dayObj: any, i: number) => (
-                      <div
-                        key={i}
-                        className={`p-3.5 rounded-xl border flex flex-col items-center justify-center gap-1.5 transition-all ${
-                          dayObj.status === "present"
-                            ? "bg-emerald-50 border-emerald-250 text-emerald-700 hover:bg-emerald-100/50"
-                            : dayObj.status === "absent"
-                            ? "bg-rose-50 border-rose-250 text-rose-700 hover:bg-rose-100/50"
-                            : "bg-amber-50 border-amber-250 text-amber-700 hover:bg-amber-100/50"
-                        }`}
-                      >
-                        <span className="text-xs font-bold">Day {dayObj.day}</span>
-                        <span className="text-[9px] font-black uppercase tracking-wider">
-                          {dayObj.status === "present" ? "Pres" : dayObj.status === "absent" ? "Abs" : "Lv"}
-                        </span>
-                        {dayObj.date && (
-                          <span className="text-[8px] text-slate-500 font-bold block leading-tight mt-0.5">
-                            {new Date(dayObj.date).toLocaleString("en-GB", {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </span>
-                        )}
-                        {dayObj.googleMeetLink && (
-                          <a
-                            href={dayObj.googleMeetLink}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="mt-1 text-[8px] bg-deepskyblue px-1.5 py-0.5 rounded text-white border border-deepskyblue-dark/20 hover:bg-deepskyblue-dark font-bold transition-all shadow-sm"
-                          >
-                            Join Meet
-                          </a>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* TAB CONTENT: QUESTION PAPER */}
-          {activeTab === "papers" && (
-            <div className="space-y-8 max-w-4xl animate-fade-in">
-              {/* SECTION A: ONLINE TESTS */}
-              <div className="space-y-4">
-                <div>
-                  <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
-                    <Award className="h-5 w-5 text-deepskyblue" />
-                    Interactive Online Exams
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-1">Complete online evaluations to update your semester mark sheet</p>
-                </div>
-
-                {quizzes.length === 0 ? (
-                  <p className="text-xs text-slate-550 p-4 rounded-xl bg-white border border-slate-200/80 text-center font-medium shadow-sm shadow-slate-100">
-                    No active online exams created for your course syllabus yet.
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {quizzes.map((quiz) => {
-                      const result = results.find((r) => r.quizId === quiz._id);
-                      const meta = quiz.examMeta || {};
-                      const isNotStarted = meta.isNotStarted ?? isExamNotStarted(quiz.scheduledAt);
-                      const isWindowClosed =
-                        meta.isWindowClosed ?? isExamWindowClosed(quiz.scheduledAt, quiz.duration || 30);
-                      const canResume = meta.canResume;
-                      const isSubmitted = quiz.isSubmitted || !!result;
-                      const questionCount = quiz.questionCount ?? quiz.questions?.length ?? 0;
-                      const answeredCount = meta.answeredCount ?? 0;
-                      const scheduleLabel =
-                        quiz.scheduledAtDisplay || formatExamSchedule(quiz.scheduledAt);
-                      const windowEndLabel = formatExamWindowEnd(quiz.scheduledAt, quiz.duration || 30);
-
-                      return (
-                        <div
-                          key={quiz._id}
-                          className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-sm shadow-slate-100"
-                        >
-                          <div className="flex items-start gap-4 min-w-0 flex-1">
-                            <div
-                              className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 border ${
-                                isSubmitted
-                                  ? "bg-emerald-50 border-emerald-200 text-emerald-600"
-                                  : isNotStarted
-                                    ? "bg-amber-50 border-amber-200 text-amber-600"
-                                    : isWindowClosed
-                                      ? "bg-slate-100 border-slate-200 text-slate-400"
-                                      : canResume
-                                        ? "bg-violet-50 border-violet-200 text-violet-600"
-                                        : "bg-deepskyblue/10 border-deepskyblue/20 text-deepskyblue"
+                    {attendance.days.length === 0 ? (
+                      <p className="text-xs text-slate-500 text-center py-6 font-medium">No lecture logs found in the database. Active attendance updates will be posted here by admin.</p>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
+                        {attendance.days.map((dayObj: any, i: number) => (
+                          <div
+                            key={i}
+                            className={`p-3.5 rounded-xl border flex flex-col items-center justify-center gap-1.5 transition-all ${dayObj.status === "present"
+                              ? "bg-emerald-50 border-emerald-250 text-emerald-700 hover:bg-emerald-100/50"
+                              : dayObj.status === "absent"
+                                ? "bg-rose-50 border-rose-250 text-rose-700 hover:bg-rose-100/50"
+                                : "bg-amber-50 border-amber-250 text-amber-700 hover:bg-amber-100/50"
                               }`}
-                            >
-                              <Award className="h-5 w-5" />
-                            </div>
-
-                            <div className="min-w-0 flex-1">
-                              <h4 className="text-sm font-bold text-slate-800 leading-snug break-words">
-                                {quiz.title}
-                              </h4>
-
-                              <div className="flex flex-wrap items-center gap-2 mt-2.5">
-                                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-600 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg">
-                                  <FileText className="h-3 w-3 text-slate-400" />
-                                  {questionCount} Objective {questionCount === 1 ? "Question" : "Questions"}
-                                </span>
-
-                                {quiz.duration ? (
-                                  <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-600 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg">
-                                    <Clock className="h-3 w-3 text-slate-400" />
-                                    {quiz.duration} Mins
-                                  </span>
-                                ) : null}
-
-                                {scheduleLabel && scheduleLabel !== "Now" ? (
-                                  <span
-                                    className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-lg border ${
-                                      isNotStarted
-                                        ? "text-amber-700 bg-amber-50 border-amber-200"
-                                        : isWindowClosed
-                                          ? "text-slate-600 bg-slate-100 border-slate-200"
-                                          : "text-emerald-700 bg-emerald-50 border-emerald-200"
-                                    }`}
-                                  >
-                                    <Calendar className="h-3 w-3 shrink-0" />
-                                    <span className="whitespace-normal sm:whitespace-nowrap">
-                                      {isNotStarted ? "Starts" : "Started"}: {scheduleLabel}
-                                    </span>
-                                  </span>
-                                ) : null}
-
-                                {!isNotStarted && !isWindowClosed && meta.remainingSeconds ? (
-                                  <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-deepskyblue-dark bg-deepskyblue/10 border border-deepskyblue/20 px-2.5 py-1 rounded-lg">
-                                    <Clock className="h-3 w-3" />
-                                    Join until {windowEndLabel}
-                                  </span>
-                                ) : null}
-
-                                {canResume && answeredCount > 0 ? (
-                                  <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-violet-700 bg-violet-50 border border-violet-200 px-2.5 py-1 rounded-lg">
-                                    <CheckCircle className="h-3 w-3" />
-                                    Saved: {answeredCount}/{questionCount} answered
-                                  </span>
-                                ) : null}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-4 justify-end shrink-0 sm:pl-2">
-                            {isSubmitted ? (
-                              <div className="text-right">
-                                <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">
-                                  {result?.score !== undefined ? "Grade" : "Submitted"}
-                                </span>
-                                {result?.score !== undefined ? (
-                                  <span className="text-xs text-emerald-650 font-bold">
-                                    Score: {result.score}/{result.total} ({result.grade})
-                                  </span>
-                                ) : (
-                                  <span className="text-xs text-slate-600 font-bold">Awaiting review</span>
-                                )}
-                              </div>
-                            ) : isNotStarted ? (
-                              <button
-                                disabled
-                                className="min-w-[108px] py-2 px-4 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-700 cursor-not-allowed"
+                          >
+                            <span className="text-xs font-bold">Day {dayObj.day}</span>
+                            <span className="text-[9px] font-black uppercase tracking-wider">
+                              {dayObj.status === "present" ? "Pres" : dayObj.status === "absent" ? "Abs" : "Lv"}
+                            </span>
+                            {dayObj.date && (
+                              <span className="text-[8px] text-slate-500 font-bold block leading-tight mt-0.5">
+                                {new Date(dayObj.date).toLocaleString("en-GB", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
+                            )}
+                            {dayObj.googleMeetLink && (
+                              <a
+                                href={dayObj.googleMeetLink}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="mt-1 text-[8px] bg-deepskyblue px-1.5 py-0.5 rounded text-white border border-deepskyblue-dark/20 hover:bg-deepskyblue-dark font-bold transition-all shadow-sm"
                               >
-                                Not Started
-                              </button>
-                            ) : isWindowClosed ? (
-                              <button
-                                disabled
-                                className="min-w-[108px] py-2 px-4 rounded-xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-500 cursor-not-allowed"
-                              >
-                                Window Closed
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => handleStartQuiz(quiz)}
-                                className={`min-w-[108px] py-2 px-4 rounded-xl text-xs font-bold text-white shadow-md active:scale-95 cursor-pointer transition-colors ${
-                                  canResume
-                                    ? "bg-violet-600 hover:bg-violet-700 shadow-violet-500/10"
-                                    : "bg-deepskyblue hover:bg-deepskyblue-dark shadow-deepskyblue/10"
-                                }`}
-                              >
-                                {canResume ? "Resume Exam" : "Start Exam"}
-                              </button>
+                                Join Meet
+                              </a>
                             )}
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          {/* TAB CONTENT: MY RESULT & MARKS */}
-          {activeTab === "results" && (
-            <div className="space-y-6 max-w-4xl print:space-y-0 animate-fade-in">
-              <div className="flex justify-between items-center print:hidden">
-                <div>
-                  <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
-                    <Award className="h-5 w-5 text-deepskyblue" />
-                    My Results & Mark Sheet
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-1">Download and inspect verified semester mark sheets</p>
-                </div>
-                <div className="flex gap-2">
-                  {results.length > 0 && (
-                    <button
-                      onClick={() => approvedResults.length > 0 && triggerPrint("cumulative_marksheet", approvedResults)}
-                      disabled={approvedResults.length === 0}
-                      className={`flex items-center gap-2 py-2 px-4 rounded-xl text-xs font-bold shadow-sm transition-all active:scale-[0.98] ${
-                        approvedResults.length > 0
-                          ? "bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 cursor-pointer"
-                          : "bg-slate-50 border border-slate-100 text-slate-400 cursor-not-allowed opacity-60"
-                      }`}
-                    >
-                      <Printer className="h-3.5 w-3.5" />
-                      <span>Print Mark Sheet</span>
-                    </button>
-                  )}
-                  {results.length > 0 && (
-                    <button
-                      onClick={() => {
-                        const latestApprovedCert = [...results].reverse().find(r => r.isCertificateApproved);
-                        if (latestApprovedCert) {
-                          triggerPrint("certificate", latestApprovedCert);
-                        }
-                      }}
-                      disabled={!results.some(r => r.isCertificateApproved)}
-                      className={`flex items-center gap-2 py-2 px-4 rounded-xl text-xs font-bold shadow transition-all active:scale-[0.98] ${
-                        results.some(r => r.isCertificateApproved)
-                          ? "bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white shadow-amber-500/10 cursor-pointer"
-                          : "bg-slate-50 border border-slate-100 text-slate-400 cursor-not-allowed opacity-60"
-                      }`}
-                    >
-                      <Award className="h-3.5 w-3.5" />
-                      <span>Print Certificate</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {results.length > 0 && approvedResults.length < results.length && (
-                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-250 flex items-start gap-3 print:hidden">
-                  <AlertCircle className="h-5.5 w-5.5 text-amber-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <h4 className="text-xs font-bold text-amber-800">Results Verification Pending</h4>
-                    <p className="text-[10px] text-amber-650 font-semibold mt-0.5 animate-pulse">
-                      Some of your completed exam records are currently undergoing verification by the academic board. Individual marksheets and certificates will become downloadable once approved by the administrator.
-                    </p>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
 
-              {results.length > 0 ? (
-                <div id="id-card-print-area" className="p-6 sm:p-8 rounded-2xl bg-white border border-slate-250 shadow-xl relative overflow-hidden bg-gradient-to-br from-white via-slate-50/50 to-deepskyblue-light/20 print:bg-white print:border-none print:shadow-none print:text-black">
-                
-                {/* Print Title Header */}
-                <div className="text-center border-b border-slate-200/80 pb-5 mb-6 print:border-zinc-300">
-                  <h3 className="text-lg font-black tracking-tight text-slate-900 print:text-black">
-                    SUPPORT MISSION INDIA
-                  </h3>
-                  <p className="text-[10px] uppercase font-bold text-deepskyblue-dark tracking-widest mt-1 print:text-zinc-600">
-                    Sarkari Skill Certification Program
-                  </p>
-                  <h4 className="text-sm font-bold text-slate-700 mt-3 print:text-zinc-800">SEMESTER MARK SHEET</h4>
-                </div>
+              {/* TAB CONTENT: QUESTION PAPER */}
+              {activeTab === "papers" && (
+                <div className="space-y-8 max-w-4xl animate-fade-in">
+                  {/* SECTION A: ONLINE TESTS */}
+                  <div className="space-y-4">
+                    <div>
+                      <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                        <Award className="h-5 w-5 text-deepskyblue" />
+                        Interactive Online Exams
+                      </h2>
+                      <p className="text-xs text-slate-500 mt-1">Complete online evaluations to update your semester mark sheet</p>
+                    </div>
 
-                {/* Candidate Info Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-3 gap-x-6 text-xs border-b border-slate-100 pb-4 mb-6 print:border-zinc-200">
-                  <div>
-                    <span className="text-slate-400 block font-semibold">Candidate Name</span>
-                    <span className="font-bold text-slate-800 print:text-black">{candidate.name}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block font-semibold">Registration ID</span>
-                    <span className="font-bold text-slate-800 print:text-black">{candidate.registrationId}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block font-semibold">Course Code</span>
-                    <span className="font-bold text-deepskyblue-dark print:text-zinc-800">{courseData?.code || "N/A"}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block font-semibold">Course Name</span>
-                    <span className="font-semibold text-slate-700 print:text-black">{candidate.course}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block font-semibold">Program Duration</span>
-                    <span className="font-semibold text-slate-700 print:text-black">{courseData?.duration || "N/A"}</span>
-                  </div>
-                </div>
+                    {quizzes.length === 0 ? (
+                      <p className="text-xs text-slate-550 p-4 rounded-xl bg-white border border-slate-200/80 text-center font-medium shadow-sm shadow-slate-100">
+                        No active online exams created for your course syllabus yet.
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {quizzes.map((quiz) => {
+                          const result = results.find((r) => r.quizId === quiz._id);
+                          const meta = quiz.examMeta || {};
+                          const isNotStarted = meta.isNotStarted ?? isExamNotStarted(quiz.scheduledAt);
+                          const isWindowClosed =
+                            meta.isWindowClosed ?? isExamWindowClosed(quiz.scheduledAt, quiz.duration || 30);
+                          const canResume = meta.canResume;
+                          const isSubmitted = quiz.isSubmitted || !!result;
+                          const questionCount = quiz.questionCount ?? quiz.questions?.length ?? 0;
+                          const answeredCount = meta.answeredCount ?? 0;
+                          const scheduleLabel =
+                            quiz.scheduledAtDisplay || formatExamSchedule(quiz.scheduledAt);
+                          const windowEndLabel = formatExamWindowEnd(quiz.scheduledAt, quiz.duration || 30);
 
-                {/* Mark Sheet Table */}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-slate-200 text-slate-450 uppercase text-[9px] tracking-wider print:border-zinc-300 print:text-zinc-500">
-                        <th className="py-2.5">Code</th>
-                        <th className="py-2.5">Subject Paper Exam</th>
-                        <th className="py-2.5 text-center">Int (30)</th>
-                        <th className="py-2.5 text-center">Ext (70)</th>
-                        <th className="py-2.5 text-center">Total (100)</th>
-                        <th className="py-2.5 text-center print:text-right">Grade</th>
-                        <th className="py-2.5 text-right print:hidden">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 print:divide-zinc-200">
-                      {resultsToDisplay.map((res: any, i) => (
-                        <tr key={i} className="text-slate-700 print:text-black">
-                          <td className="py-3 font-semibold text-slate-500 print:text-zinc-600">{res.code}</td>
-                          <td className="py-3 font-medium text-slate-800">{res.subject}</td>
-                          <td className="py-3 text-center">{res.internal}</td>
-                          <td className="py-3 text-center">{res.external}</td>
-                          <td className="py-3 text-center font-bold text-slate-900 print:text-black">{res.total}</td>
-                          <td className="py-3 text-center print:text-right font-black text-deepskyblue-dark print:text-zinc-800">{res.grade}</td>
-                          <td className="py-3 text-right print:hidden">
-                            <div className="flex gap-2 justify-end">
-                              {res.originalData && (
-                                <>
-                                  <button
-                                    onClick={() => res.isApproved && triggerPrint("marksheet", res.originalData)}
-                                    disabled={!res.isApproved}
-                                    className={`py-1 px-2.5 rounded-lg text-[10px] font-bold transition ${
-                                      res.isApproved
-                                        ? "bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 cursor-pointer"
-                                        : "bg-slate-50 border border-slate-100 text-slate-400 cursor-not-allowed opacity-60"
+                          return (
+                            <div
+                              key={quiz._id}
+                              className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-sm shadow-slate-100"
+                            >
+                              <div className="flex items-start gap-4 min-w-0 flex-1">
+                                <div
+                                  className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 border ${isSubmitted
+                                    ? "bg-emerald-50 border-emerald-200 text-emerald-600"
+                                    : isNotStarted
+                                      ? "bg-amber-50 border-amber-200 text-amber-600"
+                                      : isWindowClosed
+                                        ? "bg-slate-100 border-slate-200 text-slate-400"
+                                        : canResume
+                                          ? "bg-violet-50 border-violet-200 text-violet-600"
+                                          : "bg-deepskyblue/10 border-deepskyblue/20 text-deepskyblue"
                                     }`}
-                                    title={res.isApproved ? "Print Marksheet" : "Pending Approval"}
-                                  >
-                                    Marksheet
-                                  </button>
+                                >
+                                  <Award className="h-5 w-5" />
+                                </div>
+
+                                <div className="min-w-0 flex-1">
+                                  <h4 className="text-sm font-bold text-slate-800 leading-snug break-words">
+                                    {quiz.title}
+                                  </h4>
+
+                                  <div className="flex flex-wrap items-center gap-2 mt-2.5">
+                                    <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-600 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg">
+                                      <FileText className="h-3 w-3 text-slate-400" />
+                                      {questionCount} Objective {questionCount === 1 ? "Question" : "Questions"}
+                                    </span>
+
+                                    {quiz.duration ? (
+                                      <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-600 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg">
+                                        <Clock className="h-3 w-3 text-slate-400" />
+                                        {quiz.duration} Mins
+                                      </span>
+                                    ) : null}
+
+                                    {scheduleLabel && scheduleLabel !== "Now" ? (
+                                      <span
+                                        className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-lg border ${isNotStarted
+                                          ? "text-amber-700 bg-amber-50 border-amber-200"
+                                          : isWindowClosed
+                                            ? "text-slate-600 bg-slate-100 border-slate-200"
+                                            : "text-emerald-700 bg-emerald-50 border-emerald-200"
+                                          }`}
+                                      >
+                                        <Calendar className="h-3 w-3 shrink-0" />
+                                        <span className="whitespace-normal sm:whitespace-nowrap">
+                                          {isNotStarted ? "Starts" : "Started"}: {scheduleLabel}
+                                        </span>
+                                      </span>
+                                    ) : null}
+
+                                    {!isNotStarted && !isWindowClosed && meta.remainingSeconds ? (
+                                      <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-deepskyblue-dark bg-deepskyblue/10 border border-deepskyblue/20 px-2.5 py-1 rounded-lg">
+                                        <Clock className="h-3 w-3" />
+                                        Join until {windowEndLabel}
+                                      </span>
+                                    ) : null}
+
+                                    {canResume && answeredCount > 0 ? (
+                                      <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-violet-700 bg-violet-50 border border-violet-200 px-2.5 py-1 rounded-lg">
+                                        <CheckCircle className="h-3 w-3" />
+                                        Saved: {answeredCount}/{questionCount} answered
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-4 justify-end shrink-0 sm:pl-2">
+                                {isSubmitted ? (
+                                  <div className="text-right">
+                                    <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">
+                                      {result?.score !== undefined ? "Score" : "Submitted"}
+                                    </span>
+                                    {result?.score !== undefined ? (
+                                      <span className="text-xs text-emerald-650 font-bold">
+                                        Score: {result.score}/{result.total}
+                                      </span>
+                                    ) : (
+                                      <span className="text-xs text-slate-600 font-bold">Awaiting review</span>
+                                    )}
+                                  </div>
+                                ) : isNotStarted ? (
                                   <button
-                                    onClick={() => res.isCertificateApproved && triggerPrint("certificate", res.originalData)}
-                                    disabled={!res.isCertificateApproved}
-                                    className={`py-1 px-2.5 rounded-lg text-[10px] font-bold transition ${
-                                      res.isCertificateApproved
-                                        ? "bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white shadow shadow-amber-500/10 cursor-pointer"
-                                        : "bg-slate-50 border border-slate-100 text-slate-400 cursor-not-allowed opacity-60"
-                                    }`}
-                                    title={res.isCertificateApproved ? "Print Certificate" : "Certificate Not Approved"}
+                                    disabled
+                                    className="min-w-[108px] py-2 px-4 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-700 cursor-not-allowed"
                                   >
-                                    Certificate
+                                    Not Started
                                   </button>
+                                ) : isWindowClosed ? (
                                   <button
-                                    onClick={() => res.isApproved && handleReviewAnswers(res.originalData)}
-                                    disabled={!res.isApproved}
-                                    className={`py-1 px-2.5 rounded-lg text-[10px] font-bold transition ${
-                                      res.isApproved
-                                        ? "bg-deepskyblue hover:bg-deepskyblue-dark text-white shadow shadow-deepskyblue/10 cursor-pointer"
-                                        : "bg-slate-50 border border-slate-100 text-slate-400 cursor-not-allowed opacity-60"
-                                    }`}
-                                    title={res.isApproved ? "Review Answers" : "Pending Approval"}
+                                    disabled
+                                    className="min-w-[108px] py-2 px-4 rounded-xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-500 cursor-not-allowed"
                                   >
-                                    Review
+                                    Window Closed
                                   </button>
-                                </>
-                              )}
+                                ) : (
+                                  <button
+                                    onClick={() => handleStartQuiz(quiz)}
+                                    className={`min-w-[108px] py-2 px-4 rounded-xl text-xs font-bold text-white shadow-md active:scale-95 cursor-pointer transition-colors ${canResume
+                                      ? "bg-violet-600 hover:bg-violet-700 shadow-violet-500/10"
+                                      : "bg-deepskyblue hover:bg-deepskyblue-dark shadow-deepskyblue/10"
+                                      }`}
+                                  >
+                                    {canResume ? "Resume Exam" : "Start Exam"}
+                                  </button>
+                                )}
+                              </div>
                             </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Overall Summary Footer */}
-                <div className="mt-8 pt-4 border-t border-slate-200/80 flex justify-between items-center print:border-zinc-300 text-xs">
-                  <div className="space-y-1">
-                    <p className="text-slate-500 print:text-zinc-600 font-medium">Result Status: <span className={`font-bold ${finalStatus === "PASS" ? "text-emerald-600 print:text-emerald-600" : "text-rose-600 print:text-rose-600"}`}>{finalStatus}</span></p>
-                    <p className="text-slate-500 print:text-zinc-600 font-medium">Weighted GPA: <span className="text-slate-800 print:text-black font-bold">{weightedGpa} / 10.0</span></p>
-                  </div>
-                  
-                  {/* Signature Mock */}
-                  <div className="text-center relative">
-                    <div className="absolute -top-5 left-1/2 -translate-x-1/2 font-serif text-[10px] text-slate-400 select-none italic pointer-events-none opacity-40">
-                      Dr. K. Verma
-                    </div>
-                    <div className="border-t border-slate-200 w-24 pt-1 text-[9px] text-slate-500 print:border-zinc-300 font-semibold">
-                      Exam Controller
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-              ) : (
-                <div className="p-10 rounded-2xl bg-white border border-rose-200 shadow-sm shadow-slate-100 flex flex-col items-center justify-center text-center space-y-4 animate-fade-in mt-8">
-                  <div className="h-16 w-16 rounded-full bg-rose-50 flex items-center justify-center border border-rose-100">
-                    <AlertCircle className="h-8 w-8 text-rose-500" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-black text-slate-800">No Results Found</h3>
-                    <p className="text-sm text-slate-500 font-medium max-w-md mx-auto mt-2">
-                      You are not eligible for a marksheet and certificate. Please complete your assigned semester exams first to generate your verified results.
-                    </p>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
-            </div>
-          )}
-
-          {/* TAB CONTENT: LECTURES & NOTES */}
-          {activeTab === "lectures" && (
-            <div className="space-y-6 max-w-4xl animate-fade-in">
-              <div>
-                <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
-                  <BookMarked className="h-5 w-5 text-deepskyblue" />
-                  Course Lectures & Study Materials
-                </h2>
-                <p className="text-xs text-slate-500 mt-1">Access lecture class notes, reference books, and handbooks for {candidate.course}</p>
-              </div>
-
-              {/* SECTION A: STUDY BOOKS & SYLLABUS TEXT */}
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                    <BookOpen className="h-4 w-4 text-deepskyblue" />
-                    Study Books & Syllabus Text
-                  </h3>
-                  <p className="text-xs text-slate-400 font-semibold mt-0.5">Reference books and reading materials assigned by the admin</p>
-                </div>
-
-                {papers.filter(p => p.type === "book").length === 0 ? (
-                  <p className="text-xs text-slate-550 p-4 rounded-xl bg-white border border-slate-200/80 text-center font-medium shadow-sm shadow-slate-100">
-                    No study books uploaded for your course yet.
-                  </p>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {papers.filter(p => p.type === "book").map((paper, i) => (
-                      <div key={i} className="p-4 rounded-2xl bg-white border border-slate-205 flex items-center justify-between gap-4 shadow-sm shadow-slate-100">
-                        <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-sky-50 border border-sky-100 text-sky-600">
-                            <BookOpen className="h-4.5 w-4.5" />
-                          </div>
-                          <div>
-                            <h4 className="text-xs font-bold text-slate-800">{paper.title}</h4>
-                            <span className="text-[10px] text-slate-400 font-semibold">Text Material</span>
-                          </div>
-                        </div>
-                        <a
-                          href={paper.fileUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="py-1.5 px-3.5 rounded-lg bg-deepskyblue/10 text-xs font-bold hover:bg-deepskyblue hover:text-white text-deepskyblue-dark cursor-pointer transition-colors"
+              {/* TAB CONTENT: MY RESULT & MARKS */}
+              {activeTab === "results" && (
+                <div className="space-y-6 max-w-4xl print:space-y-0 animate-fade-in">
+                  <div className="flex justify-between items-center print:hidden">
+                    <div>
+                      <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                        <Award className="h-5 w-5 text-deepskyblue" />
+                        My Results & Mark Sheet
+                      </h2>
+                      <p className="text-xs text-slate-500 mt-1">Download and inspect verified semester mark sheets</p>
+                    </div>
+                    <div className="flex gap-2">
+                      {results.length > 0 && (
+                        <button
+                          onClick={() => approvedResults.length > 0 && triggerPrint("cumulative_marksheet", approvedResults)}
+                          disabled={approvedResults.length === 0}
+                          className={`flex items-center gap-2 py-2 px-4 rounded-xl text-xs font-bold shadow-sm transition-all active:scale-[0.98] ${approvedResults.length > 0
+                            ? "bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 cursor-pointer"
+                            : "bg-slate-50 border border-slate-100 text-slate-400 cursor-not-allowed opacity-60"
+                            }`}
                         >
-                          Open Book
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* SECTION B: LECTURE & CLASS NOTES */}
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-deepskyblue" />
-                    Lecture & Class Notes
-                  </h3>
-                  <p className="text-xs text-slate-400 font-semibold mt-0.5">Classroom handouts and slides compiled by your instructor</p>
-                </div>
-
-                {papers.filter(p => p.type === "note").length === 0 ? (
-                  <p className="text-xs text-slate-555 p-4 rounded-xl bg-white border border-slate-200/80 text-center font-medium shadow-sm shadow-slate-100">
-                    No class notes uploaded for your course yet.
-                  </p>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {papers.filter(p => p.type === "note").map((paper, i) => (
-                      <div key={i} className="p-4 rounded-2xl bg-white border border-slate-205 flex items-center justify-between gap-4 shadow-sm shadow-slate-100">
-                        <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-emerald-50 border border-emerald-100 text-emerald-600">
-                            <FileText className="h-4.5 w-4.5" />
-                          </div>
-                          <div>
-                            <h4 className="text-xs font-bold text-slate-800">{paper.title}</h4>
-                            <span className="text-[10px] text-slate-400 font-semibold">Lecture Note</span>
-                          </div>
-                        </div>
-                        <a
-                          href={paper.fileUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="py-1.5 px-3.5 rounded-lg bg-deepskyblue/10 text-xs font-bold hover:bg-deepskyblue hover:text-white text-deepskyblue-dark cursor-pointer transition-colors"
+                          <Printer className="h-3.5 w-3.5" />
+                          <span>Print Mark Sheet</span>
+                        </button>
+                      )}
+                      {results.length > 0 && (
+                        <button
+                          onClick={() => {
+                            const latestApprovedCert = [...results].reverse().find(r => r.isCertificateApproved);
+                            if (latestApprovedCert) {
+                              triggerPrint("certificate", latestApprovedCert);
+                            }
+                          }}
+                          disabled={!results.some(r => r.isCertificateApproved)}
+                          className={`flex items-center gap-2 py-2 px-4 rounded-xl text-xs font-bold shadow transition-all active:scale-[0.98] ${results.some(r => r.isCertificateApproved)
+                            ? "bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white shadow-amber-500/10 cursor-pointer"
+                            : "bg-slate-50 border border-slate-100 text-slate-400 cursor-not-allowed opacity-60"
+                            }`}
                         >
-                          View Note
-                        </a>
-                      </div>
-                    ))}
+                          <Award className="h-3.5 w-3.5" />
+                          <span>Print Certificate</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
 
-              {/* SECTION C: SYLLABUS QUESTION PAPERS */}
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-deepskyblue" />
-                    Syllabus Question Papers
-                  </h3>
-                  <p className="text-xs text-slate-400 font-semibold mt-0.5">Static practice question papers and materials</p>
-                </div>
-
-                {papers.filter(p => !p.type || p.type === "exam_paper").length === 0 ? (
-                  <p className="text-xs text-slate-555 p-4 rounded-xl bg-white border border-slate-200/80 text-center font-medium shadow-sm shadow-slate-100">
-                    No syllabus question papers uploaded for your course yet.
-                  </p>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {papers.filter(p => !p.type || p.type === "exam_paper").map((paper, i) => (
-                      <div key={i} className="p-4 rounded-2xl bg-white border border-slate-205 flex items-center justify-between gap-4 shadow-sm shadow-slate-100">
-                        <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-purple-50 border border-purple-100 text-purple-600">
-                            <FileText className="h-4.5 w-4.5" />
-                          </div>
-                          <div>
-                            <h4 className="text-xs font-bold text-slate-800">{paper.title}</h4>
-                            <span className="text-[10px] text-slate-400 font-semibold">Practice Paper</span>
-                          </div>
-                        </div>
-                        <a
-                          href={paper.fileUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="py-1.5 px-3.5 rounded-lg bg-deepskyblue/10 text-xs font-bold hover:bg-deepskyblue hover:text-white text-deepskyblue-dark cursor-pointer transition-colors"
-                        >
-                          View Paper
-                        </a>
+                  {results.length > 0 && approvedResults.length < results.length && (
+                    <div className="p-4 rounded-2xl bg-amber-50 border border-amber-250 flex items-start gap-3 print:hidden">
+                      <AlertCircle className="h-5.5 w-5.5 text-amber-600 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <h4 className="text-xs font-bold text-amber-800">Results Verification Pending</h4>
+                        <p className="text-[10px] text-amber-650 font-semibold mt-0.5 animate-pulse">
+                          Some of your completed exam records are currently undergoing verification by the academic board. Individual marksheets and certificates will become downloadable once approved by the administrator.
+                        </p>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* TAB CONTENT: MY PROFILE */}
-          {activeTab === "profile" && (
-            <div className="space-y-6 max-w-4xl animate-fade-in">
-              <div>
-                <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
-                  <User className="h-5 w-5 text-deepskyblue" />
-                  My Student Profile
-                </h2>
-                <p className="text-xs text-slate-500 mt-1">Review your registered admission records and details</p>
-              </div>
-
-              {/* Detail Profile Panel */}
-              <div className="p-6 sm:p-8 rounded-2xl bg-white border border-slate-200/80 space-y-6 shadow-sm shadow-slate-100">
-                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 border-b border-slate-100 pb-6">
-                  {renderProfileAvatar(
-                    "h-20 w-20 rounded-2xl overflow-hidden shadow-lg shadow-deepskyblue/10",
-                    "text-2xl font-black text-white"
+                    </div>
                   )}
-                  <div className="text-center sm:text-left">
-                    <h3 className="text-lg font-bold text-slate-800">{candidate.name}</h3>
-                    <p className="text-xs text-slate-450 mt-1 font-semibold">Student UID: {candidate.registrationId}</p>
-                    <div className="flex flex-wrap gap-2 items-center mt-3 justify-center sm:justify-start">
-                      <span className="inline-block text-[10px] uppercase font-bold bg-deepskyblue/10 text-deepskyblue-dark border border-deepskyblue/20 px-2 py-0.5 rounded-full">
-                        Admission Active
-                      </span>
-                      <button
-                        onClick={() => triggerPrint("admitcard", candidate)}
-                        className="inline-flex items-center gap-1.5 py-1 px-3 bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 text-[10px] font-bold text-white rounded-xl shadow-md cursor-pointer transition active:scale-95"
-                      >
-                        <Printer className="h-3.5 w-3.5" />
-                        <span>Print Admit Card</span>
-                      </button>
-                      <button
-                        onClick={() => triggerPrint("idcard", candidate)}
-                        className="inline-flex items-center gap-1.5 py-1 px-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-[10px] font-bold text-white rounded-xl shadow-md cursor-pointer transition active:scale-95"
-                      >
-                        <Printer className="h-3.5 w-3.5" />
-                        <span>Print ID Card</span>
-                      </button>
+
+                  {results.length > 0 ? (
+                    <div id="id-card-print-area" className="p-6 sm:p-8 rounded-2xl bg-white border border-slate-250 shadow-xl relative overflow-hidden bg-gradient-to-br from-white via-slate-50/50 to-deepskyblue-light/20 print:bg-white print:border-none print:shadow-none print:text-black">
+
+                      {/* Print Title Header */}
+                      <div className="text-center border-b border-slate-200/80 pb-5 mb-6 print:border-zinc-300">
+                        <h3 className="text-lg font-black tracking-tight text-slate-900 print:text-black">
+                          SUPPORT MISSION INDIA
+                        </h3>
+
+                        <h4 className="text-sm font-bold text-slate-700 mt-3 print:text-zinc-800">SEMESTER MARK SHEET</h4>
+                      </div>
+
+                      {/* Candidate Info Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-3 gap-x-6 text-xs border-b border-slate-100 pb-4 mb-6 print:border-zinc-200">
+                        <div>
+                          <span className="text-slate-400 block font-semibold">Candidate Name</span>
+                          <span className="font-bold text-slate-800 print:text-black">{candidate.name}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block font-semibold">Registration ID</span>
+                          <span className="font-bold text-slate-800 print:text-black">{candidate.registrationId}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block font-semibold">Course Code</span>
+                          <span className="font-bold text-deepskyblue-dark print:text-zinc-800">{courseData?.code || "N/A"}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block font-semibold">Course Name</span>
+                          <span className="font-semibold text-slate-700 print:text-black">{candidate.course}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block font-semibold">Program Duration</span>
+                          <span className="font-semibold text-slate-700 print:text-black">{courseData?.duration || "N/A"}</span>
+                        </div>
+                      </div>
+
+                      {/* Mark Sheet Table */}
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                          <thead>
+                            <tr className="border-b border-slate-200 text-slate-450 uppercase text-[9px] tracking-wider print:border-zinc-300 print:text-zinc-500">
+                              <th className="py-2.5">Code</th>
+                              <th className="py-2.5">Subject Paper Exam</th>
+                              <th className="py-2.5 text-center">Int (30)</th>
+                              <th className="py-2.5 text-center">Ext (70)</th>
+                              <th className="py-2.5 text-center">Total (100)</th>
+                              <th className="py-2.5 text-right print:hidden">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 print:divide-zinc-200">
+                            {resultsToDisplay.map((res: any, i) => (
+                              <tr key={i} className="text-slate-700 print:text-black">
+                                <td className="py-3 font-semibold text-slate-500 print:text-zinc-600">{res.code}</td>
+                                <td className="py-3 font-medium text-slate-800">{res.subject}</td>
+                                <td className="py-3 text-center">{res.internal}</td>
+                                <td className="py-3 text-center">{res.external}</td>
+                                <td className="py-3 text-center font-bold text-slate-900 print:text-black">{res.total}</td>
+                                <td className="py-3 text-right print:hidden">
+                                  <div className="flex gap-2 justify-end">
+                                    {res.originalData && (
+                                      <>
+                                        <button
+                                          onClick={() => res.isApproved && triggerPrint("marksheet", res.originalData)}
+                                          disabled={!res.isApproved}
+                                          className={`py-1 px-2.5 rounded-lg text-[10px] font-bold transition ${res.isApproved
+                                            ? "bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 cursor-pointer"
+                                            : "bg-slate-50 border border-slate-100 text-slate-400 cursor-not-allowed opacity-60"
+                                            }`}
+                                          title={res.isApproved ? "Print Marksheet" : "Pending Approval"}
+                                        >
+                                          Marksheet
+                                        </button>
+                                        <button
+                                          onClick={() => res.isCertificateApproved && triggerPrint("certificate", res.originalData)}
+                                          disabled={!res.isCertificateApproved}
+                                          className={`py-1 px-2.5 rounded-lg text-[10px] font-bold transition ${res.isCertificateApproved
+                                            ? "bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white shadow shadow-amber-500/10 cursor-pointer"
+                                            : "bg-slate-50 border border-slate-100 text-slate-400 cursor-not-allowed opacity-60"
+                                            }`}
+                                          title={res.isCertificateApproved ? "Print Certificate" : "Certificate Not Approved"}
+                                        >
+                                          Certificate
+                                        </button>
+                                        <button
+                                          onClick={() => res.isApproved && handleReviewAnswers(res.originalData)}
+                                          disabled={!res.isApproved}
+                                          className={`py-1 px-2.5 rounded-lg text-[10px] font-bold transition ${res.isApproved
+                                            ? "bg-deepskyblue hover:bg-deepskyblue-dark text-white shadow shadow-deepskyblue/10 cursor-pointer"
+                                            : "bg-slate-50 border border-slate-100 text-slate-400 cursor-not-allowed opacity-60"
+                                            }`}
+                                          title={res.isApproved ? "Review Answers" : "Pending Approval"}
+                                        >
+                                          Review
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Overall Summary Footer */}
+                      <div className="mt-8 pt-4 border-t border-slate-200/80 flex justify-between items-center print:border-zinc-300 text-xs">
+                        <div className="space-y-1">
+                          <p className="text-slate-500 print:text-zinc-600 font-medium">Result Status: <span className={`font-bold ${finalStatus === "PASS" ? "text-emerald-600 print:text-emerald-600" : "text-rose-600 print:text-rose-600"}`}>{finalStatus}</span></p>
+                          <p className="text-slate-500 print:text-zinc-600 font-medium">Weighted GPA: <span className="text-slate-800 print:text-black font-bold">{weightedGpa} / 10.0</span></p>
+                        </div>
+
+                        {/* Signature Mock */}
+                        <div className="text-center relative">
+                          <div className="absolute -top-5 left-1/2 -translate-x-1/2 font-serif text-[10px] text-slate-400 select-none italic pointer-events-none opacity-40">
+                            Dr. K. Verma
+                          </div>
+                          <div className="border-t border-slate-200 w-24 pt-1 text-[9px] text-slate-500 print:border-zinc-300 font-semibold">
+                            Exam Controller
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
+                  ) : (
+                    <div className="p-10 rounded-2xl bg-white border border-rose-200 shadow-sm shadow-slate-100 flex flex-col items-center justify-center text-center space-y-4 animate-fade-in mt-8">
+                      <div className="h-16 w-16 rounded-full bg-rose-50 flex items-center justify-center border border-rose-100">
+                        <AlertCircle className="h-8 w-8 text-rose-500" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-black text-slate-800">No Results Found</h3>
+                        <p className="text-sm text-slate-500 font-medium max-w-md mx-auto mt-2">
+                          You are not eligible for a marksheet and certificate. Please complete your assigned semester exams first to generate your verified results.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB CONTENT: LECTURES & NOTES */}
+              {activeTab === "lectures" && (
+                <div className="space-y-6 max-w-4xl animate-fade-in">
+                  <div>
+                    <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                      <BookMarked className="h-5 w-5 text-deepskyblue" />
+                      Course Lectures & Study Materials
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-1">Access lecture class notes, reference books, and handbooks for {candidate.course}</p>
+                  </div>
+
+                  {/* SECTION A: STUDY BOOKS & SYLLABUS TEXT */}
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <BookOpen className="h-4 w-4 text-deepskyblue" />
+                        Study Books & Syllabus Text
+                      </h3>
+                      <p className="text-xs text-slate-400 font-semibold mt-0.5">Reference books and reading materials assigned by the admin</p>
+                    </div>
+
+                    {papers.filter(p => p.type === "book").length === 0 ? (
+                      <p className="text-xs text-slate-550 p-4 rounded-xl bg-white border border-slate-200/80 text-center font-medium shadow-sm shadow-slate-100">
+                        No study books uploaded for your course yet.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {papers.filter(p => p.type === "book").map((paper, i) => (
+                          <div key={i} className="p-4 rounded-2xl bg-white border border-slate-205 flex items-center justify-between gap-4 shadow-sm shadow-slate-100">
+                            <div className="flex items-center gap-3">
+                              <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-sky-50 border border-sky-100 text-sky-600">
+                                <BookOpen className="h-4.5 w-4.5" />
+                              </div>
+                              <div>
+                                <h4 className="text-xs font-bold text-slate-800">{paper.title}</h4>
+                                <span className="text-[10px] text-slate-400 font-semibold">Text Material</span>
+                              </div>
+                            </div>
+                            <a
+                              href={paper.fileUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="py-1.5 px-3.5 rounded-lg bg-deepskyblue/10 text-xs font-bold hover:bg-deepskyblue hover:text-white text-deepskyblue-dark cursor-pointer transition-colors"
+                            >
+                              Open Book
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* SECTION B: LECTURE & CLASS NOTES */}
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-deepskyblue" />
+                        Lecture & Class Notes
+                      </h3>
+                      <p className="text-xs text-slate-400 font-semibold mt-0.5">Classroom handouts and slides compiled by your instructor</p>
+                    </div>
+
+                    {papers.filter(p => p.type === "note").length === 0 ? (
+                      <p className="text-xs text-slate-555 p-4 rounded-xl bg-white border border-slate-200/80 text-center font-medium shadow-sm shadow-slate-100">
+                        No class notes uploaded for your course yet.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {papers.filter(p => p.type === "note").map((paper, i) => (
+                          <div key={i} className="p-4 rounded-2xl bg-white border border-slate-205 flex items-center justify-between gap-4 shadow-sm shadow-slate-100">
+                            <div className="flex items-center gap-3">
+                              <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-emerald-50 border border-emerald-100 text-emerald-600">
+                                <FileText className="h-4.5 w-4.5" />
+                              </div>
+                              <div>
+                                <h4 className="text-xs font-bold text-slate-800">{paper.title}</h4>
+                                <span className="text-[10px] text-slate-400 font-semibold">Lecture Note</span>
+                              </div>
+                            </div>
+                            <a
+                              href={paper.fileUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="py-1.5 px-3.5 rounded-lg bg-deepskyblue/10 text-xs font-bold hover:bg-deepskyblue hover:text-white text-deepskyblue-dark cursor-pointer transition-colors"
+                            >
+                              View Note
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* SECTION C: SYLLABUS QUESTION PAPERS */}
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-deepskyblue" />
+                        Syllabus Question Papers
+                      </h3>
+                      <p className="text-xs text-slate-400 font-semibold mt-0.5">Static practice question papers and materials</p>
+                    </div>
+
+                    {papers.filter(p => !p.type || p.type === "exam_paper").length === 0 ? (
+                      <p className="text-xs text-slate-555 p-4 rounded-xl bg-white border border-slate-200/80 text-center font-medium shadow-sm shadow-slate-100">
+                        No syllabus question papers uploaded for your course yet.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {papers.filter(p => !p.type || p.type === "exam_paper").map((paper, i) => (
+                          <div key={i} className="p-4 rounded-2xl bg-white border border-slate-205 flex items-center justify-between gap-4 shadow-sm shadow-slate-100">
+                            <div className="flex items-center gap-3">
+                              <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-purple-50 border border-purple-100 text-purple-600">
+                                <FileText className="h-4.5 w-4.5" />
+                              </div>
+                              <div>
+                                <h4 className="text-xs font-bold text-slate-800">{paper.title}</h4>
+                                <span className="text-[10px] text-slate-400 font-semibold">Practice Paper</span>
+                              </div>
+                            </div>
+                            <a
+                              href={paper.fileUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="py-1.5 px-3.5 rounded-lg bg-deepskyblue/10 text-xs font-bold hover:bg-deepskyblue hover:text-white text-deepskyblue-dark cursor-pointer transition-colors"
+                            >
+                              View Paper
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB CONTENT: MY PROFILE */}
+              {activeTab === "profile" && (
+                <div className="space-y-6 max-w-4xl animate-fade-in">
+                  <div>
+                    <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                      <User className="h-5 w-5 text-deepskyblue" />
+                      My Student Profile
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-1">Review your registered admission records and details</p>
+                  </div>
+
+                  {/* Detail Profile Panel */}
+                  <div className="p-6 sm:p-8 rounded-2xl bg-white border border-slate-200/80 space-y-6 shadow-sm shadow-slate-100">
+                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 border-b border-slate-100 pb-6">
+                      {renderProfileAvatar(
+                        "h-20 w-20 rounded-2xl overflow-hidden shadow-lg shadow-deepskyblue/10",
+                        "text-2xl font-black text-white"
+                      )}
+                      <div className="text-center sm:text-left">
+                        <h3 className="text-lg font-bold text-slate-800">{candidate.name}</h3>
+                        <p className="text-xs text-slate-450 mt-1 font-semibold">Student UID: {candidate.registrationId}</p>
+                        <div className="flex flex-wrap gap-2 items-center mt-3 justify-center sm:justify-start">
+                          <span className="inline-block text-[10px] uppercase font-bold bg-deepskyblue/10 text-deepskyblue-dark border border-deepskyblue/20 px-2 py-0.5 rounded-full">
+                            Admission Active
+                          </span>
+                          <button
+                            onClick={() => triggerPrint("admitcard", candidate)}
+                            className="inline-flex items-center gap-1.5 py-1 px-3 bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 text-[10px] font-bold text-white rounded-xl shadow-md cursor-pointer transition active:scale-95"
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                            <span>Print Admit Card</span>
+                          </button>
+                          <button
+                            onClick={() => triggerPrint("idcard", candidate)}
+                            className="inline-flex items-center gap-1.5 py-1 px-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-[10px] font-bold text-white rounded-xl shadow-md cursor-pointer transition active:scale-95"
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                            <span>Print ID Card</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Profile Fields List */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-xs text-slate-700">
+                      <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Father&apos;s Name</span>
+                        <span className="font-semibold text-slate-800">{candidate.fatherName}</span>
+                      </div>
+                      <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Mother&apos;s Name</span>
+                        <span className="font-semibold text-slate-800">{candidate.motherName}</span>
+                      </div>
+                      <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Date of Birth</span>
+                        <span className="font-semibold text-slate-800">{new Date(candidate.dob).toLocaleDateString()}</span>
+                      </div>
+                      <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Email ID</span>
+                        <span className="font-semibold text-slate-800">{candidate.email}</span>
+                      </div>
+                      <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Phone Number</span>
+                        <span className="font-semibold text-slate-800">{candidate.phone}</span>
+                      </div>
+                      <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">District</span>
+                        <span className="font-semibold text-slate-800">{candidate.district || "N/A"}</span>
+                      </div>
+                      <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Enrolled Program</span>
+                        <span className="text-right truncate pl-4 font-semibold text-deepskyblue-dark">{candidate.course}</span>
+                      </div>
+                      <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Registration Time</span>
+                        <span className="font-semibold text-slate-800">{candidate.createdAt ? new Date(candidate.createdAt).toLocaleString() : "N/A"}</span>
+                      </div>
+                      <div className="py-2.5 border-b border-slate-100 sm:col-span-2 flex flex-col gap-2">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Permanent Address</span>
+                        <span className="text-slate-600 font-medium break-words leading-relaxed">{candidate.address}</span>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100 space-y-3">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Uploaded Documents</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {[
+                          { label: "Profile Picture", url: candidate.profilePicUrl },
+                          { label: "Admit Card", url: candidate.admitUrl },
+                          { label: "Qualification Certificate", url: candidate.qualificationUrl },
+                          { label: "Extra Qualification", url: candidate.extraQualificationUrl },
+                        ]
+                          .filter((doc) => doc.url)
+                          .map((doc) => (
+                            <a
+                              key={doc.label}
+                              href={resolveFileUrl(doc.url)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-[11px] font-bold text-slate-700 hover:bg-slate-100 transition"
+                            >
+                              <span>{doc.label}</span>
+                              <ExternalLink className="h-3.5 w-3.5 text-deepskyblue" />
+                            </a>
+                          ))}
+                      </div>
                     </div>
                   </div>
                 </div>
+              )}
 
-                {/* Profile Fields List */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-xs text-slate-700">
-                  <div className="py-2.5 border-b border-slate-100 flex justify-between">
-                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Father&apos;s Name</span>
-                    <span className="font-semibold text-slate-800">{candidate.fatherName}</span>
-                  </div>
-                  <div className="py-2.5 border-b border-slate-100 flex justify-between">
-                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Mother&apos;s Name</span>
-                    <span className="font-semibold text-slate-800">{candidate.motherName}</span>
-                  </div>
-                  <div className="py-2.5 border-b border-slate-100 flex justify-between">
-                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Date of Birth</span>
-                    <span className="font-semibold text-slate-800">{new Date(candidate.dob).toLocaleDateString()}</span>
-                  </div>
-                  <div className="py-2.5 border-b border-slate-100 flex justify-between">
-                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Email ID</span>
-                    <span className="font-semibold text-slate-800">{candidate.email}</span>
-                  </div>
-                  <div className="py-2.5 border-b border-slate-100 flex justify-between">
-                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Phone Number</span>
-                    <span className="font-semibold text-slate-800">{candidate.phone}</span>
-                  </div>
-                  <div className="py-2.5 border-b border-slate-100 flex justify-between">
-                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">District</span>
-                    <span className="font-semibold text-slate-800">{candidate.district || "N/A"}</span>
-                  </div>
-                  <div className="py-2.5 border-b border-slate-100 flex justify-between">
-                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Enrolled Program</span>
-                    <span className="text-right truncate pl-4 font-semibold text-deepskyblue-dark">{candidate.course}</span>
-                  </div>
-                  <div className="py-2.5 border-b border-slate-100 flex justify-between">
-                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Registration Time</span>
-                    <span className="font-semibold text-slate-800">{candidate.createdAt ? new Date(candidate.createdAt).toLocaleString() : "N/A"}</span>
-                  </div>
-                  <div className="py-2.5 border-b border-slate-100 sm:col-span-2 flex flex-col gap-2">
-                    <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Permanent Address</span>
-                    <span className="text-slate-600 font-medium break-words leading-relaxed">{candidate.address}</span>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-slate-100 space-y-3">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Uploaded Documents</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {[
-                      { label: "Profile Picture", url: candidate.profilePicUrl },
-                      { label: "Admit Card", url: candidate.admitUrl },
-                      { label: "Qualification Certificate", url: candidate.qualificationUrl },
-                      { label: "Extra Qualification", url: candidate.extraQualificationUrl },
-                    ]
-                      .filter((doc) => doc.url)
-                      .map((doc) => (
-                        <a
-                          key={doc.label}
-                          href={resolveFileUrl(doc.url)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-[11px] font-bold text-slate-700 hover:bg-slate-100 transition"
-                        >
-                          <span>{doc.label}</span>
-                          <ExternalLink className="h-3.5 w-3.5 text-deepskyblue" />
-                        </a>
-                      ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-        </main>
+            </main>
           </>
         )}
       </div>
@@ -2709,13 +2676,12 @@ export default function DashboardPage() {
                     key={sIdx}
                     type="button"
                     onClick={() => setCurrentQuestionIndex(sIdx)}
-                    className={`h-8 w-8 rounded-lg flex items-center justify-center text-xs font-bold transition-all cursor-pointer ${
-                      isCurrent
-                        ? "bg-deepskyblue text-white ring-2 ring-deepskyblue/30 ring-offset-1"
-                        : isAnswered
+                    className={`h-8 w-8 rounded-lg flex items-center justify-center text-xs font-bold transition-all cursor-pointer ${isCurrent
+                      ? "bg-deepskyblue text-white ring-2 ring-deepskyblue/30 ring-offset-1"
+                      : isAnswered
                         ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
                         : "bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100"
-                    }`}
+                      }`}
                   >
                     {sIdx + 1}
                   </button>
@@ -2751,17 +2717,15 @@ export default function DashboardPage() {
                             key={optIdx}
                             type="button"
                             onClick={() => handleSelectOption(activeQuestionIdx, optIdx)}
-                            className={`p-3.5 rounded-xl border text-left font-bold transition-all cursor-pointer flex items-center ${
-                              isSelected
-                                ? "bg-deepskyblue/10 border-deepskyblue text-deepskyblue-dark shadow-sm shadow-deepskyblue/10"
-                                : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800"
-                            }`}
+                            className={`p-3.5 rounded-xl border text-left font-bold transition-all cursor-pointer flex items-center ${isSelected
+                              ? "bg-deepskyblue/10 border-deepskyblue text-deepskyblue-dark shadow-sm shadow-deepskyblue/10"
+                              : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800"
+                              }`}
                           >
-                            <span className={`inline-flex h-5 w-5 rounded-full border items-center justify-center text-[10px] font-black uppercase mr-3 select-none ${
-                              isSelected
-                                ? "bg-deepskyblue text-white border-deepskyblue"
-                                : "bg-slate-50 text-slate-500 border-slate-300"
-                            }`}>
+                            <span className={`inline-flex h-5 w-5 rounded-full border items-center justify-center text-[10px] font-black uppercase mr-3 select-none ${isSelected
+                              ? "bg-deepskyblue text-white border-deepskyblue"
+                              : "bg-slate-50 text-slate-500 border-slate-300"
+                              }`}>
                               {String.fromCharCode(65 + optIdx)}
                             </span>
                             <span>{opt}</span>
@@ -2847,7 +2811,7 @@ export default function DashboardPage() {
                     <span className="text-xs text-slate-400 font-semibold">Course: {reviewQuiz?.course}</span>
                     <span className="h-1.5 w-1.5 rounded-full bg-slate-350" />
                     <span className="text-xs font-bold text-deepskyblue-dark">
-                      Score: {reviewResult.score} / {reviewResult.total} ({reviewResult.percentage}%) - {reviewResult.grade}
+                      Score: {reviewResult.score} / {reviewResult.total} ({reviewResult.percentage}%)
                     </span>
                   </div>
                 )}
@@ -2894,18 +2858,16 @@ export default function DashboardPage() {
                   const isCorrect = studentAnsIdx === correctAnsIdx;
 
                   return (
-                    <div key={qIdx} className={`space-y-3 p-4 border rounded-2xl ${
-                      isCorrect 
-                        ? "bg-emerald-50/20 border-emerald-150" 
-                        : "bg-rose-50/10 border-rose-150"
-                    }`}>
+                    <div key={qIdx} className={`space-y-3 p-4 border rounded-2xl ${isCorrect
+                      ? "bg-emerald-50/20 border-emerald-150"
+                      : "bg-rose-50/10 border-rose-150"
+                      }`}>
                       <div className="flex justify-between items-start gap-4">
                         <h4 className="text-xs font-bold text-slate-800 leading-normal">
                           Q{qIdx + 1}. {question.questionText}
                         </h4>
-                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider shrink-0 ${
-                          isCorrect ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
-                        }`}>
+                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider shrink-0 ${isCorrect ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                          }`}>
                           {isCorrect ? `+${question.marks || 1} Marks` : "0 Marks"}
                         </span>
                       </div>
@@ -2928,10 +2890,9 @@ export default function DashboardPage() {
                               className={`p-3 rounded-xl border font-bold flex items-center justify-between ${btnStyle}`}
                             >
                               <div className="flex items-center min-w-0">
-                                <span className={`inline-block h-4 w-4 rounded-full border mr-2 text-center text-[9px] font-black uppercase leading-4 shrink-0 select-none ${
-                                  isCorrectChoice ? "bg-emerald-100 border-emerald-300 text-emerald-750" :
+                                <span className={`inline-block h-4 w-4 rounded-full border mr-2 text-center text-[9px] font-black uppercase leading-4 shrink-0 select-none ${isCorrectChoice ? "bg-emerald-100 border-emerald-300 text-emerald-750" :
                                   isStudentSelected ? "bg-rose-100 border-rose-300 text-rose-750" : "bg-slate-50 border-slate-300 text-slate-500"
-                                }`}>
+                                  }`}>
                                   {String.fromCharCode(65 + optIdx)}
                                 </span>
                                 <span className="truncate pr-2">{opt}</span>
@@ -2959,126 +2920,114 @@ export default function DashboardPage() {
       {/* MOBILE BOTTOM MENU BAR */}
       {!isDashboardLocked && (
         <footer className="h-18 border-t border-slate-200/80 backdrop-blur-lg bg-white/90 fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around px-1 lg:hidden print:hidden shadow-[0_-4px_20px_0_rgba(0,0,0,0.05)] transition-all">
-        {/* Courses */}
-        <button
-          onClick={() => setActiveTab("courses")}
-          className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all duration-300 relative cursor-pointer group"
-        >
-          <div className={`transition-all duration-300 p-1 rounded-xl ${
-            activeTab === "courses" ? "bg-deepskyblue/10 text-deepskyblue-dark scale-110 -translate-y-1" : "text-slate-400 group-hover:text-slate-600"
-          }`}>
-            <BookOpen className="h-4.5 w-4.5" />
-          </div>
-          <span className={`text-[8.5px] tracking-wider transition-all duration-300 font-bold ${
-            activeTab === "courses" ? "text-deepskyblue-dark font-black scale-105" : "text-slate-400"
-          }`}>
-            Courses
-          </span>
-          {activeTab === "courses" && (
-            <span className="absolute bottom-0 h-1 w-6 bg-deepskyblue rounded-t-full shadow-[0_-2px_6px_#00bfff]" />
-          )}
-        </button>
+          {/* Courses */}
+          <button
+            onClick={() => setActiveTab("courses")}
+            className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all duration-300 relative cursor-pointer group"
+          >
+            <div className={`transition-all duration-300 p-1 rounded-xl ${activeTab === "courses" ? "bg-deepskyblue/10 text-deepskyblue-dark scale-110 -translate-y-1" : "text-slate-400 group-hover:text-slate-600"
+              }`}>
+              <BookOpen className="h-4.5 w-4.5" />
+            </div>
+            <span className={`text-[8.5px] tracking-wider transition-all duration-300 font-bold ${activeTab === "courses" ? "text-deepskyblue-dark font-black scale-105" : "text-slate-400"
+              }`}>
+              Courses
+            </span>
+            {activeTab === "courses" && (
+              <span className="absolute bottom-0 h-1 w-6 bg-deepskyblue rounded-t-full shadow-[0_-2px_6px_#00bfff]" />
+            )}
+          </button>
 
-        {/* Exams */}
-        <button
-          onClick={() => setActiveTab("papers")}
-          className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all duration-300 relative cursor-pointer group"
-        >
-          <div className={`transition-all duration-300 p-1 rounded-xl ${
-            activeTab === "papers" ? "bg-deepskyblue/10 text-deepskyblue-dark scale-110 -translate-y-1" : "text-slate-400 group-hover:text-slate-600"
-          }`}>
-            <FileText className="h-4.5 w-4.5" />
-          </div>
-          <span className={`text-[8.5px] tracking-wider transition-all duration-300 font-bold ${
-            activeTab === "papers" ? "text-deepskyblue-dark font-black scale-105" : "text-slate-400"
-          }`}>
-            Exams
-          </span>
-          {activeTab === "papers" && (
-            <span className="absolute bottom-0 h-1 w-6 bg-deepskyblue rounded-t-full shadow-[0_-2px_6px_#00bfff]" />
-          )}
-        </button>
+          {/* Exams */}
+          <button
+            onClick={() => setActiveTab("papers")}
+            className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all duration-300 relative cursor-pointer group"
+          >
+            <div className={`transition-all duration-300 p-1 rounded-xl ${activeTab === "papers" ? "bg-deepskyblue/10 text-deepskyblue-dark scale-110 -translate-y-1" : "text-slate-400 group-hover:text-slate-600"
+              }`}>
+              <FileText className="h-4.5 w-4.5" />
+            </div>
+            <span className={`text-[8.5px] tracking-wider transition-all duration-300 font-bold ${activeTab === "papers" ? "text-deepskyblue-dark font-black scale-105" : "text-slate-400"
+              }`}>
+              Exams
+            </span>
+            {activeTab === "papers" && (
+              <span className="absolute bottom-0 h-1 w-6 bg-deepskyblue rounded-t-full shadow-[0_-2px_6px_#00bfff]" />
+            )}
+          </button>
 
-        {/* Results */}
-        <button
-          onClick={() => setActiveTab("results")}
-          className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all duration-300 relative cursor-pointer group"
-        >
-          <div className={`transition-all duration-300 p-1 rounded-xl ${
-            activeTab === "results" ? "bg-deepskyblue/10 text-deepskyblue-dark scale-110 -translate-y-1" : "text-slate-400 group-hover:text-slate-600"
-          }`}>
-            <Award className="h-4.5 w-4.5" />
-          </div>
-          <span className={`text-[8.5px] tracking-wider transition-all duration-300 font-bold ${
-            activeTab === "results" ? "text-deepskyblue-dark font-black scale-105" : "text-slate-400"
-          }`}>
-            Results
-          </span>
-          {activeTab === "results" && (
-            <span className="absolute bottom-0 h-1 w-6 bg-deepskyblue rounded-t-full shadow-[0_-2px_6px_#00bfff]" />
-          )}
-        </button>
+          {/* Results */}
+          <button
+            onClick={() => setActiveTab("results")}
+            className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all duration-300 relative cursor-pointer group"
+          >
+            <div className={`transition-all duration-300 p-1 rounded-xl ${activeTab === "results" ? "bg-deepskyblue/10 text-deepskyblue-dark scale-110 -translate-y-1" : "text-slate-400 group-hover:text-slate-600"
+              }`}>
+              <Award className="h-4.5 w-4.5" />
+            </div>
+            <span className={`text-[8.5px] tracking-wider transition-all duration-300 font-bold ${activeTab === "results" ? "text-deepskyblue-dark font-black scale-105" : "text-slate-400"
+              }`}>
+              Results
+            </span>
+            {activeTab === "results" && (
+              <span className="absolute bottom-0 h-1 w-6 bg-deepskyblue rounded-t-full shadow-[0_-2px_6px_#00bfff]" />
+            )}
+          </button>
 
-        {/* Lectures */}
-        <button
-          onClick={() => setActiveTab("lectures")}
-          className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all duration-300 relative cursor-pointer group"
-        >
-          <div className={`transition-all duration-300 p-1 rounded-xl ${
-            activeTab === "lectures" ? "bg-deepskyblue/10 text-deepskyblue-dark scale-110 -translate-y-1" : "text-slate-400 group-hover:text-slate-600"
-          }`}>
-            <BookMarked className="h-4.5 w-4.5" />
-          </div>
-          <span className={`text-[8.5px] tracking-wider transition-all duration-300 font-bold ${
-            activeTab === "lectures" ? "text-deepskyblue-dark font-black scale-105" : "text-slate-400"
-          }`}>
-            Lectures
-          </span>
-          {activeTab === "lectures" && (
-            <span className="absolute bottom-0 h-1 w-6 bg-deepskyblue rounded-t-full shadow-[0_-2px_6px_#00bfff]" />
-          )}
-        </button>
+          {/* Lectures */}
+          <button
+            onClick={() => setActiveTab("lectures")}
+            className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all duration-300 relative cursor-pointer group"
+          >
+            <div className={`transition-all duration-300 p-1 rounded-xl ${activeTab === "lectures" ? "bg-deepskyblue/10 text-deepskyblue-dark scale-110 -translate-y-1" : "text-slate-400 group-hover:text-slate-600"
+              }`}>
+              <BookMarked className="h-4.5 w-4.5" />
+            </div>
+            <span className={`text-[8.5px] tracking-wider transition-all duration-300 font-bold ${activeTab === "lectures" ? "text-deepskyblue-dark font-black scale-105" : "text-slate-400"
+              }`}>
+              Lectures
+            </span>
+            {activeTab === "lectures" && (
+              <span className="absolute bottom-0 h-1 w-6 bg-deepskyblue rounded-t-full shadow-[0_-2px_6px_#00bfff]" />
+            )}
+          </button>
 
-        {/* Attendance */}
-        <button
-          onClick={() => setActiveTab("attendance")}
-          className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all duration-300 relative cursor-pointer group"
-        >
-          <div className={`transition-all duration-300 p-1 rounded-xl ${
-            activeTab === "attendance" ? "bg-deepskyblue/10 text-deepskyblue-dark scale-110 -translate-y-1" : "text-slate-400 group-hover:text-slate-600"
-          }`}>
-            <Calendar className="h-4.5 w-4.5" />
-          </div>
-          <span className={`text-[8.5px] tracking-wider transition-all duration-300 font-bold ${
-            activeTab === "attendance" ? "text-deepskyblue-dark font-black scale-105" : "text-slate-400"
-          }`}>
-            Attend
-          </span>
-          {activeTab === "attendance" && (
-            <span className="absolute bottom-0 h-1 w-6 bg-deepskyblue rounded-t-full shadow-[0_-2px_6px_#00bfff]" />
-          )}
-        </button>
+          {/* Attendance */}
+          <button
+            onClick={() => setActiveTab("attendance")}
+            className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all duration-300 relative cursor-pointer group"
+          >
+            <div className={`transition-all duration-300 p-1 rounded-xl ${activeTab === "attendance" ? "bg-deepskyblue/10 text-deepskyblue-dark scale-110 -translate-y-1" : "text-slate-400 group-hover:text-slate-600"
+              }`}>
+              <Calendar className="h-4.5 w-4.5" />
+            </div>
+            <span className={`text-[8.5px] tracking-wider transition-all duration-300 font-bold ${activeTab === "attendance" ? "text-deepskyblue-dark font-black scale-105" : "text-slate-400"
+              }`}>
+              Attend
+            </span>
+            {activeTab === "attendance" && (
+              <span className="absolute bottom-0 h-1 w-6 bg-deepskyblue rounded-t-full shadow-[0_-2px_6px_#00bfff]" />
+            )}
+          </button>
 
-        {/* Profile */}
-        <button
-          onClick={() => setActiveTab("profile")}
-          className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all duration-300 relative cursor-pointer group"
-        >
-          <div className={`transition-all duration-300 p-1 rounded-xl ${
-            activeTab === "profile" ? "bg-deepskyblue/10 text-deepskyblue-dark scale-110 -translate-y-1" : "text-slate-400 group-hover:text-slate-600"
-          }`}>
-            <User className="h-4.5 w-4.5" />
-          </div>
-          <span className={`text-[8.5px] tracking-wider transition-all duration-300 font-bold ${
-            activeTab === "profile" ? "text-deepskyblue-dark font-black scale-105" : "text-slate-400"
-          }`}>
-            Profile
-          </span>
-          {activeTab === "profile" && (
-            <span className="absolute bottom-0 h-1 w-6 bg-deepskyblue rounded-t-full shadow-[0_-2px_6px_#00bfff]" />
-          )}
-        </button>
-      </footer>
+          {/* Profile */}
+          <button
+            onClick={() => setActiveTab("profile")}
+            className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all duration-300 relative cursor-pointer group"
+          >
+            <div className={`transition-all duration-300 p-1 rounded-xl ${activeTab === "profile" ? "bg-deepskyblue/10 text-deepskyblue-dark scale-110 -translate-y-1" : "text-slate-400 group-hover:text-slate-600"
+              }`}>
+              <User className="h-4.5 w-4.5" />
+            </div>
+            <span className={`text-[8.5px] tracking-wider transition-all duration-300 font-bold ${activeTab === "profile" ? "text-deepskyblue-dark font-black scale-105" : "text-slate-400"
+              }`}>
+              Profile
+            </span>
+            {activeTab === "profile" && (
+              <span className="absolute bottom-0 h-1 w-6 bg-deepskyblue rounded-t-full shadow-[0_-2px_6px_#00bfff]" />
+            )}
+          </button>
+        </footer>
       )}
 
       {/* PRINT AREA CONTAINER (Hidden on screen, shown in printing) */}
