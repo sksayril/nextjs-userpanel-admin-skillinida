@@ -538,27 +538,52 @@ export default function DashboardPage() {
   };
 
   // Dynamic Results mapping into print Mark Sheet
-  const resultsToDisplay = results.map((r, i) => {
-    const code = `QUIZ-${101 + i}`;
-    const isApproved = !!r.isApproved;
+  const resultsToDisplay = (() => {
+    if (courseData && courseData.modules && courseData.modules.length > 0) {
+      return courseData.modules.map((mod: any, i: number) => {
+        const code = `PAPER-${101 + i}`;
+        const matched = results.find(r => 
+          r.quizTitle && 
+          r.quizTitle.toLowerCase().trim().replace(/\s+/g, "") === mod.title.toLowerCase().trim().replace(/\s+/g, "")
+        );
+        
+        const isApproved = !!matched?.isApproved;
+        const internal = isApproved ? Math.round((matched.score || 0) * (30 / (matched.total || 1))) : null;
+        const external = isApproved ? Math.round(((matched.total || 0) - (matched.score || 0)) * (70 / (matched.total || 1))) + (matched.score || 0) * 5 : null;
+        const total = isApproved ? Math.round(((matched.score || 0) / (matched.total || 1)) * 100) : null;
+        
+        return {
+          code,
+          subject: mod.title,
+          internal: isApproved ? (internal! > 30 ? 30 : internal) : "-",
+          external: isApproved ? (external! > 70 ? 70 : external) : "-",
+          total: isApproved ? total : (matched ? "Pending" : "-"),
+          isApproved,
+          isCertificateApproved: !!matched?.isCertificateApproved,
+          originalData: matched || null
+        };
+      });
+    }
 
-    // If approved, map scores. If not, fallback to placeholders.
-    const internal = isApproved ? Math.round((r.score || 0) * (30 / (r.total || 1))) : null;
-    const external = isApproved ? Math.round(((r.total || 0) - (r.score || 0)) * (70 / (r.total || 1))) + (r.score || 0) * 5 : null;
-    const total = isApproved ? Math.round(((r.score || 0) / (r.total || 1)) * 100) : null;
+    return results.map((r, i) => {
+      const code = `QUIZ-${101 + i}`;
+      const isApproved = !!r.isApproved;
+      const internal = isApproved ? Math.round((r.score || 0) * (30 / (r.total || 1))) : null;
+      const external = isApproved ? Math.round(((r.total || 0) - (r.score || 0)) * (70 / (r.total || 1))) + (r.score || 0) * 5 : null;
+      const total = isApproved ? Math.round(((r.score || 0) / (r.total || 1)) * 100) : null;
 
-    return {
-      code,
-      subject: r.quizTitle,
-      internal: isApproved ? (internal! > 30 ? 30 : internal) : "-",
-      external: isApproved ? (external! > 70 ? 70 : external) : "-",
-      total: isApproved ? total : "Pending",
-      grade: isApproved ? r.grade : "Pending",
-      isApproved,
-      isCertificateApproved: !!r.isCertificateApproved,
-      originalData: r
-    };
-  });
+      return {
+        code,
+        subject: r.quizTitle,
+        internal: isApproved ? (internal! > 30 ? 30 : internal) : "-",
+        external: isApproved ? (external! > 70 ? 70 : external) : "-",
+        total: isApproved ? total : "Pending",
+        isApproved,
+        isCertificateApproved: !!r.isCertificateApproved,
+        originalData: r
+      };
+    });
+  })();
 
   // Derive GPA only from APPROVED results
   const approvedResults = results.filter(r => r.isApproved);
@@ -1379,24 +1404,67 @@ export default function DashboardPage() {
   };
 
   const renderPrintCumulativeMarksheet = (resList: any[]) => {
-    const list = resList && resList.length > 0 ? resList : [];
-    const overallTotalScore = list.reduce((acc, curr) => acc + curr.score, 0);
-    const overallTotalPossible = list.reduce((acc, curr) => acc + curr.total, 0);
-    const averagePercentage = list.length > 0
-      ? parseFloat((list.reduce((acc, curr) => acc + curr.percentage, 0) / list.length).toFixed(1))
-      : 0;
+    const courseName = candidate?.course || "N/A";
+    
+    // Find the course details
+    let list: any[] = [];
+    if (courseData && courseData.modules && courseData.modules.length > 0) {
+      list = courseData.modules.map((mod: any) => {
+        const matchedRes = resList.find(r => 
+          r.quizTitle && 
+          r.quizTitle.toLowerCase().trim().replace(/\s+/g, "") === mod.title.toLowerCase().trim().replace(/\s+/g, "")
+        );
+        
+        if (matchedRes) {
+          const internal = Math.round(matchedRes.score * (30 / matchedRes.total));
+          const external = Math.round((matchedRes.total - matchedRes.score) * (70 / matchedRes.total)) + matchedRes.score * 5;
+          return {
+            quizTitle: mod.title,
+            internal: internal > 30 ? 30 : internal,
+            external: external > 70 ? 70 : external,
+            score: matchedRes.score,
+            total: matchedRes.total,
+            percentage: matchedRes.percentage,
+            isAttempted: true
+          };
+        } else {
+          return {
+            quizTitle: mod.title,
+            internal: "-",
+            external: "-",
+            score: 0,
+            total: 0,
+            percentage: 0,
+            isAttempted: false
+          };
+        }
+      });
+    } else {
+      list = resList.map(r => {
+        const internal = Math.round(r.score * (30 / r.total));
+        const external = Math.round((r.total - r.score) * (70 / r.total)) + r.score * 5;
+        return {
+          quizTitle: r.quizTitle,
+          internal: internal > 30 ? 30 : internal,
+          external: external > 70 ? 70 : external,
+          score: r.score,
+          total: r.total,
+          percentage: r.percentage,
+          isAttempted: true
+        };
+      });
+    }
 
-    let overallGrade = "F";
-    if (averagePercentage >= 90) overallGrade = "A+";
-    else if (averagePercentage >= 80) overallGrade = "A";
-    else if (averagePercentage >= 70) overallGrade = "B+";
-    else if (averagePercentage >= 60) overallGrade = "B";
-    else if (averagePercentage >= 50) overallGrade = "C";
+    const attemptedList = list.filter(item => item.isAttempted);
+    const overallTotalScore = attemptedList.reduce((acc, curr) => acc + curr.score, 0);
+    const overallTotalPossible = attemptedList.reduce((acc, curr) => acc + curr.total, 0);
+    const averagePercentage = attemptedList.length > 0
+      ? parseFloat((attemptedList.reduce((acc, curr) => acc + curr.percentage, 0) / attemptedList.length).toFixed(1))
+      : 0;
 
     const overallStatus = averagePercentage >= 50 ? "PASS" : "FAIL";
     const candidateName = candidate?.name || "N/A";
     const regId = candidate?.registrationId || "N/A";
-    const courseName = candidate?.course || "N/A";
 
     return (
       <div className="w-[210mm] h-[297mm] border-[6px] border-slate-900 bg-white p-12 flex flex-col justify-between font-sans relative box-border">
@@ -1457,16 +1525,18 @@ export default function DashboardPage() {
                     <td colSpan={5} className="py-6 text-center text-slate-400">No assessment records found in portal database.</td>
                   </tr>
                 ) : (
-                  list.map((res, i) => {
-                    const internal = Math.round(res.score * (30 / res.total));
-                    const external = Math.round((res.total - res.score) * (70 / res.total)) + res.score * 5;
+                  list.map((res: any, i: number) => {
                     return (
                       <tr key={i} className="text-slate-700">
                         <td className="py-3 px-4 font-bold text-slate-800">{res.quizTitle}</td>
-                        <td className="py-3 px-4 text-center">{internal > 30 ? 30 : internal}</td>
-                        <td className="py-3 px-4 text-center">{external > 70 ? 70 : external}</td>
-                        <td className="py-3 px-4 text-center font-bold">{res.score} / {res.total}</td>
-                        <td className="py-3 px-4 text-center">{res.percentage}%</td>
+                        <td className="py-3 px-4 text-center">{res.internal}</td>
+                        <td className="py-3 px-4 text-center">{res.external}</td>
+                        <td className="py-3 px-4 text-center font-bold">
+                          {res.isAttempted ? `${res.score} / ${res.total}` : "-"}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          {res.isAttempted ? `${res.percentage}%` : "-"}
+                        </td>
                       </tr>
                     );
                   })
@@ -2232,7 +2302,7 @@ export default function DashboardPage() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100 print:divide-zinc-200">
-                            {resultsToDisplay.map((res: any, i) => (
+                            {resultsToDisplay.map((res: any, i: number) => (
                               <tr key={i} className="text-slate-700 print:text-black">
                                 <td className="py-3 font-semibold text-slate-500 print:text-zinc-600">{res.code}</td>
                                 <td className="py-3 font-medium text-slate-800">{res.subject}</td>
@@ -2303,7 +2373,6 @@ export default function DashboardPage() {
                           </div>
                         </div>
                       </div>
-
                     </div>
                   ) : (
                     <div className="p-10 rounded-2xl bg-white border border-rose-200 shadow-sm shadow-slate-100 flex flex-col items-center justify-center text-center space-y-4 animate-fade-in mt-8">
