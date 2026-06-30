@@ -64,6 +64,8 @@ export async function POST(request: Request) {
       category,
       gender,
       password,
+      pincode,
+      state,
     } = data;
 
     // Check required fields
@@ -76,20 +78,22 @@ export async function POST(request: Request) {
       !phone ||
       !address ||
       !district ||
+      !pincode ||
+      !state ||
       !admitUrl ||
       !qualificationUrl ||
       !course ||
       !password
     ) {
-      return NextResponse.json({ error: "Missing required registration fields" }, { status: 400 });
+      return NextResponse.json({ error: "Missing required registration fields (including PIN Code and State)" }, { status: 400 });
     }
 
     if (password.length < 6) {
       return NextResponse.json({ error: "Password must be at least 6 characters long" }, { status: 400 });
     }
 
-    if (!isValidWestBengalDistrict(district)) {
-      return NextResponse.json({ error: "Please select a valid West Bengal district" }, { status: 400 });
+    if (!district || district.trim() === "") {
+      return NextResponse.json({ error: "District is required" }, { status: 400 });
     }
 
     // Check duplicate email+course combination (same email can register for different courses)
@@ -140,6 +144,8 @@ export async function POST(request: Request) {
       registrationId,
       password: hashedPassword,
       originalPassword: password,
+      pincode: pincode || undefined,
+      state: state || undefined,
     });
 
     await student.save();

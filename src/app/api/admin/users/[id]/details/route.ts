@@ -95,6 +95,8 @@ export async function PUT(
       category,
       gender,
       password,
+      pincode,
+      state,
     } = body;
 
     if (name) student.name = name;
@@ -102,6 +104,8 @@ export async function PUT(
     if (motherName) student.motherName = motherName;
     if (dob) student.dob = new Date(dob);
     if (address) student.address = address;
+    if (pincode !== undefined) student.pincode = pincode;
+    if (state !== undefined) student.state = state;
     if (admitUrl) student.admitUrl = admitUrl;
     if (qualificationUrl) student.qualificationUrl = qualificationUrl;
     if (profilePicUrl) student.profilePicUrl = profilePicUrl;
@@ -115,8 +119,8 @@ export async function PUT(
     if (phone) student.phone = phone;
 
     if (district) {
-      if (!isValidWestBengalDistrict(district)) {
-        return NextResponse.json({ error: "Please select a valid West Bengal district" }, { status: 400 });
+      if (district.trim() === "") {
+        return NextResponse.json({ error: "District cannot be empty" }, { status: 400 });
       }
       student.district = district;
     }

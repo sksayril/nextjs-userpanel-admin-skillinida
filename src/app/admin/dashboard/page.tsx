@@ -254,7 +254,9 @@ export default function AdminDashboardPage() {
     course: "",
     category: "GEN",
     address: "",
-    password: ""
+    password: "",
+    pincode: "",
+    state: ""
   });
 
   const [editingAssociate, setEditingAssociate] = useState<any | null>(null);
@@ -296,7 +298,9 @@ export default function AdminDashboardPage() {
     admitUrl: "",
     qualificationUrl: "",
     extraQualificationUrl: "",
-    password: ""
+    password: "",
+    pincode: "",
+    state: ""
   });
   const [uploadingAdmit, setUploadingAdmit] = useState(false);
   const [uploadingQual, setUploadingQual] = useState(false);
@@ -850,6 +854,43 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleAdminPincodeLookup = async (pin: string, formType: "create" | "edit") => {
+    if (pin.length !== 6) return;
+    try {
+      const res = await fetch(`/api/pincode?pin=${pin}`);
+      const data = await res.json();
+      if (data && data[0] && data[0].Status === "Success") {
+        const postOfficeList = data[0].PostOffice;
+        if (postOfficeList && postOfficeList.length > 0) {
+          const first = postOfficeList[0];
+          const apiDistrict = first.District;
+          const apiState = first.State;
+
+          if (formType === "create") {
+            setStudentForm(prev => ({
+              ...prev,
+              district: apiDistrict || "",
+              state: apiState || "",
+            }));
+            toast.success(`PIN Code verified for ${apiDistrict}, ${apiState}.`);
+          } else {
+            setStudentEditForm((prev: any) => ({
+              ...prev,
+              district: apiDistrict || "",
+              state: apiState || "",
+            }));
+            toast.success(`PIN Code verified for ${apiDistrict}, ${apiState}.`);
+          }
+        }
+      } else {
+        toast.error("No details found for the entered PIN Code.");
+      }
+    } catch (err) {
+      console.error("Admin PIN Code error:", err);
+      toast.error("Failed to verify PIN Code.");
+    }
+  };
+
   const handleRegisterStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
@@ -867,7 +908,8 @@ export default function AdminDashboardPage() {
         setSuccessMsg(`Student registered! Registration ID: ${data.student.registrationId}`);
         setStudentForm({
           name: "", fatherName: "", motherName: "", dob: "", category: "GEN", gender: "MALE", email: "", phone: "",
-          district: "", address: "", course: "", admitUrl: "", qualificationUrl: "", extraQualificationUrl: "", password: ""
+          district: "", address: "", course: "", admitUrl: "", qualificationUrl: "", extraQualificationUrl: "", password: "",
+          pincode: "", state: ""
         });
         await fetchAllData();
         setTimeout(() => setSuccessMsg(""), 6000);
@@ -1397,7 +1439,9 @@ export default function AdminDashboardPage() {
       course: s.course || "",
       category: s.category || "GEN",
       address: s.address || "",
-      password: ""
+      password: "",
+      pincode: s.pincode || "",
+      state: s.state || ""
     });
     setIsEditingStudent(true);
   };
@@ -3766,23 +3810,46 @@ export default function AdminDashboardPage() {
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">PIN Code</label>
+                      <input
+                        type="text"
+                        maxLength={6}
+                        placeholder="Enter 6-digit PIN Code"
+                        value={studentForm.pincode || ""}
+                        onChange={e => {
+                          const val = e.target.value.replace(/\D/g, "");
+                          setStudentForm(prev => ({ ...prev, pincode: val }));
+                          if (val.length === 6) {
+                            handleAdminPincodeLookup(val, "create");
+                          }
+                        }}
+                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">State</label>
+                      <input
+                        type="text"
+                        readOnly
+                        placeholder="Auto-detected State"
+                        value={studentForm.state || ""}
+                        className="block w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-slate-500 text-xs focus:outline-none pointer-events-none"
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">District (West Bengal)</label>
-                    <select
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">District</label>
+                    <input
+                      type="text"
                       required
-                      value={studentForm.district}
+                      placeholder="Enter District"
+                      value={studentForm.district || ""}
                       onChange={e => setStudentForm(prev => ({ ...prev, district: e.target.value }))}
                       className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
-                    >
-                      <option value="" disabled>
-                        Select District
-                      </option>
-                      {WEST_BENGAL_DISTRICTS.map((district) => (
-                        <option key={district} value={district}>
-                          {district}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </div>
 
                   <div className="space-y-1">
@@ -5517,19 +5584,48 @@ export default function AdminDashboardPage() {
                         />
                       </div>
 
+                      {/* PIN Code */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">PIN Code</label>
+                        <input
+                          type="text"
+                          maxLength={6}
+                          placeholder="6-digit PIN Code"
+                          value={studentEditForm.pincode || ""}
+                          onChange={e => {
+                            const val = e.target.value.replace(/\D/g, "");
+                            setStudentEditForm((prev: any) => ({ ...prev, pincode: val }));
+                            if (val.length === 6) {
+                              handleAdminPincodeLookup(val, "edit");
+                            }
+                          }}
+                          className="block w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-deepskyblue"
+                        />
+                      </div>
+
+                      {/* State */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">State</label>
+                        <input
+                          type="text"
+                          readOnly
+                          placeholder="Auto-detected State"
+                          value={studentEditForm.state || ""}
+                          className="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 focus:outline-none pointer-events-none"
+                        />
+                      </div>
+
                       {/* District */}
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">District (West Bengal)</label>
-                        <select
-                          value={studentEditForm.district}
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">District</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Enter District"
+                          value={studentEditForm.district || ""}
                           onChange={e => setStudentEditForm((prev: any) => ({ ...prev, district: e.target.value }))}
                           className="block w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-deepskyblue"
-                        >
-                          <option value="" disabled>Select District</option>
-                          {WEST_BENGAL_DISTRICTS.map((dist, idx) => (
-                            <option key={idx} value={dist}>{dist}</option>
-                          ))}
-                        </select>
+                        />
                       </div>
 
                       {/* Course */}
@@ -5626,6 +5722,14 @@ export default function AdminDashboardPage() {
                       <div className="py-2.5 border-b border-slate-100 flex justify-between">
                         <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">District</span>
                         <span className="font-semibold text-slate-800">{studentDetails.student.district || "N/A"}</span>
+                      </div>
+                      <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">PIN Code</span>
+                        <span className="font-semibold text-slate-800">{studentDetails.student.pincode || "—"}</span>
+                      </div>
+                      <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">State</span>
+                        <span className="font-semibold text-slate-800">{studentDetails.student.state || "—"}</span>
                       </div>
                       <div className="py-2.5 border-b border-slate-100 flex justify-between">
                         <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Enrolled Course</span>

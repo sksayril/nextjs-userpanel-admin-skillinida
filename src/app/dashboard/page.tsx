@@ -27,6 +27,29 @@ import { resolveFileUrl } from "@/lib/fileUrl";
 import { formatExamSchedule, isExamNotStarted, isExamWindowClosed, formatExamWindowEnd } from "@/lib/examSchedule";
 import Logo from "@/components/Logo";
 
+function seededRandom(seedStr: string) {
+  let h = 0;
+  for (let i = 0; i < seedStr.length; i++) {
+    h = Math.imul(31, h) + seedStr.charCodeAt(i) | 0;
+  }
+  return function() {
+    let t = h += 0x6D2B79F5;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffleWithSeed<T>(array: T[], seed: string): T[] {
+  const rng = seededRandom(seed);
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const toast = useToast();
@@ -54,6 +77,9 @@ export default function DashboardPage() {
   const [activeQuiz, setActiveQuiz] = useState<any>(null);
   const [selectedAnswers, setSelectedAnswers] = useState<number[]>([]);
   const [submittingQuiz, setSubmittingQuiz] = useState<boolean>(false);
+
+  const [shuffledIndices, setShuffledIndices] = useState<number[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
 
   // Print Target State
   const [printTarget, setPrintTarget] = useState<any>(null);
@@ -159,6 +185,14 @@ export default function DashboardPage() {
 
       if (res.ok && data.success) {
         const fullQuiz = data.quiz;
+
+        // Seeded shuffle indices mapping
+        const originalIndices = Array.from({ length: fullQuiz.questions.length }, (_, i) => i);
+        const seed = (candidate?._id || "") + fullQuiz._id;
+        const shuffled = shuffleWithSeed(originalIndices, seed);
+        setShuffledIndices(shuffled);
+        setCurrentQuestionIndex(0);
+
         setActiveQuiz(fullQuiz);
         setSelectedAnswers(data.session.answers);
         examExpiresAtRef.current = data.expiresAt;
@@ -477,6 +511,8 @@ export default function DashboardPage() {
         }
         examExpiresAtRef.current = null;
         setActiveQuiz(null);
+        setShuffledIndices([]);
+        setCurrentQuestionIndex(0);
         await fetchDashboardData();
       } else {
         toast.error(data.error || "Failed to submit answers.");
@@ -2625,7 +2661,8 @@ export default function DashboardPage() {
       )}
 
       {/* INTERACTIVE EXAM MODAL */}
-      {activeQuiz && (
+      {/* INTERACTIVE EXAM MODAL */}
+      {activeQuiz && shuffledIndices.length > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
           <div className="relative w-full max-w-2xl bg-white border border-slate-250 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 my-8 text-left">
             <div className="flex justify-between items-start border-b border-slate-150 pb-4">
@@ -2653,6 +2690,8 @@ export default function DashboardPage() {
                   }
                   examExpiresAtRef.current = null;
                   setActiveQuiz(null);
+                  setShuffledIndices([]);
+                  setCurrentQuestionIndex(0);
                 }}
                 className="text-slate-650 hover:text-slate-950 text-xs font-bold bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 cursor-pointer transition-colors"
               >
@@ -2660,60 +2699,136 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmitQuiz} className="space-y-6">
-              <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2">
-                {activeQuiz.questions.map((question: any, qIdx: number) => (
-                  <div key={qIdx} className="space-y-3 p-4 bg-slate-50 border border-slate-150 rounded-2xl">
-                    <h4 className="text-xs font-bold text-slate-800 leading-normal">
-                      Q{qIdx + 1}. {question.questionText}
+            {/* Question Quick Navigation Bar */}
+            <div className="flex flex-wrap gap-2 pb-2 border-b border-slate-100 max-h-24 overflow-y-auto">
+              {shuffledIndices.map((origIdx, sIdx) => {
+                const isCurrent = sIdx === currentQuestionIndex;
+                const isAnswered = selectedAnswers[origIdx] !== undefined && selectedAnswers[origIdx] !== -1;
+                return (
+                  <button
+                    key={sIdx}
+                    type="button"
+                    onClick={() => setCurrentQuestionIndex(sIdx)}
+                    className={`h-8 w-8 rounded-lg flex items-center justify-center text-xs font-bold transition-all cursor-pointer ${
+                      isCurrent
+                        ? "bg-deepskyblue text-white ring-2 ring-deepskyblue/30 ring-offset-1"
+                        : isAnswered
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                        : "bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100"
+                    }`}
+                  >
+                    {sIdx + 1}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Question Content */}
+            <div className="space-y-4">
+              {(() => {
+                const activeQuestionIdx = shuffledIndices[currentQuestionIndex];
+                const question = activeQuiz.questions[activeQuestionIdx];
+                if (!question) return null;
+
+                return (
+                  <div className="space-y-4 p-5 bg-slate-50 border border-slate-150 rounded-2xl">
+                    <div className="flex justify-between items-start">
+                      <span className="text-[10px] uppercase font-black bg-deepskyblue/10 text-deepskyblue border border-deepskyblue/25 px-2 py-0.5 rounded-md">
+                        Question {currentQuestionIndex + 1} of {activeQuiz.questions.length}
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-400">
+                        {question.marks || 1} Mark(s)
+                      </span>
+                    </div>
+                    <h4 className="text-sm font-extrabold text-slate-800 leading-normal">
+                      {question.questionText}
                     </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div className="grid grid-cols-1 gap-3 text-xs pt-2">
                       {question.options.map((opt: string, optIdx: number) => {
-                        const isSelected = selectedAnswers[qIdx] === optIdx;
+                        const isSelected = selectedAnswers[activeQuestionIdx] === optIdx;
                         return (
                           <button
                             key={optIdx}
                             type="button"
-                            onClick={() => handleSelectOption(qIdx, optIdx)}
-                            className={`p-3 rounded-xl border text-left font-bold transition-all cursor-pointer ${
+                            onClick={() => handleSelectOption(activeQuestionIdx, optIdx)}
+                            className={`p-3.5 rounded-xl border text-left font-bold transition-all cursor-pointer flex items-center ${
                               isSelected
                                 ? "bg-deepskyblue/10 border-deepskyblue text-deepskyblue-dark shadow-sm shadow-deepskyblue/10"
                                 : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800"
                             }`}
                           >
-                            <span className="inline-block h-4 w-4 rounded-full border border-slate-300 mr-2 text-center text-[9px] font-black uppercase leading-4 bg-slate-50 select-none">
+                            <span className={`inline-flex h-5 w-5 rounded-full border items-center justify-center text-[10px] font-black uppercase mr-3 select-none ${
+                              isSelected
+                                ? "bg-deepskyblue text-white border-deepskyblue"
+                                : "bg-slate-50 text-slate-500 border-slate-300"
+                            }`}>
                               {String.fromCharCode(65 + optIdx)}
                             </span>
-                            {opt}
+                            <span>{opt}</span>
                           </button>
                         );
                       })}
                     </div>
                   </div>
-                ))}
+                );
+              })()}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="flex justify-between items-center border-t border-slate-150 pt-4">
+              <button
+                type="button"
+                disabled={currentQuestionIndex === 0}
+                onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
+                className="flex items-center gap-1 py-2 px-4 rounded-xl border border-slate-200 text-slate-650 hover:bg-slate-50 hover:text-slate-800 text-xs font-bold transition-all disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+              >
+                <span>Previous</span>
+              </button>
+
+              <div className="hidden sm:flex text-xs text-slate-400 font-bold">
+                {selectedAnswers.filter(a => a !== -1).length} of {activeQuiz.questions.length} Answered
               </div>
 
-              <div className="flex justify-between items-center border-t border-slate-150 pt-4">
-                <span className="text-xs text-slate-500 font-semibold">
-                  {selectedAnswers.filter(a => a !== -1).length} of {activeQuiz.questions.length} Answered
-                </span>
+              <div className="flex items-center gap-3">
+                {/* Show submit early button if not on last question */}
+                {currentQuestionIndex < shuffledIndices.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={handleSubmitQuiz}
+                    className="text-xs font-bold text-slate-400 hover:text-deepskyblue mr-2 cursor-pointer transition-colors"
+                  >
+                    Submit Exam
+                  </button>
+                )}
 
-                <button
-                  type="submit"
-                  disabled={submittingQuiz}
-                  className="flex items-center gap-1.5 py-2.5 px-6 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-xs shadow-md shadow-deepskyblue/15 disabled:opacity-50 cursor-pointer"
-                >
-                  {submittingQuiz ? (
-                    <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <span>Submit Answers</span>
-                      <CheckCircle className="h-4 w-4" />
-                    </>
-                  )}
-                </button>
+                {currentQuestionIndex < shuffledIndices.length - 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
+                    className="flex items-center gap-1 py-2.5 px-5 rounded-xl bg-deepskyblue hover:bg-deepskyblue-dark font-bold text-white text-xs shadow-md shadow-deepskyblue/10 transition-all cursor-pointer"
+                  >
+                    <span>Next</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleSubmitQuiz}
+                    disabled={submittingQuiz}
+                    className="flex items-center gap-1.5 py-2.5 px-6 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-xs shadow-md shadow-deepskyblue/15 disabled:opacity-50 cursor-pointer"
+                  >
+                    {submittingQuiz ? (
+                      <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <span>Finish & Submit</span>
+                        <CheckCircle className="h-4 w-4" />
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
-            </form>
+            </div>
+
           </div>
         </div>
       )}

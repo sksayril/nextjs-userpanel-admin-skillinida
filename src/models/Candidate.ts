@@ -30,6 +30,8 @@ export interface ICandidate extends Document {
     amount: number;
     paidAt: Date;
   };
+  pincode?: string;
+  state?: string;
   createdAt: Date;
 }
 
@@ -63,6 +65,8 @@ const CandidateSchema = new Schema<ICandidate>({
     amount: { type: Number },
     paidAt: { type: Date },
   },
+  pincode: { type: String },
+  state: { type: String },
   createdAt: { type: Date, default: Date.now },
 });
 

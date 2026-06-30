@@ -31,6 +31,8 @@ export async function POST(request: Request) {
       agentCode,
       profilePicUrl,
       signatureUrl,
+      pincode,
+      state,
     } = data;
 
     // 1. Check required fields
@@ -43,6 +45,8 @@ export async function POST(request: Request) {
       !phone ||
       !address ||
       !district ||
+      !pincode ||
+      !state ||
       !admitUrl ||
       !qualificationUrl ||
       !profilePicUrl ||
@@ -51,7 +55,7 @@ export async function POST(request: Request) {
       !otp ||
       !password
     ) {
-      return NextResponse.json({ error: "Missing required registration fields (Name, Documents, Profile Picture, Signature, etc.)" }, { status: 400 });
+      return NextResponse.json({ error: "Missing required registration fields (Name, PIN Code, State, Documents, Profile Picture, Signature, etc.)" }, { status: 400 });
     }
 
     const cleanPhone = phone.replace(/\D/g, "");
@@ -63,8 +67,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Password must be at least 6 characters long" }, { status: 400 });
     }
 
-    if (!isValidWestBengalDistrict(district)) {
-      return NextResponse.json({ error: "Please select a valid West Bengal district" }, { status: 400 });
+    if (!district || district.trim() === "") {
+      return NextResponse.json({ error: "District is required" }, { status: 400 });
     }
 
     // 2. Validate OTP code from the database
@@ -143,6 +147,8 @@ export async function POST(request: Request) {
       agentCode: agentCode ? agentCode.trim() : null,
       profilePicUrl: profilePicUrl || null,
       signatureUrl: signatureUrl || null,
+      pincode: pincode || undefined,
+      state: state || undefined,
     });
 
     await candidateDoc.save();

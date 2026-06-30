@@ -54,6 +54,8 @@ export default function SignupPage() {
     password: "",
     agentCode: "",
     profilePicUrl: "",
+    pincode: "",
+    state: "",
   });
 
   // Upload progress and loading states
@@ -162,6 +164,44 @@ export default function SignupPage() {
     }
   };
 
+  const [pincodeLoading, setPincodeLoading] = useState(false);
+
+  const handlePincodeLookup = async (pin: string) => {
+    if (pin.length !== 6) return;
+    setPincodeLoading(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+    try {
+      const res = await fetch(`/api/pincode?pin=${pin}`);
+      const data = await res.json();
+      if (data && data[0] && data[0].Status === "Success") {
+        const postOfficeList = data[0].PostOffice;
+        if (postOfficeList && postOfficeList.length > 0) {
+          const first = postOfficeList[0];
+          const apiDistrict = first.District;
+          const apiState = first.State;
+
+          setFormData((prev) => ({
+            ...prev,
+            district: apiDistrict || "",
+            state: apiState || "",
+          }));
+
+          setSuccessMsg(`PIN Code verified for ${apiDistrict}, ${apiState}.`);
+        } else {
+          setErrorMsg("No post office records found for this PIN Code.");
+        }
+      } else {
+        setErrorMsg("Invalid PIN Code or details not found.");
+      }
+    } catch (err) {
+      console.error("PIN Code error:", err);
+      setErrorMsg("Failed to verify PIN Code. Please enter details manually.");
+    } finally {
+      setPincodeLoading(false);
+    }
+  };
+
   // Send email verification OTP
   const handleSendOtp = async () => {
     if (!formData.email) {
@@ -235,6 +275,8 @@ export default function SignupPage() {
         !formData.gender ||
         !formData.phone ||
         !formData.district ||
+        !formData.pincode ||
+        !formData.state ||
         !formData.address
       ) {
         setErrorMsg("Please fill in all personal details fields");
@@ -484,29 +526,77 @@ export default function SignupPage() {
                     />
                   </div>
                 </div>
+
+                {/* PIN Code */}
+                <div className="space-y-1.5">
+                  <label htmlFor="pincode" className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    PIN Code {pincodeLoading && <span className="text-[10px] text-deepskyblue animate-pulse">(fetching...)</span>}
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                      <MapPin className="h-4 w-4" />
+                    </span>
+                    <input
+                      id="pincode"
+                      suppressHydrationWarning
+                      type="text"
+                      maxLength={6}
+                      placeholder="6-digit PIN Code"
+                      value={formData.pincode}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "");
+                        setFormData((prev) => ({ ...prev, pincode: val }));
+                        if (val.length === 6) {
+                          handlePincodeLookup(val);
+                        }
+                      }}
+                      className="block w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/10"
+                    />
+                  </div>
+                </div>
+
+                {/* State */}
+                <div className="space-y-1.5">
+                  <label htmlFor="state" className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    State
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                      <MapPin className="h-4 w-4" />
+                    </span>
+                    <input
+                      id="state"
+                      suppressHydrationWarning
+                      type="text"
+                      placeholder="Auto-detected State"
+                      value={formData.state}
+                      readOnly
+                      className="block w-full pl-9 pr-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-slate-500 text-sm focus:outline-none pointer-events-none"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* District */}
               <div className="space-y-1.5">
                 <label htmlFor="district" className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  District (West Bengal)
+                  District
                 </label>
-                <select
-                  id="district"
-                  required
-                  value={formData.district}
-                  onChange={handleChange}
-                  className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/10"
-                >
-                  <option value="" disabled>
-                    Select District
-                  </option>
-                  {WEST_BENGAL_DISTRICTS.map((district) => (
-                    <option key={district} value={district}>
-                      {district}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                    <MapPin className="h-4 w-4" />
+                  </span>
+                  <input
+                    id="district"
+                    suppressHydrationWarning
+                    type="text"
+                    required
+                    placeholder="Enter District"
+                    value={formData.district}
+                    onChange={handleChange}
+                    className="block w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/10"
+                  />
+                </div>
               </div>
 
               {/* Address */}
@@ -1068,6 +1158,8 @@ export default function SignupPage() {
                       password: "",
                       agentCode: "",
                       profilePicUrl: "",
+                      pincode: "",
+                      state: "",
                     });
                     setOtpSent(false);
                     setRegisteredCandidate(null);
