@@ -6,6 +6,7 @@ import { ExamSession } from "@/models/ExamSession";
 import { Result } from "@/models/Result";
 import { enrichQuizWithSchedule } from "@/lib/examSchedule";
 import { buildExamSessionPayload } from "@/lib/examSessionHelpers";
+import { autoSubmitPendingExamSessions } from "@/lib/resultHelpers";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
@@ -59,6 +60,8 @@ export async function GET() {
       },
       { status: "expired" }
     );
+
+    await autoSubmitPendingExamSessions(student._id);
 
     const sessionMap = new Map(sessions.map((session) => [session.quizId.toString(), session]));
     const submittedQuizIds = new Set(submittedResults.map((result) => result.quizId.toString()));

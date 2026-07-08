@@ -3,6 +3,7 @@ import dbConnect from "@/lib/dbConnect";
 import { Candidate } from "@/models/Candidate";
 import { Attendance } from "@/models/Attendance";
 import { Result } from "@/models/Result";
+import { autoSubmitPendingExamSessions } from "@/lib/resultHelpers";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
@@ -42,6 +43,8 @@ export async function GET(
     if (!student) {
       return NextResponse.json({ error: "Student not found" }, { status: 404 });
     }
+
+    await autoSubmitPendingExamSessions(id);
 
     const attendance = await Attendance.find({ candidateId: id }).sort({ date: -1 });
     const results = await Result.find({ candidateId: id }).sort({ date: -1 });

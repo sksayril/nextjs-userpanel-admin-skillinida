@@ -9,6 +9,10 @@ import {
   isExamNotStarted,
   isExamWindowClosed,
 } from "@/lib/examSchedule";
+import {
+  autoSubmitPendingExamSessions,
+  gradeQuizAnswers,
+} from "@/lib/resultHelpers";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
@@ -36,6 +40,8 @@ export async function GET() {
     if (!student) {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
     }
+
+    await autoSubmitPendingExamSessions(student.id);
 
     const rawResults = await Result.find({ candidateId: student.id }).sort({ date: -1 });
     const results = rawResults.map(r => {
@@ -127,45 +133,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // Calculate score based on custom marks
-    let score = 0;
-    let correctCount = 0;
-    let incorrectCount = 0;
-    let totalMarks = 0;
-
-    quiz.questions.forEach((question: any, index: number) => {
-      const qMarks = question.marks || 1;
-      totalMarks += qMarks;
-      const studentAnswer = answers[index];
-      if (studentAnswer !== undefined && studentAnswer === question.correctAnswerIndex) {
-        score += qMarks;
-        correctCount++;
-      } else {
-        incorrectCount++;
-      }
-    });
-
-    const percentage = parseFloat(((score / totalMarks) * 100).toFixed(1));
-
-    // Determine grade
-    let grade = "F";
-    if (percentage >= 90) grade = "A+";
-    else if (percentage >= 80) grade = "A";
-    else if (percentage >= 70) grade = "B+";
-    else if (percentage >= 60) grade = "B";
-    else if (percentage >= 50) grade = "C";
+    const graded = gradeQuizAnswers(quiz, answers);
 
     // Update or insert result
     const query = { candidateId: student.id, quizId };
     const update = {
-      quizTitle: quiz.title,
-      score,
-      total: totalMarks,
-      percentage,
-      grade,
-      correctCount,
-      incorrectCount,
-      answers,
+      quizTitle: graded.quizTitle,
+      score: graded.score,
+      total: graded.total,
+      percentage: graded.percentage,
+      grade: graded.grade,
+      correctCount: graded.correctCount,
+      incorrectCount: graded.incorrectCount,
+      answers: graded.answers,
       date: new Date(),
     };
 

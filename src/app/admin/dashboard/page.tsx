@@ -13,6 +13,11 @@ import { registrationIdCardPrintStyles } from "@/components/registrationIdCardPr
 import Logo from "@/components/Logo";
 import { WEST_BENGAL_DISTRICTS } from "@/lib/westBengalDistricts";
 import {
+  buildCumulativeMarksheetRows,
+  getResultQuestionCounts,
+} from "@/lib/resultHelpers";
+import { usePrintTrigger } from "@/lib/usePrintTrigger";
+import {
   formatExamSchedule,
   isExamNotStarted,
   toDatetimeLocalValue,
@@ -268,7 +273,7 @@ export default function AdminDashboardPage() {
     password: ""
   });
   const [modalActiveTab, setModalActiveTab] = useState<string>("profile");
-  const [printTarget, setPrintTarget] = useState<any>(null);
+  const { printTarget, triggerPrint } = usePrintTrigger();
 
   // ================= FORM STATES =================
   // 1. Create Course
@@ -1575,13 +1580,6 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const triggerPrint = (type: "marksheet" | "certificate" | "cumulative_marksheet" | "admitcard" | "idcard", data: any) => {
-    setPrintTarget({ type, data });
-    setTimeout(() => {
-      window.print();
-    }, 150);
-  };
-
   const renderPrintIdCard = (student: any) => {
     if (!student) return null;
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent("https://app.smi.in.net/login")}`;
@@ -2244,7 +2242,7 @@ export default function AdminDashboardPage() {
 
   const renderPrintMarksheet = (res: any) => {
     if (!res) return null;
-    const totalQuestions = res.correctCount + res.incorrectCount;
+    const { correctCount, incorrectCount, totalQuestions } = getResultQuestionCounts(res);
     const formattedDate = new Date(res.date).toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
@@ -2355,58 +2353,9 @@ export default function AdminDashboardPage() {
     const candidateName = studentDetails?.student?.name || "N/A";
     const regId = studentDetails?.student?.registrationId || "N/A";
     const courseName = studentDetails?.student?.course || "N/A";
-    
-    // Find the course details
-    const courseObj = coursesList.find(c => c.title === courseName || c.code === courseName);
-    
-    let list: any[] = [];
-    if (courseObj && courseObj.modules && courseObj.modules.length > 0) {
-      list = courseObj.modules.map((mod: any) => {
-        const matchedRes = resList.find(r => 
-          r.quizTitle && 
-          r.quizTitle.toLowerCase().trim().replace(/\s+/g, "") === mod.title.toLowerCase().trim().replace(/\s+/g, "")
-        );
-        
-        if (matchedRes) {
-          const internal = Math.round(matchedRes.score * (30 / matchedRes.total));
-          const external = Math.round((matchedRes.total - matchedRes.score) * (70 / matchedRes.total)) + matchedRes.score * 5;
-          return {
-            quizTitle: mod.title,
-            internal: internal > 30 ? 30 : internal,
-            external: external > 70 ? 70 : external,
-            score: matchedRes.score,
-            total: matchedRes.total,
-            percentage: matchedRes.percentage,
-            isAttempted: true
-          };
-        } else {
-          return {
-            quizTitle: mod.title,
-            internal: "-",
-            external: "-",
-            score: 0,
-            total: 0,
-            percentage: 0,
-            isAttempted: false
-          };
-        }
-      });
-    } else {
-      list = resList.map(r => {
-        const internal = Math.round(r.score * (30 / r.total));
-        const external = Math.round((r.total - r.score) * (70 / r.total)) + r.score * 5;
-        return {
-          quizTitle: r.quizTitle,
-          internal: internal > 30 ? 30 : internal,
-          external: external > 70 ? 70 : external,
-          score: r.score,
-          total: r.total,
-          percentage: r.percentage,
-          isAttempted: true
-        };
-      });
-    }
 
+    const courseObj = coursesList.find(c => c.title === courseName || c.code === courseName);
+    const list = buildCumulativeMarksheetRows(courseObj?.modules, resList);
     const attemptedList = list.filter(item => item.isAttempted);
     const overallTotalScore = attemptedList.reduce((acc, curr) => acc + curr.score, 0);
     const overallTotalPossible = attemptedList.reduce((acc, curr) => acc + curr.total, 0);
@@ -6272,7 +6221,7 @@ export default function AdminDashboardPage() {
       )}
 
       {/* PRINT AREA CONTAINER (Hidden on screen, shown in printing) */}
-      <div id="print-area-wrapper" className="hidden print:block">
+      <div id="print-area-wrapper">
         {printTarget?.type === "marksheet" && renderPrintMarksheet(printTarget.data)}
         {printTarget?.type === "cumulative_marksheet" && renderPrintCumulativeMarksheet(printTarget.data)}
         {printTarget?.type === "certificate" && renderPrintCertificate(printTarget.data)}

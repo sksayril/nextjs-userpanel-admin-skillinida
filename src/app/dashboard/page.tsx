@@ -25,6 +25,12 @@ import {
 } from "lucide-react";
 import { resolveFileUrl } from "@/lib/fileUrl";
 import { formatExamSchedule, isExamNotStarted, isExamWindowClosed, formatExamWindowEnd } from "@/lib/examSchedule";
+import {
+  buildCumulativeMarksheetRows,
+  buildResultsDisplayRows,
+  getResultQuestionCounts,
+} from "@/lib/resultHelpers";
+import { usePrintTrigger } from "@/lib/usePrintTrigger";
 import Logo from "@/components/Logo";
 
 function seededRandom(seedStr: string) {
@@ -81,8 +87,7 @@ export default function DashboardPage() {
   const [shuffledIndices, setShuffledIndices] = useState<number[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
 
-  // Print Target State
-  const [printTarget, setPrintTarget] = useState<any>(null);
+  const { printTarget, triggerPrint } = usePrintTrigger();
   const [paymentLoading, setPaymentLoading] = useState<boolean>(false);
 
   // Exam Review States
@@ -446,11 +451,84 @@ export default function DashboardPage() {
     window.print();
   };
 
-  const triggerPrint = (type: "marksheet" | "certificate" | "cumulative_marksheet" | "admitcard" | "idcard", data: any) => {
-    setPrintTarget({ type, data });
-    setTimeout(() => {
-      window.print();
-    }, 150);
+  const refreshApprovedResults = async () => {
+    const res = await fetch("/api/results");
+    const data = await res.json();
+    if (res.ok && data.success) {
+      setResults(data.results);
+      return data.results as any[];
+    }
+    return null;
+  };
+
+  const handlePrintSingleMarksheet = async (resultRecord: any) => {
+    if (!resultRecord?._id) {
+      toast.error("Result record is missing. Please refresh and try again.");
+      return;
+    }
+
+    if (!resultRecord.isApproved) {
+      toast.error("This marksheet is pending administrator approval.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/results/${resultRecord._id}`);
+      const data = await res.json();
+      if (res.ok && data.success && data.result) {
+        triggerPrint("marksheet", data.result);
+      } else {
+        toast.error(data.error || "Unable to load marksheet for printing.");
+      }
+    } catch (err) {
+      console.error("Print marksheet error:", err);
+      toast.error("Network error while preparing marksheet for print.");
+    }
+  };
+
+  const handlePrintCumulativeMarksheet = async () => {
+    try {
+      const latestResults = await refreshApprovedResults();
+      if (!latestResults) {
+        toast.error("Unable to load your results. Please try again.");
+        return;
+      }
+
+      const approved = latestResults.filter((result: any) => result.isApproved);
+      if (approved.length === 0) {
+        toast.error("No approved marksheets are available to print yet.");
+        return;
+      }
+
+      triggerPrint("cumulative_marksheet", approved);
+    } catch (err) {
+      console.error("Print cumulative marksheet error:", err);
+      toast.error("Network error while preparing mark sheet for print.");
+    }
+  };
+
+  const handlePrintCertificate = async () => {
+    try {
+      const latestResults = await refreshApprovedResults();
+      if (!latestResults) {
+        toast.error("Unable to load your results. Please try again.");
+        return;
+      }
+
+      const latestApprovedCert = [...latestResults]
+        .reverse()
+        .find((result: any) => result.isCertificateApproved);
+
+      if (!latestApprovedCert) {
+        toast.error("No approved certificate is available to print yet.");
+        return;
+      }
+
+      triggerPrint("certificate", latestApprovedCert);
+    } catch (err) {
+      console.error("Print certificate error:", err);
+      toast.error("Network error while preparing certificate for print.");
+    }
   };
 
   // Start Exam Quiz Handler
@@ -537,53 +615,15 @@ export default function DashboardPage() {
     await submitQuizAnswers(selectedAnswers, false);
   };
 
-  // Dynamic Results mapping into print Mark Sheet
-  const resultsToDisplay = (() => {
-    if (courseData && courseData.modules && courseData.modules.length > 0) {
-      return courseData.modules.map((mod: any, i: number) => {
-        const code = `PAPER-${101 + i}`;
-        const matched = results.find(r => 
-          r.quizTitle && 
-          r.quizTitle.toLowerCase().trim().replace(/\s+/g, "") === mod.title.toLowerCase().trim().replace(/\s+/g, "")
-        );
-        
-        const isApproved = !!matched?.isApproved;
-        const internal = isApproved ? Math.round((matched.score || 0) * (30 / (matched.total || 1))) : null;
-        const external = isApproved ? Math.round(((matched.total || 0) - (matched.score || 0)) * (70 / (matched.total || 1))) + (matched.score || 0) * 5 : null;
-        const total = isApproved ? Math.round(((matched.score || 0) / (matched.total || 1)) * 100) : null;
-        
-        return {
-          code,
-          subject: mod.title,
-          internal: isApproved ? (internal! > 30 ? 30 : internal) : "-",
-          external: isApproved ? (external! > 70 ? 70 : external) : "-",
-          total: isApproved ? total : (matched ? "Pending" : "-"),
-          isApproved,
-          isCertificateApproved: !!matched?.isCertificateApproved,
-          originalData: matched || null
-        };
-      });
+  useEffect(() => {
+    if (activeTab === "results" && candidate) {
+      refreshApprovedResults().catch((err) =>
+        console.error("Failed to refresh results:", err)
+      );
     }
+  }, [activeTab, candidate?._id]);
 
-    return results.map((r, i) => {
-      const code = `QUIZ-${101 + i}`;
-      const isApproved = !!r.isApproved;
-      const internal = isApproved ? Math.round((r.score || 0) * (30 / (r.total || 1))) : null;
-      const external = isApproved ? Math.round(((r.total || 0) - (r.score || 0)) * (70 / (r.total || 1))) + (r.score || 0) * 5 : null;
-      const total = isApproved ? Math.round(((r.score || 0) / (r.total || 1)) * 100) : null;
-
-      return {
-        code,
-        subject: r.quizTitle,
-        internal: isApproved ? (internal! > 30 ? 30 : internal) : "-",
-        external: isApproved ? (external! > 70 ? 70 : external) : "-",
-        total: isApproved ? total : "Pending",
-        isApproved,
-        isCertificateApproved: !!r.isCertificateApproved,
-        originalData: r
-      };
-    });
-  })();
+  const resultsToDisplay = buildResultsDisplayRows(courseData?.modules, results);
 
   // Derive GPA only from APPROVED results
   const approvedResults = results.filter(r => r.isApproved);
@@ -1299,7 +1339,10 @@ export default function DashboardPage() {
 
   const renderPrintMarksheet = (res: any) => {
     if (!res) return null;
-    const totalQuestions = res.correctCount + res.incorrectCount;
+    const { correctCount, incorrectCount, totalQuestions } = getResultQuestionCounts(res);
+    const score = res.score ?? 0;
+    const total = res.total ?? 0;
+    const percentage = res.percentage ?? 0;
     const formattedDate = new Date(res.date).toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
@@ -1367,8 +1410,8 @@ export default function DashboardPage() {
                   <td className="py-4 px-4 font-bold text-slate-800">{res.quizTitle}</td>
                   <td className="py-4 px-4 text-center font-semibold text-emerald-600">{res.correctCount} / {totalQuestions}</td>
                   <td className="py-4 px-4 text-center font-semibold text-rose-500">{res.incorrectCount} / {totalQuestions}</td>
-                  <td className="py-4 px-4 text-center font-semibold">{res.total}</td>
-                  <td className="py-4 px-4 text-right font-black text-slate-900">{res.score}</td>
+                  <td className="py-4 px-4 text-center font-semibold">{total}</td>
+                  <td className="py-4 px-4 text-right font-black text-slate-900">{score}</td>
                 </tr>
               </tbody>
             </table>
@@ -1376,12 +1419,12 @@ export default function DashboardPage() {
           <div className="mt-8 grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200/60">
             <div className="text-center">
               <span className="text-slate-400 block font-bold uppercase tracking-wider text-[8px]">Obtained Percentage</span>
-              <span className="text-lg font-black text-slate-900 mt-1 block">{res.percentage}%</span>
+              <span className="text-lg font-black text-slate-900 mt-1 block">{percentage}%</span>
             </div>
             <div className="text-center">
               <span className="text-slate-400 block font-bold uppercase tracking-wider text-[8px]">Evaluation Status</span>
-              <span className={`text-lg font-black mt-1 block ${res.percentage >= 50 ? "text-emerald-600" : "text-rose-600"}`}>
-                {res.percentage >= 50 ? "PASS" : "FAIL"}
+              <span className={`text-lg font-black mt-1 block ${percentage >= 50 ? "text-emerald-600" : "text-rose-600"}`}>
+                {percentage >= 50 ? "PASS" : "FAIL"}
               </span>
             </div>
           </div>
@@ -1404,58 +1447,8 @@ export default function DashboardPage() {
   };
 
   const renderPrintCumulativeMarksheet = (resList: any[]) => {
-    const courseName = candidate?.course || "N/A";
-    
-    // Find the course details
-    let list: any[] = [];
-    if (courseData && courseData.modules && courseData.modules.length > 0) {
-      list = courseData.modules.map((mod: any) => {
-        const matchedRes = resList.find(r => 
-          r.quizTitle && 
-          r.quizTitle.toLowerCase().trim().replace(/\s+/g, "") === mod.title.toLowerCase().trim().replace(/\s+/g, "")
-        );
-        
-        if (matchedRes) {
-          const internal = Math.round(matchedRes.score * (30 / matchedRes.total));
-          const external = Math.round((matchedRes.total - matchedRes.score) * (70 / matchedRes.total)) + matchedRes.score * 5;
-          return {
-            quizTitle: mod.title,
-            internal: internal > 30 ? 30 : internal,
-            external: external > 70 ? 70 : external,
-            score: matchedRes.score,
-            total: matchedRes.total,
-            percentage: matchedRes.percentage,
-            isAttempted: true
-          };
-        } else {
-          return {
-            quizTitle: mod.title,
-            internal: "-",
-            external: "-",
-            score: 0,
-            total: 0,
-            percentage: 0,
-            isAttempted: false
-          };
-        }
-      });
-    } else {
-      list = resList.map(r => {
-        const internal = Math.round(r.score * (30 / r.total));
-        const external = Math.round((r.total - r.score) * (70 / r.total)) + r.score * 5;
-        return {
-          quizTitle: r.quizTitle,
-          internal: internal > 30 ? 30 : internal,
-          external: external > 70 ? 70 : external,
-          score: r.score,
-          total: r.total,
-          percentage: r.percentage,
-          isAttempted: true
-        };
-      });
-    }
-
-    const attemptedList = list.filter(item => item.isAttempted);
+    const list = buildCumulativeMarksheetRows(courseData?.modules, resList);
+    const attemptedList = list.filter((item) => item.isAttempted);
     const overallTotalScore = attemptedList.reduce((acc, curr) => acc + curr.score, 0);
     const overallTotalPossible = attemptedList.reduce((acc, curr) => acc + curr.total, 0);
     const averagePercentage = attemptedList.length > 0
@@ -1465,6 +1458,7 @@ export default function DashboardPage() {
     const overallStatus = averagePercentage >= 50 ? "PASS" : "FAIL";
     const candidateName = candidate?.name || "N/A";
     const regId = candidate?.registrationId || "N/A";
+    const courseName = candidate?.course || "N/A";
 
     return (
       <div className="w-[210mm] h-[297mm] border-[6px] border-slate-900 bg-white p-12 flex flex-col justify-between font-sans relative box-border">
@@ -2208,7 +2202,7 @@ export default function DashboardPage() {
                     <div className="flex gap-2">
                       {results.length > 0 && (
                         <button
-                          onClick={() => approvedResults.length > 0 && triggerPrint("cumulative_marksheet", approvedResults)}
+                          onClick={handlePrintCumulativeMarksheet}
                           disabled={approvedResults.length === 0}
                           className={`flex items-center gap-2 py-2 px-4 rounded-xl text-xs font-bold shadow-sm transition-all active:scale-[0.98] ${approvedResults.length > 0
                             ? "bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 cursor-pointer"
@@ -2221,12 +2215,7 @@ export default function DashboardPage() {
                       )}
                       {results.length > 0 && (
                         <button
-                          onClick={() => {
-                            const latestApprovedCert = [...results].reverse().find(r => r.isCertificateApproved);
-                            if (latestApprovedCert) {
-                              triggerPrint("certificate", latestApprovedCert);
-                            }
-                          }}
+                          onClick={handlePrintCertificate}
                           disabled={!results.some(r => r.isCertificateApproved)}
                           className={`flex items-center gap-2 py-2 px-4 rounded-xl text-xs font-bold shadow transition-all active:scale-[0.98] ${results.some(r => r.isCertificateApproved)
                             ? "bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white shadow-amber-500/10 cursor-pointer"
@@ -2253,7 +2242,53 @@ export default function DashboardPage() {
                   )}
 
                   {results.length > 0 ? (
-                    <div id="id-card-print-area" className="p-6 sm:p-8 rounded-2xl bg-white border border-slate-250 shadow-xl relative overflow-hidden bg-gradient-to-br from-white via-slate-50/50 to-deepskyblue-light/20 print:bg-white print:border-none print:shadow-none print:text-black">
+                    <div className="space-y-6">
+                      <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm print:hidden">
+                        <h3 className="text-sm font-black text-slate-900 mb-3">Your Exam Results</h3>
+                        <div className="space-y-3">
+                          {results.map((result: any) => (
+                            <div
+                              key={result._id}
+                              className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50/70"
+                            >
+                              <div>
+                                <p className="text-xs font-bold text-slate-800">{result.quizTitle}</p>
+                                <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+                                  {new Date(result.date).toLocaleDateString("en-IN", {
+                                    day: "numeric",
+                                    month: "short",
+                                    year: "numeric",
+                                  })}
+                                </p>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                {result.isApproved ? (
+                                  <>
+                                    <span className="px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black">
+                                      {result.score} / {result.total} ({result.percentage}%)
+                                    </span>
+                                    <span className="px-2 py-1 rounded-lg bg-slate-100 text-slate-700 text-[10px] font-bold">
+                                      Grade: {result.grade}
+                                    </span>
+                                    <button
+                                      onClick={() => handlePrintSingleMarksheet(result)}
+                                      className="py-1 px-2.5 rounded-lg text-[10px] font-bold bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 cursor-pointer"
+                                    >
+                                      Print Marksheet
+                                    </button>
+                                  </>
+                                ) : (
+                                  <span className="px-2 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-black uppercase tracking-wide">
+                                    Pending Approval
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                    <div id="student-semester-marksheet" className="p-6 sm:p-8 rounded-2xl bg-white border border-slate-250 shadow-xl relative overflow-hidden bg-gradient-to-br from-white via-slate-50/50 to-deepskyblue-light/20 print:bg-white print:border-none print:shadow-none print:text-black">
 
                       {/* Print Title Header */}
                       <div className="text-center border-b border-slate-200/80 pb-5 mb-6 print:border-zinc-300">
@@ -2314,7 +2349,7 @@ export default function DashboardPage() {
                                     {res.originalData && (
                                       <>
                                         <button
-                                          onClick={() => res.isApproved && triggerPrint("marksheet", res.originalData)}
+                                          onClick={() => handlePrintSingleMarksheet(res.originalData)}
                                           disabled={!res.isApproved}
                                           className={`py-1 px-2.5 rounded-lg text-[10px] font-bold transition ${res.isApproved
                                             ? "bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 cursor-pointer"
@@ -2373,6 +2408,7 @@ export default function DashboardPage() {
                           </div>
                         </div>
                       </div>
+                    </div>
                     </div>
                   ) : (
                     <div className="p-10 rounded-2xl bg-white border border-rose-200 shadow-sm shadow-slate-100 flex flex-col items-center justify-center text-center space-y-4 animate-fade-in mt-8">
@@ -3100,7 +3136,7 @@ export default function DashboardPage() {
       )}
 
       {/* PRINT AREA CONTAINER (Hidden on screen, shown in printing) */}
-      <div id="print-area-wrapper" className="hidden print:block">
+      <div id="print-area-wrapper">
         {printTarget?.type === "marksheet" && renderPrintMarksheet(printTarget.data)}
         {printTarget?.type === "cumulative_marksheet" && renderPrintCumulativeMarksheet(printTarget.data)}
         {printTarget?.type === "certificate" && renderPrintCertificate(printTarget.data)}

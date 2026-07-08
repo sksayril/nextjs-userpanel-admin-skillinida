@@ -73,32 +73,56 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+@media screen {
+  #print-area-wrapper {
+    position: fixed;
+    left: -10000px;
+    top: 0;
+    width: 210mm;
+    height: auto;
+    overflow: visible;
+    pointer-events: none;
+    z-index: -1;
+  }
+}
+
 @media print {
   @page {
     margin: 0;
   }
-  
+
   body * {
     visibility: hidden !important;
   }
-  
-  #print-area-wrapper, #print-area-wrapper * {
+
+  #print-area-wrapper,
+  #print-area-wrapper * {
     visibility: visible !important;
   }
-  
+
   #print-area-wrapper {
+    display: block !important;
+    visibility: visible !important;
     position: absolute !important;
     left: 0 !important;
     top: 0 !important;
     width: 100% !important;
+    height: auto !important;
+    min-height: 100% !important;
+    overflow: visible !important;
     margin: 0 !important;
     padding: 0 !important;
     box-shadow: none !important;
     border: none !important;
     background: white !important;
     color: black !important;
+    z-index: 2147483647 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  body.print-marksheet-document #print-area-wrapper > div {
+    page-break-inside: avoid !important;
   }
 }
 
