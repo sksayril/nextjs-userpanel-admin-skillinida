@@ -3,7 +3,7 @@ import dbConnect from "@/lib/dbConnect";
 import { Candidate } from "@/models/Candidate";
 import { Attendance } from "@/models/Attendance";
 import { Result } from "@/models/Result";
-import { autoSubmitPendingExamSessions } from "@/lib/resultHelpers";
+import { autoSubmitPendingExamSessions } from "@/lib/resultHelpers.server";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";

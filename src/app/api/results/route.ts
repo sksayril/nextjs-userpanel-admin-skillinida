@@ -9,10 +9,8 @@ import {
   isExamNotStarted,
   isExamWindowClosed,
 } from "@/lib/examSchedule";
-import {
-  autoSubmitPendingExamSessions,
-  gradeQuizAnswers,
-} from "@/lib/resultHelpers";
+import { gradeQuizAnswers } from "@/lib/resultHelpers";
+import { autoSubmitPendingExamSessions } from "@/lib/resultHelpers.server";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 

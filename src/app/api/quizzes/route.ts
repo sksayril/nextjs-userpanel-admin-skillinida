@@ -6,7 +6,7 @@ import { ExamSession } from "@/models/ExamSession";
 import { Result } from "@/models/Result";
 import { enrichQuizWithSchedule } from "@/lib/examSchedule";
 import { buildExamSessionPayload } from "@/lib/examSessionHelpers";
-import { autoSubmitPendingExamSessions } from "@/lib/resultHelpers";
+import { autoSubmitPendingExamSessions } from "@/lib/resultHelpers.server";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
