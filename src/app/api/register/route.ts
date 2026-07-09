@@ -80,9 +80,10 @@ export async function POST(request: Request) {
     // Remove used OTP code immediately to prevent double submissions
     await Otp.deleteOne({ email });
 
-    // Validate Agent Code if provided
-    if (agentCode) {
-      const agent = await Associate.findOne({ agentCode: agentCode.trim() });
+    // Validate Agent Code if provided (normalize to uppercase for consistent matching)
+    const normalizedAgentCode = agentCode ? agentCode.trim().toUpperCase() : null;
+    if (normalizedAgentCode) {
+      const agent = await Associate.findOne({ agentCode: normalizedAgentCode });
       if (!agent) {
         return NextResponse.json({ error: "Invalid associate code entered" }, { status: 400 });
       }
@@ -144,7 +145,7 @@ export async function POST(request: Request) {
       registrationId,
       password: hashedPassword,
       originalPassword: password,
-      agentCode: agentCode ? agentCode.trim() : null,
+      agentCode: normalizedAgentCode,
       profilePicUrl: profilePicUrl || null,
       signatureUrl: signatureUrl || null,
       pincode: pincode || undefined,

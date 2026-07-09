@@ -7,6 +7,50 @@ import { cookies } from "next/headers";
 
 const JWT_SECRET = process.env.JWT_SECRET || "default-secret-key-change-me";
 
+function mapStudentForAssociate(student: {
+  _id: unknown;
+  name: string;
+  fatherName: string;
+  motherName: string;
+  dob: Date;
+  email: string;
+  phone: string;
+  address: string;
+  district: string;
+  state?: string;
+  pincode?: string;
+  course: string;
+  category: string;
+  gender: string;
+  registrationId: string;
+  agentCode?: string | null;
+  isPaid: boolean;
+  isActive: boolean;
+  createdAt: Date;
+}) {
+  return {
+    id: String(student._id),
+    name: student.name,
+    fatherName: student.fatherName,
+    motherName: student.motherName,
+    dob: student.dob,
+    email: student.email,
+    phone: student.phone,
+    address: student.address,
+    district: student.district,
+    state: student.state || "",
+    pincode: student.pincode || "",
+    course: student.course,
+    category: student.category,
+    gender: student.gender,
+    registrationId: student.registrationId,
+    agentCode: student.agentCode,
+    isPaid: student.isPaid,
+    isActive: student.isActive,
+    createdAt: student.createdAt,
+  };
+}
+
 export async function GET() {
   try {
     await dbConnect();
@@ -18,14 +62,14 @@ export async function GET() {
       return NextResponse.json({ error: "Session token not found" }, { status: 401 });
     }
 
-    let decoded: any;
+    let decoded: { id?: string; role?: string };
     try {
-      decoded = jwt.verify(tokenCookie.value, JWT_SECRET);
-    } catch (err) {
+      decoded = jwt.verify(tokenCookie.value, JWT_SECRET) as { id?: string; role?: string };
+    } catch {
       return NextResponse.json({ error: "Session token is invalid or expired" }, { status: 401 });
     }
 
-    if (!decoded || !decoded.id || decoded.role !== "associate") {
+    if (!decoded?.id || decoded.role !== "associate") {
       return NextResponse.json({ error: "Token payload is invalid" }, { status: 401 });
     }
 
@@ -38,18 +82,24 @@ export async function GET() {
       return NextResponse.json({ error: "Associate is not approved" }, { status: 403 });
     }
 
-    // Retrieve students registered with this associate's code
     const students = await Candidate.find({ agentCode: associate.agentCode })
-      .select("-password")
-      .sort({ createdAt: -1 });
+      .select(
+        "name fatherName motherName dob email phone address district state pincode course category gender registrationId agentCode isPaid isActive createdAt"
+      )
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const mappedStudents = students.map(mapStudentForAssociate);
 
     return NextResponse.json({
       success: true,
-      students,
-      count: students.length,
+      students: mappedStudents,
+      count: mappedStudents.length,
+      associateCode: associate.agentCode,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to fetch associate students";
     console.error("Associate Students API Error:", error);
-    return NextResponse.json({ error: error.message || "Failed to fetch associate students" }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
