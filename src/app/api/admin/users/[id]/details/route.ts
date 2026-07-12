@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import { Candidate } from "@/models/Candidate";
+import { Associate } from "@/models/Associate";
 import { Attendance } from "@/models/Attendance";
 import { Result } from "@/models/Result";
 import { autoSubmitPendingExamSessions } from "@/lib/resultHelpers.server";
@@ -49,11 +50,17 @@ export async function GET(
     const attendance = await Attendance.find({ candidateId: id }).sort({ date: -1 });
     const results = await Result.find({ candidateId: id }).sort({ date: -1 });
 
+    let agent = null;
+    if (student.agentCode) {
+      agent = await Associate.findOne({ agentCode: student.agentCode }).select("-password -originalPassword");
+    }
+
     return NextResponse.json({
       success: true,
       student,
       attendance,
       results,
+      agent,
     });
   } catch (error: any) {
     console.error("Fetch Student Details Error:", error);
@@ -100,6 +107,7 @@ export async function PUT(
       password,
       pincode,
       state,
+      agentCode,
     } = body;
 
     if (name) student.name = name;
@@ -152,12 +160,22 @@ export async function PUT(
       student.originalPassword = password;
     }
 
+    if (agentCode !== undefined) {
+      student.agentCode = agentCode ? agentCode.trim() : null;
+    }
+
     await student.save({ validateBeforeSave: false });
+
+    let agent = null;
+    if (student.agentCode) {
+      agent = await Associate.findOne({ agentCode: student.agentCode }).select("-password -originalPassword");
+    }
 
     return NextResponse.json({
       success: true,
       message: "Student profile updated successfully",
       student,
+      agent,
     });
   } catch (error: any) {
     console.error("Update Student Error:", error);

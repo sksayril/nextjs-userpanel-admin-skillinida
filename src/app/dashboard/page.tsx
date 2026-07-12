@@ -2325,26 +2325,26 @@ export default function DashboardPage() {
 
                       {/* Mark Sheet Table */}
                       <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs">
+                        <table className="w-full text-left text-xs border-collapse">
                           <thead>
-                            <tr className="border-b border-slate-200 text-slate-450 uppercase text-[9px] tracking-wider print:border-zinc-300 print:text-zinc-500">
-                              <th className="py-2.5">Code</th>
-                              <th className="py-2.5">Subject Paper Exam</th>
-                              <th className="py-2.5 text-center">Int (30)</th>
-                              <th className="py-2.5 text-center">Ext (70)</th>
-                              <th className="py-2.5 text-center">Total (100)</th>
-                              <th className="py-2.5 text-right print:hidden">Actions</th>
+                            <tr className="border-b border-slate-200 text-slate-450 uppercase text-[9px] tracking-wider print:border-zinc-300 print:text-zinc-500 font-bold">
+                              <th className="py-2.5 pl-4 pr-3 whitespace-nowrap">Code</th>
+                              <th className="py-2.5 px-3 min-w-[150px] whitespace-nowrap">Subject Paper Exam</th>
+                              <th className="py-2.5 px-3 text-center whitespace-nowrap">Int (30)</th>
+                              <th className="py-2.5 px-3 text-center whitespace-nowrap">Ext (70)</th>
+                              <th className="py-2.5 px-3 text-center whitespace-nowrap">Total (100)</th>
+                              <th className="py-2.5 pr-4 pl-3 text-right whitespace-nowrap print:hidden">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100 print:divide-zinc-200">
                             {resultsToDisplay.map((res: any, i: number) => (
                               <tr key={i} className="text-slate-700 print:text-black">
-                                <td className="py-3 font-semibold text-slate-500 print:text-zinc-600">{res.code}</td>
-                                <td className="py-3 font-medium text-slate-800">{res.subject}</td>
-                                <td className="py-3 text-center">{res.internal}</td>
-                                <td className="py-3 text-center">{res.external}</td>
-                                <td className="py-3 text-center font-bold text-slate-900 print:text-black">{res.total}</td>
-                                <td className="py-3 text-right print:hidden">
+                                <td className="py-3 pl-4 pr-3 font-semibold text-slate-500 print:text-zinc-600 whitespace-nowrap">{res.code}</td>
+                                <td className="py-3 px-3 font-medium text-slate-800 min-w-[150px] whitespace-normal">{res.subject}</td>
+                                <td className="py-3 px-3 text-center whitespace-nowrap">{res.internal}</td>
+                                <td className="py-3 px-3 text-center whitespace-nowrap">{res.external}</td>
+                                <td className="py-3 px-3 text-center font-bold text-slate-900 print:text-black whitespace-nowrap">{res.total}</td>
+                                <td className="py-3 pr-4 pl-3 text-right print:hidden whitespace-nowrap min-w-max">
                                   <div className="flex gap-2 justify-end">
                                     {res.originalData && (
                                       <>

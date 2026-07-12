@@ -52,7 +52,8 @@ import {
   Palette,
   CreditCard,
   DollarSign,
-  Copy
+  Copy,
+  Eye
 } from "lucide-react";
 
 // ── Sidebar Theme Definitions ────────────────────────────────────────────────
@@ -261,7 +262,8 @@ export default function AdminDashboardPage() {
     address: "",
     password: "",
     pincode: "",
-    state: ""
+    state: "",
+    agentCode: ""
   });
 
   const [editingAssociate, setEditingAssociate] = useState<any | null>(null);
@@ -1446,7 +1448,8 @@ export default function AdminDashboardPage() {
       address: s.address || "",
       password: "",
       pincode: s.pincode || "",
-      state: s.state || ""
+      state: s.state || "",
+      agentCode: s.agentCode || ""
     });
     setIsEditingStudent(true);
   };
@@ -1466,7 +1469,8 @@ export default function AdminDashboardPage() {
         toast.success(data.message || "Student profile updated successfully!");
         setStudentDetails((prev: any) => ({
           ...prev,
-          student: data.student
+          student: data.student,
+          agent: data.agent || null,
         }));
         setStudentsList((prev: any[]) =>
           prev.map((s: any) => (s._id === selectedStudentId ? data.student : s))
@@ -1478,6 +1482,12 @@ export default function AdminDashboardPage() {
     } catch (err) {
       toast.error("Network error updating student profile.");
     }
+  };
+
+  const handleViewAssociateStudents = (agentCode: string) => {
+    setSearchQuery(agentCode);
+    setActiveTab("overview");
+    toast.success(`Filtering students by Agent Code: ${agentCode}`);
   };
 
   const handleStartEditAssociate = (associate: any) => {
@@ -2503,7 +2513,8 @@ export default function AdminDashboardPage() {
       s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.registrationId.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.course.toLowerCase().includes(searchQuery.toLowerCase());
+      s.course.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (s.agentCode && s.agentCode.toLowerCase().includes(searchQuery.toLowerCase()));
 
     if (!matchesSearch) return false;
 
@@ -2952,7 +2963,7 @@ export default function AdminDashboardPage() {
           </section>
 
           {/* OVERLAPPING METRICS CARDS */}
-          <section className="relative -mt-12 z-10 grid grid-cols-1 sm:grid-cols-4 gap-6 px-8 max-w-7xl w-full mx-auto">
+          <section className="relative -mt-12 z-10 grid grid-cols-1 sm:grid-cols-4 gap-6 px-8 max-w-[95%] w-full mx-auto">
             {/* Card 1: Students */}
             <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-md shadow-slate-200/50 flex items-center justify-between">
               <div className="space-y-1">
@@ -3012,7 +3023,7 @@ export default function AdminDashboardPage() {
           </section>
 
           {/* MAIN CONTAINER AREA */}
-          <main className="p-8 max-w-7xl w-full mx-auto flex-1 flex flex-col gap-6">
+          <main className="p-8 max-w-[95%] w-full mx-auto flex-1 flex flex-col gap-6">
 
             {/* Notification Messages */}
             {successMsg && (
@@ -3263,7 +3274,7 @@ export default function AdminDashboardPage() {
                       </span>
                       <input
                         type="text"
-                        placeholder="Search name, registration ID, email..."
+                        placeholder="Search name, registration ID, agent code, email..."
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
                         className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/5 transition-all font-semibold placeholder-slate-400"
@@ -3324,20 +3335,21 @@ export default function AdminDashboardPage() {
                       <table className="w-full text-left text-xs border-collapse">
                         <thead>
                           <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] tracking-wider font-bold">
-                            <th className="pb-3 pl-2">Reg ID</th>
-                            <th className="pb-3">Candidate Name</th>
-                            <th className="pb-3">Enrolled Program</th>
-                            <th className="pb-3">Email ID</th>
-                            <th className="pb-3">Payment</th>
-                            <th className="pb-3">Date Created</th>
-                            <th className="pb-3 text-right pr-2">Actions</th>
+                            <th className="pb-3 pl-4 pr-3 whitespace-nowrap">Reg ID</th>
+                            <th className="pb-3 px-3 whitespace-nowrap">Candidate Name</th>
+                            <th className="pb-3 px-3 min-w-[200px] whitespace-nowrap">Enrolled Program</th>
+                            <th className="pb-3 px-3 whitespace-nowrap">Email ID</th>
+                            <th className="pb-3 px-3 text-center whitespace-nowrap">Payment</th>
+                            <th className="pb-3 px-3 text-center whitespace-nowrap">Agent</th>
+                            <th className="pb-3 px-3 whitespace-nowrap">Date Created</th>
+                            <th className="pb-3 pr-4 pl-3 text-right whitespace-nowrap">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                           {filteredStudents.map((stud, idx) => (
                             <tr key={idx} className="text-slate-700 hover:bg-slate-50/50 hover:text-slate-900 transition-colors">
-                              <td className="py-3.5 pl-2 font-bold text-deepskyblue-dark">{stud.registrationId}</td>
-                              <td className="py-3.5 font-semibold">
+                              <td className="py-3.5 pl-4 pr-3 font-bold text-deepskyblue-dark whitespace-nowrap">{stud.registrationId}</td>
+                              <td className="py-3.5 px-3 font-semibold whitespace-nowrap">
                                 <div className="flex items-center gap-2.5">
                                   <div className={`h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold select-none ${stud.isActive !== false ? "bg-slate-100 text-deepskyblue-dark animate-pulse" : "bg-slate-200 text-slate-405"
                                     }`}>
@@ -3353,9 +3365,9 @@ export default function AdminDashboardPage() {
                                   </div>
                                 </div>
                               </td>
-                              <td className="py-3.5 text-slate-500 font-medium">{stud.course}</td>
-                              <td className="py-3.5 text-slate-500 font-mono">{stud.email}</td>
-                              <td className="py-3.5">
+                              <td className="py-3.5 px-3 text-slate-500 font-medium min-w-[200px] whitespace-normal">{stud.course}</td>
+                              <td className="py-3.5 px-3 text-slate-500 font-mono whitespace-nowrap">{stud.email}</td>
+                              <td className="py-3.5 px-3 text-center whitespace-nowrap">
                                 {(() => {
                                   const course = coursesList.find(c => c.title === stud.course || c.code === stud.course);
                                   if (!course?.isPaid) {
@@ -3371,16 +3383,26 @@ export default function AdminDashboardPage() {
                                   );
                                 })()}
                               </td>
-                              <td className="py-3.5 text-slate-400 font-medium">
+                              <td className="py-3.5 px-3 text-center whitespace-nowrap">
+                                {stud.agentCode ? (
+                                  <span className="px-2 py-0.5 rounded-full text-[9px] uppercase font-bold tracking-wider bg-sky-50 text-deepskyblue-dark border border-sky-100/60">
+                                    {stud.agentCode}
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] text-slate-400 italic">Direct</span>
+                                )}
+                              </td>
+                              <td className="py-3.5 px-3 text-slate-400 font-medium whitespace-nowrap">
                                 {new Date(stud.createdAt).toLocaleDateString()}
                               </td>
-                              <td className="py-3.5 text-right pr-2">
+                              <td className="py-3.5 pr-4 pl-3 text-right min-w-max">
                                 <div className="flex items-center justify-end gap-2">
                                   <button
                                     onClick={() => handleViewStudentDetails(stud._id)}
-                                    className="px-2.5 py-1.5 rounded-xl bg-deepskyblue/10 text-deepskyblue-dark text-[10px] font-extrabold hover:bg-deepskyblue hover:text-white transition cursor-pointer shrink-0"
+                                    className="p-1.5 rounded-xl bg-deepskyblue/10 text-deepskyblue-dark hover:bg-deepskyblue hover:text-white transition cursor-pointer shrink-0 inline-flex items-center justify-center"
+                                    title="View Details"
                                   >
-                                    View Details
+                                    <Eye className="h-3.5 w-3.5" />
                                   </button>
                                   <button
                                     onClick={() => triggerPrint("admitcard", stud)}
@@ -4092,16 +4114,16 @@ export default function AdminDashboardPage() {
                   </div>
 
                   {attendanceList.length === 0 ? (
-                    <p className="text-xs text-slate-450 py-8 text-center font-medium">No presence logs logged in database.</p>
+                    <p className="text-xs text-slate-455 py-8 text-center font-medium">No presence logs logged in database.</p>
                   ) : (
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs">
+                      <table className="w-full text-left text-xs border-collapse">
                         <thead>
                           <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] tracking-wider font-bold">
-                            <th className="pb-3 pl-1">Date</th>
-                            <th className="pb-3">Student</th>
-                            <th className="pb-3">Status</th>
-                            <th className="pb-3 text-right pr-1">Google Meet</th>
+                            <th className="pb-3 pl-4 pr-3 whitespace-nowrap">Date</th>
+                            <th className="pb-3 px-3 whitespace-nowrap">Student</th>
+                            <th className="pb-3 px-3 whitespace-nowrap">Status</th>
+                            <th className="pb-3 pr-4 pl-3 text-right whitespace-nowrap">Google Meet</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -4118,7 +4140,7 @@ export default function AdminDashboardPage() {
                             })
                             .map((att, idx) => (
                               <tr key={idx} className="text-slate-700 hover:bg-slate-50/50 transition-colors">
-                                <td className="py-3 pl-1 font-semibold text-slate-500">
+                                <td className="py-3 pl-4 pr-3 font-semibold text-slate-500 whitespace-nowrap">
                                   {new Date(att.date).toLocaleString("en-GB", {
                                     day: "numeric",
                                     month: "short",
@@ -4127,18 +4149,18 @@ export default function AdminDashboardPage() {
                                     minute: "2-digit",
                                   })}
                                 </td>
-                                <td className="py-3">
+                                <td className="py-3 px-3 whitespace-nowrap">
                                   <p className="font-bold text-slate-800">{att.candidateId?.name || "N/A"}</p>
                                   <span className="text-[9px] text-slate-400 font-mono">{att.candidateId?.registrationId}</span>
                                 </td>
-                                <td className="py-3">
+                                <td className="py-3 px-3 whitespace-nowrap">
                                   <span className={`px-2.5 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${att.status === "present" ? "bg-emerald-50 text-emerald-600" :
                                     att.status === "absent" ? "bg-rose-55 text-rose-600" : "bg-amber-50 text-amber-600"
                                     }`}>
                                     {att.status}
                                   </span>
                                 </td>
-                                <td className="py-3 text-right pr-1">
+                                <td className="py-3 pr-4 pl-3 text-right whitespace-nowrap">
                                   {att.googleMeetLink ? (
                                     <a href={att.googleMeetLink} target="_blank" rel="noreferrer" className="text-deepskyblue-dark hover:text-deepskyblue hover:underline inline-flex items-center gap-0.5 font-bold text-[10px]">
                                       <span>Join class</span>
@@ -4795,16 +4817,16 @@ export default function AdminDashboardPage() {
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
                         <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] tracking-wider font-bold">
-                          <th className="pb-3 pl-2">Student Name</th>
-                          <th className="pb-3">Reg ID</th>
-                          <th className="pb-3">Course Cohort</th>
-                          <th className="pb-3">Exam Title</th>
-                          <th className="pb-3 text-center">Score</th>
-                          <th className="pb-3 text-center">Percentage</th>
-                          <th className="pb-3 text-center">Marksheet Reveal</th>
-                          <th className="pb-3 text-center">Certificate Status</th>
-                          <th className="pb-3">Date Taken</th>
-                          <th className="pb-3 text-right pr-2">Actions</th>
+                          <th className="pb-3 pl-4 pr-3 whitespace-nowrap">Student Name</th>
+                          <th className="pb-3 px-3 whitespace-nowrap">Reg ID</th>
+                          <th className="pb-3 px-3 min-w-[180px] whitespace-nowrap">Course Cohort</th>
+                          <th className="pb-3 px-3 min-w-[180px] whitespace-nowrap">Exam Title</th>
+                          <th className="pb-3 px-3 text-center whitespace-nowrap">Score</th>
+                          <th className="pb-3 px-3 text-center whitespace-nowrap">Percentage</th>
+                          <th className="pb-3 px-3 text-center whitespace-nowrap">Marksheet Reveal</th>
+                          <th className="pb-3 px-3 text-center whitespace-nowrap">Certificate Status</th>
+                          <th className="pb-3 px-3 whitespace-nowrap">Date Taken</th>
+                          <th className="pb-3 pr-4 pl-3 text-right whitespace-nowrap">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
@@ -4830,36 +4852,36 @@ export default function AdminDashboardPage() {
                           })
                           .map((res, idx) => (
                             <tr key={idx} className="text-slate-700 hover:bg-slate-50/50 hover:text-slate-900 transition-colors">
-                              <td className="py-3.5 pl-2 font-semibold">
+                              <td className="py-3.5 pl-4 pr-3 font-semibold whitespace-nowrap">
                                 {res.candidateId?.name || "Deleted Candidate"}
                               </td>
-                              <td className="py-3.5 font-bold text-deepskyblue-dark">
+                              <td className="py-3.5 px-3 font-bold text-deepskyblue-dark whitespace-nowrap">
                                 {res.candidateId?.registrationId || "N/A"}
                               </td>
-                              <td className="py-3.5 text-slate-500 font-medium">
+                              <td className="py-3.5 px-3 text-slate-500 font-medium min-w-[180px] whitespace-normal">
                                 {res.candidateId?.course || "N/A"}
                               </td>
-                              <td className="py-3.5 font-semibold text-slate-800">
+                              <td className="py-3.5 px-3 font-semibold text-slate-800 min-w-[180px] whitespace-normal">
                                 {res.quizTitle}
                               </td>
-                              <td className="py-3.5 text-center font-bold text-slate-700">
+                              <td className="py-3.5 px-3 text-center font-bold text-slate-700 whitespace-nowrap">
                                 {res.score} / {res.total}
                               </td>
-                              <td className="py-3.5 text-center font-extrabold text-slate-900">
+                              <td className="py-3.5 px-3 text-center font-extrabold text-slate-900 whitespace-nowrap">
                                 {res.percentage}%
                               </td>
-                              <td className="py-3.5 text-center">
+                              <td className="py-3.5 px-3 text-center whitespace-nowrap">
                                 <button
                                   onClick={() => handleToggleResultApproval(res._id, "marksheet", !!res.isApproved)}
                                   className={`px-2 py-1 rounded-full text-[9px] font-black tracking-wider uppercase transition cursor-pointer ${res.isApproved
                                     ? "bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100"
-                                    : "bg-amber-50 text-amber-600 border border-amber-250 hover:bg-amber-100"
+                                    : "bg-amber-50 text-amber-600 border border-amber-255 hover:bg-amber-100"
                                     }`}
                                 >
                                   {res.isApproved ? "Approved / Revealed" : "Pending / Hidden"}
                                 </button>
                               </td>
-                              <td className="py-3.5 text-center">
+                              <td className="py-3.5 px-3 text-center whitespace-nowrap">
                                 <button
                                   onClick={() => handleToggleResultApproval(res._id, "certificate", !!res.isCertificateApproved)}
                                   className={`px-2 py-1 rounded-full text-[9px] font-black tracking-wider uppercase transition cursor-pointer ${res.isCertificateApproved
@@ -4870,10 +4892,10 @@ export default function AdminDashboardPage() {
                                   {res.isCertificateApproved ? "Approved / Assigned" : "Not Assigned"}
                                 </button>
                               </td>
-                              <td className="py-3.5 text-slate-400 font-medium">
+                              <td className="py-3.5 px-3 text-slate-400 font-medium whitespace-nowrap">
                                 {new Date(res.date).toLocaleDateString()}
                               </td>
-                              <td className="py-3.5 text-right pr-2 space-x-2">
+                              <td className="py-3.5 pr-4 pl-3 text-right whitespace-nowrap space-x-2">
                                 <button
                                   onClick={() => triggerPrint("marksheet", res)}
                                   className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-[10px] font-bold text-slate-600 transition cursor-pointer"
@@ -4913,12 +4935,12 @@ export default function AdminDashboardPage() {
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
                         <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] tracking-wider font-bold">
-                          <th className="pb-3 pl-2">Associate Details</th>
-                          <th className="pb-3">Referral Code</th>
-                          <th className="pb-3">Original Password</th>
-                          <th className="pb-3 text-center">Referrals Count</th>
-                          <th className="pb-3 text-center">Status</th>
-                          <th className="pb-3 text-right pr-2">Actions</th>
+                          <th className="pb-3 pl-4 pr-3 whitespace-nowrap">Associate Details</th>
+                          <th className="pb-3 px-3 whitespace-nowrap">Referral Code</th>
+                          <th className="pb-3 px-3 whitespace-nowrap">Original Password</th>
+                          <th className="pb-3 px-3 text-center whitespace-nowrap">Referrals Count</th>
+                          <th className="pb-3 px-3 text-center whitespace-nowrap">Status</th>
+                          <th className="pb-3 pr-4 pl-3 text-right whitespace-nowrap">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
@@ -4933,23 +4955,29 @@ export default function AdminDashboardPage() {
                           })
                           .map((associate, idx) => (
                             <tr key={idx} className="text-slate-700 hover:bg-slate-50/50 hover:text-slate-900 transition-colors">
-                              <td className="py-4 pl-2">
+                              <td className="py-4 pl-4 pr-3 whitespace-nowrap">
                                 <div className="font-bold text-slate-900">{associate.name}</div>
                                 <div className="text-[10px] text-slate-400 mt-1 flex flex-col space-y-0.5">
                                   <span>{associate.email}</span>
                                   <span>{associate.phone}</span>
                                 </div>
                               </td>
-                              <td className="py-4 font-mono font-bold text-deepskyblue-dark">
+                              <td className="py-4 px-3 font-mono font-bold text-deepskyblue-dark whitespace-nowrap">
                                 {associate.agentCode}
                               </td>
-                              <td className="py-4 font-mono text-slate-505 font-semibold select-all">
+                              <td className="py-4 px-3 font-mono text-slate-505 font-semibold select-all whitespace-nowrap">
                                 {associate.originalPassword || "N/A"}
                               </td>
-                              <td className="py-4 text-center font-extrabold text-slate-900">
-                                {associate.studentCount} Students
+                              <td className="py-4 px-3 text-center whitespace-nowrap">
+                                <button
+                                  type="button"
+                                  onClick={() => handleViewAssociateStudents(associate.agentCode)}
+                                  className="px-2.5 py-1 rounded-xl bg-deepskyblue/10 hover:bg-deepskyblue text-deepskyblue-dark hover:text-white transition font-extrabold text-[10px] cursor-pointer inline-flex items-center gap-1 shadow-sm"
+                                >
+                                  <span>{associate.studentCount} Students</span>
+                                </button>
                               </td>
-                              <td className="py-4 text-center">
+                              <td className="py-4 px-3 text-center whitespace-nowrap">
                                 <span className={`px-2.5 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${associate.status === "approved" ? "bg-emerald-50 text-emerald-650 border border-emerald-100" :
                                   associate.status === "rejected" ? "bg-rose-50 text-rose-650 border border-rose-100" :
                                     "bg-amber-50 text-amber-655 border border-amber-100"
@@ -4957,7 +4985,7 @@ export default function AdminDashboardPage() {
                                   {associate.status}
                                 </span>
                               </td>
-                              <td className="py-4 text-right pr-2 space-x-2">
+                              <td className="py-4 pr-4 pl-3 text-right whitespace-nowrap min-w-max space-x-2">
                                 <button
                                   onClick={() => handleStartEditAssociate(associate)}
                                   className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-[10px] font-bold text-slate-700 border border-slate-300 transition cursor-pointer"
@@ -5102,12 +5130,12 @@ export default function AdminDashboardPage() {
                       <table className="w-full text-left text-xs border-collapse">
                         <thead>
                           <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] tracking-wider font-bold">
-                            <th className="pb-3 pl-2">Candidate Details</th>
-                            <th className="pb-3">Enrolled Program</th>
-                            <th className="pb-3">Fee Amount</th>
-                            <th className="pb-3 text-center">Payment Status</th>
-                            <th className="pb-3">Transaction Details</th>
-                            <th className="pb-3">Unlock Date</th>
+                            <th className="pb-3 pl-4 pr-3 whitespace-nowrap">Candidate Details</th>
+                            <th className="pb-3 px-3 min-w-[200px] whitespace-nowrap">Enrolled Program</th>
+                            <th className="pb-3 px-3 whitespace-nowrap">Fee Amount</th>
+                            <th className="pb-3 px-3 text-center whitespace-nowrap">Payment Status</th>
+                            <th className="pb-3 px-3 whitespace-nowrap">Transaction Details</th>
+                            <th className="pb-3 pr-4 pl-3 whitespace-nowrap">Unlock Date</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -5125,7 +5153,7 @@ export default function AdminDashboardPage() {
                               const amount = course?.price || 0;
                               return (
                                 <tr key={idx} className="text-slate-700 hover:bg-slate-50/50 hover:text-slate-900 transition-colors">
-                                  <td className="py-3.5 pl-2">
+                                  <td className="py-3.5 pl-4 pr-3 whitespace-nowrap">
                                     <div className={`font-bold ${stud.isActive !== false ? "text-slate-900" : "text-slate-400 line-through"}`}>{stud.name}</div>
                                     <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1.5">
                                       <span>{stud.registrationId}</span>
@@ -5134,9 +5162,9 @@ export default function AdminDashboardPage() {
                                       )}
                                     </div>
                                   </td>
-                                  <td className="py-3.5 text-slate-500 font-semibold">{stud.course}</td>
-                                  <td className="py-3.5 font-bold text-slate-800">₹{amount}</td>
-                                  <td className="py-3.5 text-center">
+                                  <td className="py-3.5 px-3 text-slate-500 font-semibold min-w-[200px] whitespace-normal">{stud.course}</td>
+                                  <td className="py-3.5 px-3 font-bold text-slate-800 whitespace-nowrap">₹{amount}</td>
+                                  <td className="py-3.5 px-3 text-center whitespace-nowrap">
                                     <span className={`px-2.5 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${stud.isPaid
                                       ? "bg-emerald-50 text-emerald-650 border border-emerald-100"
                                       : "bg-amber-50 text-amber-655 border border-amber-100"
@@ -5144,7 +5172,7 @@ export default function AdminDashboardPage() {
                                       {stud.isPaid ? "SUCCESS / PAID" : "PENDING / UNPAID"}
                                     </span>
                                   </td>
-                                  <td className="py-3.5 text-slate-505 font-mono text-[10px]">
+                                  <td className="py-3.5 px-3 text-slate-505 font-mono text-[10px] whitespace-nowrap">
                                     {stud.isPaid && stud.paymentDetails ? (
                                       <div className="flex flex-col">
                                         <span>Order: {stud.paymentDetails.orderId}</span>
@@ -5154,7 +5182,7 @@ export default function AdminDashboardPage() {
                                       <span className="text-slate-300">—</span>
                                     )}
                                   </td>
-                                  <td className="py-3.5 text-slate-400 font-medium">
+                                  <td className="py-3.5 pr-4 pl-3 text-slate-400 font-medium whitespace-nowrap">
                                     {stud.isPaid && stud.paymentDetails?.paidAt ? (
                                       new Date(stud.paymentDetails.paidAt).toLocaleString()
                                     ) : (
@@ -5668,6 +5696,18 @@ export default function AdminDashboardPage() {
                         </select>
                       </div>
 
+                      {/* Referral Agent Code */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Referral Agent Code</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. AG-1001 (Leave blank for Direct)"
+                          value={studentEditForm.agentCode || ""}
+                          onChange={e => setStudentEditForm((prev: any) => ({ ...prev, agentCode: e.target.value }))}
+                          className="block w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-deepskyblue placeholder-slate-400"
+                        />
+                      </div>
+
                       {/* Password */}
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Portal Password (Leave blank to keep current)</label>
@@ -5771,6 +5811,39 @@ export default function AdminDashboardPage() {
                       <div className="py-2.5 border-b border-slate-100 sm:col-span-2 flex flex-col gap-2">
                         <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Address</span>
                         <span className="text-slate-600 font-medium break-words leading-relaxed">{studentDetails.student.address}</span>
+                      </div>
+
+                      {/* Referral Agent Details */}
+                      <div className="py-3 px-4 bg-slate-50 border border-slate-200/65 rounded-2xl sm:col-span-2 flex flex-col gap-2 mt-1">
+                        <div className="flex items-center gap-2 border-b border-slate-100 pb-1.5">
+                          <Users className="h-4 w-4 text-deepskyblue" />
+                          <span className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">Referral Agent/Associate Details</span>
+                        </div>
+                        {studentDetails.agent ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-slate-700">
+                            <div>
+                              <span className="text-[9px] text-slate-400 block uppercase font-bold">Agent Name</span>
+                              <span className="font-semibold text-slate-800">{studentDetails.agent.name}</span>
+                            </div>
+                            <div>
+                              <span className="text-[9px] text-slate-400 block uppercase font-bold">Agent Code</span>
+                              <span className="font-semibold text-deepskyblue-dark">{studentDetails.agent.agentCode}</span>
+                            </div>
+                            <div>
+                              <span className="text-[9px] text-slate-400 block uppercase font-bold">Contact Info</span>
+                              <span className="font-medium text-slate-500 block">{studentDetails.agent.phone}</span>
+                              <span className="font-medium text-slate-500 block break-all">{studentDetails.agent.email}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-slate-500 font-medium text-[10.5px]">
+                            {studentDetails.student.agentCode ? (
+                              <span>Registered under Agent Code: <strong className="text-deepskyblue-dark font-black">{studentDetails.student.agentCode}</strong> (Agent details not found/approved)</span>
+                            ) : (
+                              <span className="italic text-slate-400">Direct Registration (No referral agent)</span>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <div className="py-3 px-4 bg-slate-50 border border-slate-200/65 rounded-2xl sm:col-span-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div className="flex flex-col gap-0.5">
