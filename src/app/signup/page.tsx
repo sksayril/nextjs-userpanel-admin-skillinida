@@ -98,7 +98,11 @@ export default function SignupPage() {
 
   // Handle textual changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData((prev) => ({ ...prev, [e.target.id]: e.target.value }));
+    const { id, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [id]: id === "agentCode" ? value.toUpperCase() : value,
+    }));
     setErrorMsg("");
   };
 
