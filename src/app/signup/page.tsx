@@ -23,11 +23,11 @@ import {
   ArrowRight,
   ArrowLeft,
   CheckCircle,
-  ShieldCheck,
   Printer,
   Sparkles,
   Download,
-  Upload
+  Upload,
+  Lock
 } from "lucide-react";
 
 export default function SignupPage() {
@@ -50,7 +50,6 @@ export default function SignupPage() {
     qualificationUrl: "",
     extraQualificationUrl: "",
     signatureUrl: "",
-    otp: "",
     password: "",
     agentCode: "",
     profilePicUrl: "",
@@ -70,8 +69,6 @@ export default function SignupPage() {
   const [profileFileName, setProfileFileName] = useState("");
   const [signatureFileName, setSignatureFileName] = useState("");
 
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpLoading, setOtpLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
@@ -206,41 +203,15 @@ export default function SignupPage() {
     }
   };
 
-  // Send email verification OTP
-  const handleSendOtp = async () => {
-    if (!formData.email) {
-      setErrorMsg("Email address is required to send verification code");
-      return;
-    }
-    setOtpLoading(true);
-    setErrorMsg("");
-    try {
-      const res = await fetch("/api/auth/send-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: formData.email }),
-      });
-      const result = await res.json();
-      if (res.ok) {
-        setOtpSent(true);
-        // Display notice about fallback log printing
-        setSuccessMsg(result.message);
-      } else {
-        setErrorMsg(result.error || "Failed to dispatch verification code");
-      }
-    } catch (err) {
-      console.error(err);
-      setErrorMsg("Connection error sending verification code");
-    } finally {
-      setOtpLoading(false);
-    }
-  };
-
   // Register Candidate
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.otp) {
-      setErrorMsg("OTP Code is required for registration verification");
+    if (!formData.email) {
+      setErrorMsg("Email address is required");
+      return;
+    }
+    if (!formData.password || formData.password.length < 6) {
+      setErrorMsg("Password must be at least 6 characters long");
       return;
     }
     setSubmitLoading(true);
@@ -341,7 +312,7 @@ export default function SignupPage() {
             <div className="flex-1 h-[2px] bg-slate-200 mx-4" />
             <div className="flex items-center gap-3">
               <span className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold border transition-colors ${step >= 3 ? "bg-deepskyblue border-deepskyblue text-white shadow-sm shadow-deepskyblue/20" : "border-slate-300 text-slate-400"}`}>3</span>
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 hidden sm:inline">Verify</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 hidden sm:inline">Account</span>
             </div>
           </div>
         )}
@@ -986,109 +957,79 @@ export default function SignupPage() {
             </div>
           )}
 
-          {/* STEP 3: OTP Mail Verification */}
+          {/* STEP 3: Email & Password */}
           {step === 3 && (
             <div className="space-y-6 print:hidden">
               <div className="p-4 bg-slate-50/80 border border-slate-200/80 rounded-xl space-y-4">
                 <div className="flex items-start gap-3">
-                  <ShieldCheck className="h-6 w-6 text-deepskyblue flex-shrink-0 mt-0.5 animate-pulse" />
+                  <Lock className="h-6 w-6 text-deepskyblue flex-shrink-0 mt-0.5" />
                   <div>
-                    <h4 className="text-sm font-bold text-slate-800">Email Verification OTP</h4>
+                    <h4 className="text-sm font-bold text-slate-800">Create Account</h4>
                     <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                      We require email validation to secure registration. Click Send Code to receive a 6-digit OTP code on your mail.
+                      Enter your email and choose a password to complete registration.
                     </p>
-                  </div>
-                </div>
-
-                {/* Email Address */}
-                <div className="space-y-1.5 pt-2">
-                  <label htmlFor="email" className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    Candidate Email Address
-                  </label>
-                  <div className="flex gap-3">
-                    <div className="relative flex-1">
-                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-                        <Mail className="h-4 w-4" />
-                      </span>
-                      <input
-                        id="email"
-                        suppressHydrationWarning
-                        type="email"
-                        required
-                        placeholder="candidate@example.com"
-                        value={formData.email}
-                        onChange={handleChange}
-                        className="block w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/10"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      suppressHydrationWarning
-                      onClick={handleSendOtp}
-                      disabled={otpLoading || !formData.email}
-                      className="py-2.5 px-4 rounded-xl bg-deepskyblue/10 hover:bg-deepskyblue/25 text-deepskyblue-dark border border-deepskyblue/20 font-bold text-sm transition-all disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98] cursor-pointer"
-                    >
-                      {otpLoading ? "Sending..." : otpSent ? "Resend" : "Send Code"}
-                    </button>
                   </div>
                 </div>
               </div>
 
-              {otpSent && (
-                <form onSubmit={handleRegister} className="space-y-5">
-                  {/* OTP Verification code */}
-                  <div className="space-y-1.5">
-                    <label htmlFor="otp" className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
-                      Enter Verification Code (OTP)
-                    </label>
+              <form onSubmit={handleRegister} className="space-y-5">
+                {/* Email Address */}
+                <div className="space-y-1.5">
+                  <label htmlFor="email" className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    Candidate Email Address
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                      <Mail className="h-4 w-4" />
+                    </span>
                     <input
-                      id="otp"
+                      id="email"
                       suppressHydrationWarning
-                      type="text"
+                      type="email"
                       required
-                      placeholder="Enter 6-digit OTP"
-                      value={formData.otp}
+                      placeholder="candidate@example.com"
+                      value={formData.email}
                       onChange={handleChange}
-                      maxLength={6}
-                      className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 text-lg font-bold text-center tracking-widest focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/10"
+                      className="block w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/10"
                     />
                   </div>
+                </div>
 
-                  {/* Choose Password */}
-                  <div className="space-y-1.5">
-                    <label htmlFor="password" className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
-                      Choose Password
-                    </label>
-                    <input
-                      id="password"
-                      suppressHydrationWarning
-                      type="password"
-                      required
-                      placeholder="Minimum 6 characters"
-                      value={formData.password}
-                      onChange={handleChange}
-                      className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/10"
-                    />
-                  </div>
-
-                  {/* Submit Button */}
-                  <button
-                    type="submit"
+                {/* Choose Password */}
+                <div className="space-y-1.5">
+                  <label htmlFor="password" className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    Choose Password
+                  </label>
+                  <input
+                    id="password"
                     suppressHydrationWarning
-                    disabled={submitLoading || !formData.otp}
-                    className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-sm transition-all duration-200 shadow-md shadow-deepskyblue/15 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    {submitLoading ? (
-                      <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <span>Verify & Register Candidate</span>
-                        <CheckCircle className="h-4 w-4" />
-                      </>
-                    )}
-                  </button>
-                </form>
-              )}
+                    type="password"
+                    required
+                    minLength={6}
+                    placeholder="Minimum 6 characters"
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="block w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/10"
+                  />
+                </div>
+
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  suppressHydrationWarning
+                  disabled={submitLoading || !formData.email || !formData.password}
+                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-sm transition-all duration-200 shadow-md shadow-deepskyblue/15 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {submitLoading ? (
+                    <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <span>Register Candidate</span>
+                      <CheckCircle className="h-4 w-4" />
+                    </>
+                  )}
+                </button>
+              </form>
 
               {/* Navigation Actions */}
               <div className="flex justify-between items-center pt-4 border-t border-slate-100">
@@ -1158,14 +1099,12 @@ export default function SignupPage() {
                       qualificationUrl: "",
                       extraQualificationUrl: "",
                       signatureUrl: "",
-                      otp: "",
                       password: "",
                       agentCode: "",
                       profilePicUrl: "",
                       pincode: "",
                       state: "",
                     });
-                    setOtpSent(false);
                     setRegisteredCandidate(null);
                     setSuccessMsg("");
                   }}

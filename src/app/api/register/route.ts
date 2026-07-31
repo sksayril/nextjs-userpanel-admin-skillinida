@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import { Candidate } from "@/models/Candidate";
-import { Otp } from "@/models/Otp";
 import { Associate } from "@/models/Associate";
 import bcrypt from "bcryptjs";
-import { isValidWestBengalDistrict } from "@/lib/westBengalDistricts";
 
 export async function POST(request: Request) {
   try {
@@ -26,7 +24,6 @@ export async function POST(request: Request) {
       course,
       category,
       gender,
-      otp,
       password,
       agentCode,
       profilePicUrl,
@@ -52,7 +49,6 @@ export async function POST(request: Request) {
       !profilePicUrl ||
       !signatureUrl ||
       !course ||
-      !otp ||
       !password
     ) {
       return NextResponse.json({ error: "Missing required registration fields (Name, PIN Code, State, Documents, Profile Picture, Signature, etc.)" }, { status: 400 });
@@ -70,15 +66,6 @@ export async function POST(request: Request) {
     if (!district || district.trim() === "") {
       return NextResponse.json({ error: "District is required" }, { status: 400 });
     }
-
-    // 2. Validate OTP code from the database
-    const otpRecord = await Otp.findOne({ email });
-    if (!otpRecord || otpRecord.code !== otp) {
-      return NextResponse.json({ error: "Invalid or expired OTP code" }, { status: 400 });
-    }
-
-    // Remove used OTP code immediately to prevent double submissions
-    await Otp.deleteOne({ email });
 
     // Validate Agent Code if provided (normalize to uppercase for consistent matching)
     const normalizedAgentCode = agentCode ? agentCode.trim().toUpperCase() : null;
