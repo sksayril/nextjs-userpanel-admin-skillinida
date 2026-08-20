@@ -20,6 +20,7 @@ function mapStudentForAssociate(student: {
   state?: string;
   pincode?: string;
   course: string;
+  lastQualification?: string;
   category: string;
   gender: string;
   registrationId: string;
@@ -41,6 +42,7 @@ function mapStudentForAssociate(student: {
     state: student.state || "",
     pincode: student.pincode || "",
     course: student.course,
+    lastQualification: student.lastQualification,
     category: student.category,
     gender: student.gender,
     registrationId: student.registrationId,
@@ -82,14 +84,24 @@ export async function GET() {
       return NextResponse.json({ error: "Associate is not approved" }, { status: 403 });
     }
 
-    const students = await Candidate.find({ agentCode: associate.agentCode })
+    const rawStudents = await Candidate.find({ agentCode: associate.agentCode })
       .select(
-        "name fatherName motherName dob email phone address district state pincode course category gender registrationId agentCode isPaid isActive createdAt"
+        "name fatherName motherName dob email phone address district state pincode course lastQualification category gender registrationId agentCode isPaid isActive createdAt"
       )
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: -1, _id: -1 })
       .lean();
 
-    const mappedStudents = students.map(mapStudentForAssociate);
+    const mappedStudents = rawStudents.map((s: any) => {
+      let createdAt = s.createdAt;
+      if (!createdAt && s._id) {
+        try {
+          createdAt = new Date(parseInt(String(s._id).substring(0, 8), 16) * 1000);
+        } catch {
+          createdAt = new Date();
+        }
+      }
+      return mapStudentForAssociate({ ...s, createdAt });
+    });
 
     return NextResponse.json({
       success: true,

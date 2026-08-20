@@ -3,6 +3,7 @@ import dbConnect from "@/lib/dbConnect";
 import { Settings } from "@/models/Settings";
 import { Candidate } from "@/models/Candidate";
 import { Course } from "@/models/Course";
+import { Coupon } from "@/models/Coupon";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
@@ -23,13 +24,21 @@ async function verifyStudent() {
   return null;
 }
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
     await dbConnect();
     const studentDecoded = await verifyStudent();
     if (!studentDecoded) {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
     }
+
+    let reqBody: any = {};
+    try {
+      reqBody = await request.json();
+    } catch (e) {
+      // optional body
+    }
+    const { couponCode } = reqBody;
 
     const candidate = await Candidate.findById(studentDecoded.id);
     if (!candidate) {
@@ -48,12 +57,48 @@ export async function POST() {
       return NextResponse.json({ error: "Enrolled course details not found" }, { status: 404 });
     }
 
-    if (!course.isPaid) {
+    if (!course.isPaid || course.price === 0) {
       return NextResponse.json({ error: "This course is free, no payment is required" }, { status: 400 });
     }
 
-    if (candidate.isPaid) {
-      return NextResponse.json({ error: "You have already paid for this course" }, { status: 400 });
+    if (candidate.isPaid || candidate.isFreeRegistration || candidate.registeredPrice === 0) {
+      return NextResponse.json({ error: "You have already been granted full access to this course (no payment required)" }, { status: 400 });
+    }
+
+    let payableAmount = course.price;
+    let appliedCouponDoc: any = null;
+
+    if (couponCode) {
+      const cleanCode = couponCode.trim().toUpperCase();
+      appliedCouponDoc = await Coupon.findOne({ code: cleanCode });
+      if (appliedCouponDoc && appliedCouponDoc.isActive && appliedCouponDoc.usedCount < appliedCouponDoc.maxUses) {
+        const discount = appliedCouponDoc.discountAmount || 0;
+        payableAmount = Math.max(0, course.price - discount);
+      }
+    }
+
+    if (payableAmount === 0) {
+      // 100% Free with Coupon!
+      candidate.isPaid = true;
+      candidate.paymentDetails = {
+        orderId: `COUPON_${appliedCouponDoc?.code || "FREE"}`,
+        paymentId: `PAY_${Date.now()}`,
+        signature: "COUPON_100_PERCENT_DISCOUNT",
+        amount: 0,
+        paidAt: new Date(),
+      };
+      await candidate.save();
+
+      if (appliedCouponDoc) {
+        appliedCouponDoc.usedCount += 1;
+        await appliedCouponDoc.save();
+      }
+
+      return NextResponse.json({
+        success: true,
+        isFreeWithCoupon: true,
+        message: "100% Discount coupon applied! Full course access granted.",
+      });
     }
 
     let settings = await Settings.findOne({});
@@ -92,7 +137,7 @@ export async function POST() {
       return NextResponse.json({ error: "Razorpay payment keys are not configured" }, { status: 500 });
     }
 
-    const amountInPaise = Math.round(course.price * 100);
+    const amountInPaise = Math.round(payableAmount * 100);
     const receiptId = `rcpt_${candidate._id.toString().slice(-6)}_${Date.now().toString().slice(-6)}`;
 
     // Call Razorpay API directly using fetch

@@ -36,10 +36,11 @@ export async function GET() {
     }
 
     // Try to find course in database matching the student's registered course string
+    const courseQuery = student.course ? student.course.trim() : "";
     let course = await Course.findOne({
       $or: [
-        { title: student.course },
-        { code: student.course }
+        { title: { $regex: new RegExp(`^${courseQuery.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}$`, "i") } },
+        { code: { $regex: new RegExp(`^${courseQuery.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}$`, "i") } }
       ]
     });
 

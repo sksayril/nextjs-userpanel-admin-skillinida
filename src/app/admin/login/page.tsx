@@ -9,6 +9,7 @@ import Logo from "@/components/Logo";
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [secretCode, setSecretCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -25,7 +26,7 @@ export default function AdminLoginPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, secretCode }),
       });
 
       const data = await res.json();
@@ -33,7 +34,7 @@ export default function AdminLoginPage() {
       if (res.ok && data.success) {
         router.push("/admin/dashboard");
       } else {
-        setErrorMsg(data.error || "Authentication failed. Please check admin credentials.");
+        setErrorMsg(data.error || "Authentication failed. Please check admin credentials and secret security code.");
       }
     } catch (err) {
       console.error(err);
@@ -113,6 +114,28 @@ export default function AdminLoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="block w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 text-sm transition-all focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10"
+                />
+              </div>
+            </div>
+
+            {/* Secret Security Code Field */}
+            <div className="space-y-1.5">
+              <label htmlFor="secretCode" className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
+                <Shield className="h-3 w-3 text-deepskyblue" />
+                <span>Admin Secret Security Code</span>
+              </label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-deepskyblue">
+                  <Shield className="h-4 w-4" />
+                </span>
+                <input
+                  id="secretCode"
+                  type="password"
+                  required
+                  placeholder="Enter 10-digit secret code"
+                  value={secretCode}
+                  onChange={(e) => setSecretCode(e.target.value)}
+                  className="block w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 text-sm transition-all focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 font-mono tracking-wider font-bold"
                 />
               </div>
             </div>

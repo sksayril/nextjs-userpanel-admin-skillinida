@@ -11,7 +11,8 @@ import {
 } from "@/components/RegistrationIdCard";
 import { registrationIdCardPrintStyles } from "@/components/registrationIdCardPrintStyles";
 import Logo from "@/components/Logo";
-import { WEST_BENGAL_DISTRICTS } from "@/lib/westBengalDistricts";
+import { WEST_BENGAL_DISTRICTS, ALL_INDIA_DISTRICTS } from "@/lib/westBengalDistricts";
+import { QUALIFICATION_OPTIONS } from "@/lib/qualifications";
 import {
   buildCumulativeMarksheetRows,
   getResultQuestionCounts,
@@ -29,6 +30,7 @@ import {
   Users,
   User,
   Calendar,
+  Clock,
   FileText,
   Award,
   Plus,
@@ -53,7 +55,8 @@ import {
   CreditCard,
   DollarSign,
   Copy,
-  Eye
+  Eye,
+  Tag
 } from "lucide-react";
 
 // ── Sidebar Theme Definitions ────────────────────────────────────────────────
@@ -74,6 +77,66 @@ const hexToRgb = (hex: string): string => {
   return r ? `${parseInt(r[1], 16)}, ${parseInt(r[2], 16)}, ${parseInt(r[3], 16)}` : "14, 165, 233";
 };
 
+// ── Student Payment & Date Helpers ───────────────────────────────────────────
+const getCourseForStudent = (studentCourse: string, courses: any[]) => {
+  if (!studentCourse) return null;
+  const target = studentCourse.trim().toLowerCase();
+  return courses.find(c => {
+    const title = (c.title || "").trim().toLowerCase();
+    const code = (c.code || "").trim().toLowerCase();
+    return title === target || code === target || target.includes(title) || target.includes(code) || title.includes(target) || code.includes(target);
+  });
+};
+
+const getStudentPaymentStatus = (student: any, courses: any[]) => {
+  // 1. If candidate paid OR registered during a free period, access is 100% granted (Paid/Free Access)
+  if (student.isPaid || student.isFreeRegistration || student.registeredPrice === 0) {
+    return { label: "Paid", badgeText: "Paid / Success", status: "paid", isPaid: true };
+  }
+  const course = getCourseForStudent(student.course, courses);
+  // 2. Only candidates who registered for a paid course and haven't paid are pending
+  if (course && course.isPaid && course.price > 0) {
+    return { label: "Pending", badgeText: "Pending / Unpaid", status: "pending", isPaid: false };
+  }
+  return { label: "Paid", badgeText: "Free Access Granted", status: "paid", isPaid: true };
+};
+
+const formatSafeDate = (dateVal?: any, includeTime: boolean = false): string => {
+  if (!dateVal) return "N/A";
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return "N/A";
+  if (includeTime) {
+    return d.toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  }
+  return d.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  });
+};
+
+const splitDateTimeString = (val?: string) => {
+  if (!val) return { date: "", time: "" };
+  const parts = val.split("T");
+  return {
+    date: parts[0] || "",
+    time: parts[1] ? parts[1].slice(0, 5) : ""
+  };
+};
+
+const combineDateTimeString = (date: string, time: string) => {
+  if (!date && !time) return "";
+  const d = date || new Date().toISOString().slice(0, 10);
+  const t = time || "09:00";
+  return `${d}T${t}`;
+};
+
 const ADMIN_NAV_ITEMS = [
   { id: "overview", label: "Overview", Icon: TrendingUp },
   { id: "courses", label: "Manage Courses", Icon: BookOpen },
@@ -83,6 +146,7 @@ const ADMIN_NAV_ITEMS = [
   { id: "results", label: "Exam Results", Icon: CheckCircle },
   { id: "associates", label: "Manage Associates", Icon: Users },
   { id: "classes", label: "Live Classes", Icon: LinkIcon },
+  { id: "coupons", label: "Manage Coupons", Icon: Tag },
   { id: "payments", label: "Payment Ledger", Icon: CreditCard },
   { id: "settings", label: "Payment Settings", Icon: Settings },
 ] as const;
@@ -207,6 +271,9 @@ export default function AdminDashboardPage() {
   const [districtFilter, setDistrictFilter] = useState("");
   const [resultsSearchQuery, setResultsSearchQuery] = useState("");
   const [resultsCourseFilter, setResultsCourseFilter] = useState("");
+  const [resultsExamTitleFilter, setResultsExamTitleFilter] = useState("");
+  const [resultsStartDate, setResultsStartDate] = useState("");
+  const [resultsEndDate, setResultsEndDate] = useState("");
 
   // Stats
   const [stats, setStats] = useState({
@@ -238,6 +305,19 @@ export default function AdminDashboardPage() {
   });
   const [submittingClass, setSubmittingClass] = useState(false);
   const [searchStudentTerm, setSearchStudentTerm] = useState("");
+  const [editingClassId, setEditingClassId] = useState<string | null>(null);
+
+  // Discount Coupons States
+  const [couponsList, setCouponsList] = useState<any[]>([]);
+  const [couponForm, setCouponForm] = useState({
+    code: "",
+    discountAmount: 100,
+    maxUses: 50,
+    course: "ALL",
+    expiryDate: ""
+  });
+  const [submittingCoupon, setSubmittingCoupon] = useState(false);
+  const [editingCouponId, setEditingCouponId] = useState<string | null>(null);
 
   // Messages
   const [successMsg, setSuccessMsg] = useState("");
@@ -305,6 +385,7 @@ export default function AdminDashboardPage() {
     admitUrl: "",
     qualificationUrl: "",
     extraQualificationUrl: "",
+    lastQualification: "12th Standard (Higher Secondary / H.S.)",
     password: "",
     pincode: "",
     state: ""
@@ -483,6 +564,16 @@ export default function AdminDashboardPage() {
         console.error("Error fetching live classes:", err);
       }
 
+      // Fetch Discount Coupons
+      try {
+        const resCoupons = await fetch("/api/admin/coupons");
+        const dataCoupons = await resCoupons.json();
+        const coupons = dataCoupons.coupons || [];
+        setCouponsList(coupons);
+      } catch (err) {
+        console.error("Error fetching coupons:", err);
+      }
+
       // Update Stats
       setStats({
         studentsCount: students.length,
@@ -502,14 +593,18 @@ export default function AdminDashboardPage() {
     setSubmittingClass(true);
 
     try {
-      const res = await fetch("/api/admin/live-classes", {
-        method: "POST",
+      const url = editingClassId ? `/api/admin/live-classes/${editingClassId}` : "/api/admin/live-classes";
+      const method = editingClassId ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(classForm),
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setSuccessMsg("Live class scheduled successfully!");
+        setSuccessMsg(editingClassId ? "Live class updated successfully!" : "Live class scheduled successfully!");
+        setEditingClassId(null);
         setClassForm({
           className: "",
           course: "",
@@ -522,13 +617,49 @@ export default function AdminDashboardPage() {
         await fetchAllData();
         setTimeout(() => setSuccessMsg(""), 4000);
       } else {
-        setErrorMsg(data.error || "Failed to schedule live class.");
+        setErrorMsg(data.error || "Failed to save live class.");
       }
     } catch (err) {
-      setErrorMsg("Network error scheduling live class.");
+      setErrorMsg("Network error saving live class.");
     } finally {
       setSubmittingClass(false);
     }
+  };
+
+  const handleEditLiveClass = (lc: any) => {
+    setEditingClassId(lc._id);
+    const studentIds = (lc.students || []).map((s: any) => typeof s === "object" ? s._id : s);
+
+    const formatForInput = (dVal: any) => {
+      if (!dVal) return "";
+      const d = new Date(dVal);
+      if (isNaN(d.getTime())) return "";
+      const tzOffset = d.getTimezoneOffset() * 60000;
+      return new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+    };
+
+    setClassForm({
+      className: lc.className || "",
+      course: lc.course || "",
+      students: studentIds,
+      startTime: formatForInput(lc.startTime),
+      endTime: formatForInput(lc.endTime),
+      meetLink: lc.meetLink || ""
+    });
+    setSearchStudentTerm("");
+  };
+
+  const handleCancelEditLiveClass = () => {
+    setEditingClassId(null);
+    setClassForm({
+      className: "",
+      course: "",
+      students: [] as string[],
+      startTime: "",
+      endTime: "",
+      meetLink: ""
+    });
+    setSearchStudentTerm("");
   };
 
   const handleDeleteLiveClass = async (classId: string) => {
@@ -550,6 +681,108 @@ export default function AdminDashboardPage() {
       }
     } catch (err) {
       setErrorMsg("Network error deleting live class.");
+    }
+  };
+
+  const handleSaveCoupon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+    setSuccessMsg("");
+    setSubmittingCoupon(true);
+
+    try {
+      const url = editingCouponId ? `/api/admin/coupons/${editingCouponId}` : "/api/admin/coupons";
+      const method = editingCouponId ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(couponForm),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSuccessMsg(editingCouponId ? "Coupon code updated successfully!" : "Discount coupon created successfully!");
+        setEditingCouponId(null);
+        setCouponForm({
+          code: "",
+          discountAmount: 100,
+          maxUses: 50,
+          course: "ALL",
+          expiryDate: ""
+        });
+        await fetchAllData();
+        setTimeout(() => setSuccessMsg(""), 4000);
+      } else {
+        setErrorMsg(data.error || "Failed to save coupon.");
+      }
+    } catch (err) {
+      setErrorMsg("Network error saving coupon.");
+    } finally {
+      setSubmittingCoupon(false);
+    }
+  };
+
+  const handleEditCoupon = (cp: any) => {
+    setEditingCouponId(cp._id);
+    const expDateStr = cp.expiryDate ? new Date(cp.expiryDate).toISOString().slice(0, 10) : "";
+    setCouponForm({
+      code: cp.code || "",
+      discountAmount: cp.discountAmount || 100,
+      maxUses: cp.maxUses || 50,
+      course: cp.course || "ALL",
+      expiryDate: expDateStr
+    });
+  };
+
+  const handleCancelEditCoupon = () => {
+    setEditingCouponId(null);
+    setCouponForm({
+      code: "",
+      discountAmount: 100,
+      maxUses: 50,
+      course: "ALL",
+      expiryDate: ""
+    });
+  };
+
+  const handleDeleteCoupon = async (couponId: string) => {
+    if (!confirm("Are you sure you want to delete this discount coupon?")) return;
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    try {
+      const res = await fetch(`/api/admin/coupons/${couponId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSuccessMsg("Coupon deleted successfully!");
+        await fetchAllData();
+        setTimeout(() => setSuccessMsg(""), 4000);
+      } else {
+        setErrorMsg(data.error || "Failed to delete coupon.");
+      }
+    } catch (err) {
+      setErrorMsg("Network error deleting coupon.");
+    }
+  };
+
+  const handleToggleCouponStatus = async (cp: any) => {
+    try {
+      const res = await fetch(`/api/admin/coupons/${cp._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !cp.isActive }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(`Coupon "${cp.code}" is now ${!cp.isActive ? "Active" : "Inactive"}`);
+        await fetchAllData();
+      } else {
+        toast.error(data.error || "Failed to update coupon status");
+      }
+    } catch (err) {
+      toast.error("Network error toggling coupon status");
     }
   };
 
@@ -736,6 +969,7 @@ export default function AdminDashboardPage() {
       "Email ID",
       "Phone Number",
       "District",
+      "Last Qualification",
       "Enrolled Course",
       "Social Category",
       "Gender",
@@ -745,9 +979,9 @@ export default function AdminDashboardPage() {
     ];
 
     const rows = studentsList.map(s => {
-      const dob = s.dob ? new Date(s.dob).toLocaleDateString() : "N/A";
-      const createdAt = s.createdAt ? new Date(s.createdAt).toLocaleDateString() : "N/A";
-      const paymentStatus = s.isPaid ? "Paid" : "Pending/Unpaid";
+      const dob = formatSafeDate(s.dob);
+      const createdAt = formatSafeDate(s.createdAt);
+      const statusInfo = getStudentPaymentStatus(s, coursesList);
       const profileStatus = s.isActive !== false ? "Active" : "Deactivated";
 
       return [
@@ -759,10 +993,11 @@ export default function AdminDashboardPage() {
         s.email || "N/A",
         s.phone || "N/A",
         s.district || "N/A",
+        s.lastQualification || "N/A",
         s.course || "N/A",
         s.category || "GEN",
         s.gender || "MALE",
-        paymentStatus,
+        statusInfo.label,
         profileStatus,
         createdAt
       ];
@@ -915,7 +1150,7 @@ export default function AdminDashboardPage() {
         setSuccessMsg(`Student registered! Registration ID: ${data.student.registrationId}`);
         setStudentForm({
           name: "", fatherName: "", motherName: "", dob: "", category: "GEN", gender: "MALE", email: "", phone: "",
-          district: "", address: "", course: "", admitUrl: "", qualificationUrl: "", extraQualificationUrl: "", password: "",
+          district: "", address: "", lastQualification: "12th Standard (Higher Secondary / H.S.)", course: "", admitUrl: "", qualificationUrl: "", extraQualificationUrl: "", password: "",
           pincode: "", state: ""
         });
         await fetchAllData();
@@ -1427,6 +1662,35 @@ export default function AdminDashboardPage() {
     } catch (err) {
       console.error(err);
       toast.error("Network error updating student status");
+    }
+  };
+
+  const handleDeleteStudent = async (studentId: string, studentName?: string, regId?: string) => {
+    const displayName = studentName ? `"${studentName}" (${regId || ""})` : "this student";
+    if (!confirm(`Are you sure you want to permanently delete ${displayName}? This action cannot be undone.`)) return;
+
+    try {
+      const res = await fetch(`/api/admin/users/${studentId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(data.message || "Student deleted permanently");
+
+        // Remove student from state
+        setStudentsList((prev: any[]) => prev.filter((s: any) => s._id !== studentId));
+
+        // Close student modal if open for this student
+        if (selectedStudentId === studentId) {
+          setSelectedStudentId(null);
+          setStudentDetails(null);
+        }
+      } else {
+        toast.error(data.error || "Failed to delete student");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Network error deleting student");
     }
   };
 
@@ -2506,26 +2770,38 @@ export default function AdminDashboardPage() {
   }
 
   const courseOptions = coursesList.map(c => c.title);
+  const districtOptions = Array.from(
+    new Set([
+      ...ALL_INDIA_DISTRICTS,
+      ...studentsList.map(s => s.district).filter(Boolean)
+    ])
+  ).sort((a, b) => a.localeCompare(b));
 
-  // Filter students based on search query and status filter
-  const filteredStudents = studentsList.filter(s => {
-    const matchesSearch =
-      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.registrationId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.course.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (s.agentCode && s.agentCode.toLowerCase().includes(searchQuery.toLowerCase()));
+  // Filter and sort students strictly by date sequence (newest registrations / recent joins first)
+  const filteredStudents = studentsList
+    .filter(s => {
+      const matchesSearch =
+        s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.registrationId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.course.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (s.agentCode && s.agentCode.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    if (!matchesSearch) return false;
+      if (!matchesSearch) return false;
 
-    if (courseFilter && s.course !== courseFilter) return false;
-    if (districtFilter && s.district !== districtFilter) return false;
+      if (courseFilter && s.course !== courseFilter) return false;
+      if (districtFilter && s.district !== districtFilter) return false;
 
-    const studentActive = s.isActive !== false;
-    if (statusFilter === "active") return studentActive;
-    if (statusFilter === "deactivated") return !studentActive;
-    return true;
-  });
+      const studentActive = s.isActive !== false;
+      if (statusFilter === "active") return studentActive;
+      if (statusFilter === "deactivated") return !studentActive;
+      return true;
+    })
+    .sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : (a._id ? parseInt(String(a._id).substring(0, 8), 16) * 1000 : 0);
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : (b._id ? parseInt(String(b._id).substring(0, 8), 16) * 1000 : 0);
+      return timeB - timeA;
+    });
 
   // ================= CHARTS DATA COMPUTATION =================
   // 1. Get monthly registration trend (6 months back to current)
@@ -2621,13 +2897,13 @@ export default function AdminDashboardPage() {
   const themeRgb = hexToRgb(activeSidebarTheme.bg);
   const themeDarkRgb = hexToRgb(activeSidebarTheme.dark);
 
-  // Payment totals calculation
+  // Payment totals calculation using robust payment status logic
   const totalCollected = studentsList.reduce((sum, student) => {
     if (student.isPaid) {
       if (student.paymentDetails?.amount) {
         return sum + student.paymentDetails.amount;
       }
-      const course = coursesList.find(c => c.title === student.course || c.code === student.course);
+      const course = getCourseForStudent(student.course, coursesList);
       return sum + (course?.price || 0);
     }
     return sum;
@@ -2636,8 +2912,8 @@ export default function AdminDashboardPage() {
   const paidStudentsCount = studentsList.filter(s => s.isPaid).length;
 
   const pendingStudentsCount = studentsList.filter(student => {
-    const course = coursesList.find(c => c.title === student.course || c.code === student.course);
-    return course?.isPaid && !student.isPaid;
+    const statusInfo = getStudentPaymentStatus(student, coursesList);
+    return statusInfo.status === "pending";
   }).length;
 
   return (
@@ -3300,10 +3576,10 @@ export default function AdminDashboardPage() {
                       <select
                         value={districtFilter}
                         onChange={e => setDistrictFilter(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-750 focus:outline-none focus:border-deepskyblue font-semibold cursor-pointer"
+                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-755 focus:outline-none focus:border-deepskyblue font-semibold cursor-pointer"
                       >
-                        <option value="">All Districts</option>
-                        {WEST_BENGAL_DISTRICTS.map((dist, dIdx) => (
+                        <option value="">All Districts (All India)</option>
+                        {districtOptions.map((dist, dIdx) => (
                           <option key={dIdx} value={dist}>
                             {dist}
                           </option>
@@ -3369,16 +3645,24 @@ export default function AdminDashboardPage() {
                               <td className="py-3.5 px-3 text-slate-500 font-mono whitespace-nowrap">{stud.email}</td>
                               <td className="py-3.5 px-3 text-center whitespace-nowrap">
                                 {(() => {
-                                  const course = coursesList.find(c => c.title === stud.course || c.code === stud.course);
-                                  if (!course?.isPaid) {
-                                    return <span className="px-2 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider bg-slate-100 text-slate-500 border border-slate-200/60">Free</span>;
+                                  const statusInfo = getStudentPaymentStatus(stud, coursesList);
+                                  if (statusInfo.status === "paid") {
+                                    return (
+                                      <span className="px-2 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider bg-emerald-50 text-emerald-650 border border-emerald-100">
+                                        Paid / Success
+                                      </span>
+                                    );
+                                  }
+                                  if (statusInfo.status === "pending") {
+                                    return (
+                                      <span className="px-2 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider bg-amber-50 text-amber-655 border border-amber-100">
+                                        Pending
+                                      </span>
+                                    );
                                   }
                                   return (
-                                    <span className={`px-2 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${stud.isPaid
-                                      ? "bg-emerald-50 text-emerald-650 border border-emerald-100"
-                                      : "bg-amber-50 text-amber-655 border border-amber-100"
-                                      }`}>
-                                      {stud.isPaid ? "Success" : "Pending"}
+                                    <span className="px-2 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider bg-slate-100 text-slate-500 border border-slate-200/60">
+                                      Free
                                     </span>
                                   );
                                 })()}
@@ -3393,7 +3677,7 @@ export default function AdminDashboardPage() {
                                 )}
                               </td>
                               <td className="py-3.5 px-3 text-slate-400 font-medium whitespace-nowrap">
-                                {new Date(stud.createdAt).toLocaleDateString()}
+                                {formatSafeDate(stud.createdAt)}
                               </td>
                               <td className="py-3.5 pr-4 pl-3 text-right min-w-max">
                                 <div className="flex items-center justify-end gap-2">
@@ -3421,11 +3705,19 @@ export default function AdminDashboardPage() {
                                   <button
                                     onClick={() => handleToggleStudentAccess(stud._id)}
                                     className={`px-2.5 py-1.5 rounded-xl text-[10px] font-extrabold transition cursor-pointer shrink-0 ${stud.isActive !== false
-                                      ? "bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white"
+                                      ? "bg-amber-50 text-amber-600 border border-amber-200 hover:bg-amber-600 hover:text-white"
                                       : "bg-emerald-50 text-emerald-650 border border-emerald-250 hover:bg-emerald-650 hover:text-white"
                                       }`}
                                   >
                                     {stud.isActive !== false ? "Deactivate" : "Activate"}
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteStudent(stud._id, stud.name, stud.registrationId)}
+                                    className="px-2.5 py-1.5 rounded-xl text-[10px] font-extrabold text-rose-600 border border-rose-200 bg-rose-50 hover:bg-rose-600 hover:text-white transition cursor-pointer shrink-0 flex items-center gap-1 shadow-xs"
+                                    title="Delete Student Permanently"
+                                  >
+                                    <Trash className="h-3 w-3" />
+                                    <span>Delete</span>
                                   </button>
                                 </div>
                               </td>
@@ -3869,7 +4161,7 @@ export default function AdminDashboardPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
                     {/* Select Course */}
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Course Program</label>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Course Program <span className="text-rose-500">*</span></label>
                       <select
                         required
                         value={studentForm.course}
@@ -3882,6 +4174,22 @@ export default function AdminDashboardPage() {
                         </option>
                         {courseOptions.map((co, idx) => (
                           <option key={idx} value={co} className="bg-white">{co}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Last Qualification */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Last Educational Qualification <span className="text-rose-500">*</span></label>
+                      <select
+                        required
+                        value={studentForm.lastQualification}
+                        onChange={e => setStudentForm(prev => ({ ...prev, lastQualification: e.target.value }))}
+                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
+                      >
+                        <option value="" disabled>Select Last Qualification</option>
+                        {QUALIFICATION_OPTIONS.map((qo, idx) => (
+                          <option key={idx} value={qo} className="bg-white">{qo}</option>
                         ))}
                       </select>
                     </div>
@@ -4051,14 +4359,45 @@ export default function AdminDashboardPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lecture Date & Time</label>
-                    <input
-                      type="datetime-local"
-                      required
-                      value={attendanceForm.date}
-                      onChange={e => setAttendanceForm(prev => ({ ...prev, date: e.target.value }))}
-                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all"
-                    />
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lecture Schedule (Date & Time)</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                          <Calendar className="h-3 w-3 text-deepskyblue" /> Date
+                        </span>
+                        <input
+                          type="date"
+                          required
+                          value={splitDateTimeString(attendanceForm.date).date}
+                          onChange={e => {
+                            const { time } = splitDateTimeString(attendanceForm.date);
+                            setAttendanceForm(prev => ({
+                              ...prev,
+                              date: combineDateTimeString(e.target.value, time || "09:00")
+                            }));
+                          }}
+                          className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all font-semibold"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                          <Clock className="h-3 w-3 text-deepskyblue" /> Time
+                        </span>
+                        <input
+                          type="time"
+                          required
+                          value={splitDateTimeString(attendanceForm.date).time}
+                          onChange={e => {
+                            const { date } = splitDateTimeString(attendanceForm.date);
+                            setAttendanceForm(prev => ({
+                              ...prev,
+                              date: combineDateTimeString(date || new Date().toISOString().slice(0, 10), e.target.value)
+                            }));
+                          }}
+                          className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all font-semibold"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   <div className="space-y-1">
@@ -4335,20 +4674,34 @@ export default function AdminDashboardPage() {
             {activeTab === "quizzes" && (
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start animate-fade-in">
                 {/* Left Column: Create Quiz Form */}
-                <form onSubmit={handleSaveQuiz} className="md:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-6">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3 gap-3">
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900">
-                      {editingQuizId ? "Edit Exam" : "Interactive Exam Builder"}
-                    </h3>
-                    {editingQuizId ? (
+                <form onSubmit={handleSaveQuiz} className="md:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-6 relative">
+                  <div className="sticky top-0 bg-white/95 backdrop-blur-md z-20 pt-2 pb-3 -mt-2 border-b border-slate-100 flex items-center justify-between gap-3 shadow-xs">
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900">
+                        {editingQuizId ? "Edit Exam" : "Interactive Exam Builder"}
+                      </h3>
+                      <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                        {quizForm.questions.length} Question{quizForm.questions.length !== 1 ? "s" : ""} added
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {editingQuizId && (
+                        <button
+                          type="button"
+                          onClick={handleCancelEditQuiz}
+                          className="text-[10px] font-bold text-slate-500 hover:text-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      )}
                       <button
-                        type="button"
-                        onClick={handleCancelEditQuiz}
-                        className="text-[10px] font-bold text-slate-500 hover:text-slate-800 px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer"
+                        type="submit"
+                        className="flex items-center gap-1.5 py-2 px-3.5 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-extrabold text-white text-xs shadow shadow-deepskyblue/20 cursor-pointer transition-all shrink-0 hover:scale-[1.02]"
                       >
-                        Cancel Edit
+                        {editingQuizId ? <Pencil className="h-3.5 w-3.5" /> : <Award className="h-3.5 w-3.5" />}
+                        <span>{editingQuizId ? "Save Exam Changes" : "Build and Assign Exam"}</span>
                       </button>
-                    ) : null}
+                    </div>
                   </div>
 
                   <div className="space-y-4">
@@ -4385,19 +4738,53 @@ export default function AdminDashboardPage() {
                       </select>
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        Start Date & Time (IST)
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                        <span>Start Schedule (IST)</span>
+                        <span className="text-[9px] text-deepskyblue-dark font-extrabold normal-case">
+                          {quizForm.scheduledAt ? formatExamSchedule(quizForm.scheduledAt) : "No schedule set"}
+                        </span>
                       </label>
-                      <input
-                        type="datetime-local"
-                        required
-                        value={quizForm.scheduledAt}
-                        onChange={e => setQuizForm(prev => ({ ...prev, scheduledAt: e.target.value }))}
-                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white"
-                      />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                            <Calendar className="h-3 w-3 text-deepskyblue" /> Select Start Date
+                          </span>
+                          <input
+                            type="date"
+                            required
+                            value={splitDateTimeString(quizForm.scheduledAt).date}
+                            onChange={e => {
+                              const { time } = splitDateTimeString(quizForm.scheduledAt);
+                              setQuizForm(prev => ({
+                                ...prev,
+                                scheduledAt: combineDateTimeString(e.target.value, time || "09:00")
+                              }));
+                            }}
+                            className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all font-semibold"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                            <Clock className="h-3 w-3 text-deepskyblue" /> Select Start Time
+                          </span>
+                          <input
+                            type="time"
+                            required
+                            value={splitDateTimeString(quizForm.scheduledAt).time}
+                            onChange={e => {
+                              const { date } = splitDateTimeString(quizForm.scheduledAt);
+                              setQuizForm(prev => ({
+                                ...prev,
+                                scheduledAt: combineDateTimeString(date || new Date().toISOString().slice(0, 10), e.target.value)
+                              }));
+                            }}
+                            className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white focus:ring-4 focus:ring-deepskyblue/10 transition-all font-semibold"
+                          />
+                        </div>
+                      </div>
                       <p className="text-[9px] text-slate-400 font-medium">
-                        Use 24-hour time (e.g. 13:00 for 1 PM, 22:00 for 10 PM). Students see this exact IST schedule.
+                        Select Start Date & Start Time separately. Students will see this exact IST schedule.
                       </p>
                     </div>
 
@@ -4761,29 +5148,30 @@ export default function AdminDashboardPage() {
                 </div>
 
                 {resultsList.length > 0 && (
-                  <>
-                    {/* Search and Filters Bar */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200/60">
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/60 space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {/* Search Input */}
                       <div className="relative">
                         <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                           <Search className="h-4 w-4" />
                         </span>
                         <input
                           type="text"
-                          placeholder="Search candidate, registration ID, exam title..."
+                          placeholder="Search candidate, reg ID, exam title..."
                           value={resultsSearchQuery}
                           onChange={e => setResultsSearchQuery(e.target.value)}
-                          className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/5 transition-all font-semibold placeholder-slate-400"
+                          className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/5 transition-all font-semibold placeholder-slate-400"
                         />
                       </div>
 
+                      {/* Course Filter Dropdown */}
                       <div>
                         <select
                           value={resultsCourseFilter}
                           onChange={e => setResultsCourseFilter(e.target.value)}
-                          className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-750 focus:outline-none focus:border-deepskyblue font-semibold cursor-pointer"
+                          className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-750 focus:outline-none focus:border-deepskyblue font-semibold cursor-pointer"
                         >
-                          <option value="">All Courses</option>
+                          <option value="">All Course Cohorts</option>
                           {coursesList.map((course, cIdx) => (
                             <option key={cIdx} value={course.title}>
                               {course.title}
@@ -4791,23 +5179,75 @@ export default function AdminDashboardPage() {
                           ))}
                         </select>
                       </div>
+
+                      {/* Exam Title Filter Dropdown */}
+                      <div>
+                        <select
+                          value={resultsExamTitleFilter}
+                          onChange={e => setResultsExamTitleFilter(e.target.value)}
+                          className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-750 focus:outline-none focus:border-deepskyblue font-semibold cursor-pointer"
+                        >
+                          <option value="">All Exam Titles</option>
+                          {Array.from(
+                            new Set(
+                              [
+                                ...resultsList.map(r => r.quizTitle || r.quizId?.title).filter(Boolean),
+                                ...quizzesList.map(q => q.title).filter(Boolean)
+                              ]
+                            )
+                          )
+                            .sort()
+                            .map((title, tIdx) => (
+                              <option key={tIdx} value={title}>
+                                {title}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
                     </div>
 
-                    {(resultsSearchQuery || resultsCourseFilter) && (
-                      <div className="flex justify-end pr-2 text-[10px] -mt-2">
+                    {/* Row 2: Date Range Filter (Start Date to End Date) */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-2.5 border-t border-slate-200/50">
+                      <div className="flex items-center gap-2 text-xs flex-wrap">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                          <Calendar className="h-3.5 w-3.5 text-deepskyblue" /> Filter Date Range:
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="date"
+                            title="Start Date"
+                            value={resultsStartDate}
+                            onChange={e => setResultsStartDate(e.target.value)}
+                            className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 font-semibold focus:outline-none focus:border-deepskyblue"
+                          />
+                          <span className="text-slate-400 font-bold text-[11px]">to</span>
+                          <input
+                            type="date"
+                            title="End Date"
+                            value={resultsEndDate}
+                            onChange={e => setResultsEndDate(e.target.value)}
+                            className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 font-semibold focus:outline-none focus:border-deepskyblue"
+                          />
+                        </div>
+                      </div>
+
+                      {(resultsSearchQuery || resultsCourseFilter || resultsExamTitleFilter || resultsStartDate || resultsEndDate) && (
                         <button
                           type="button"
                           onClick={() => {
                             setResultsSearchQuery("");
                             setResultsCourseFilter("");
+                            setResultsExamTitleFilter("");
+                            setResultsStartDate("");
+                            setResultsEndDate("");
                           }}
-                          className="text-rose-500 hover:text-rose-700 font-bold underline cursor-pointer"
+                          className="text-[10px] text-rose-500 hover:text-rose-700 font-extrabold underline cursor-pointer transition-colors"
                         >
-                          Clear Active Filters
+                          Clear All Active Filters
                         </button>
-                      </div>
-                    )}
-                  </>
+                      )}
+                    </div>
+                  </div>
                 )}
 
                 {resultsList.length === 0 ? (
@@ -4832,18 +5272,41 @@ export default function AdminDashboardPage() {
                       <tbody className="divide-y divide-slate-100">
                         {resultsList
                           .filter(res => {
-                            // Filter by resultsCourseFilter if selected
+                            // 1. Filter by Course
                             if (resultsCourseFilter && res.candidateId?.course !== resultsCourseFilter) {
                               return false;
                             }
 
-                            // Filter by resultsSearchQuery if entered
+                            // 2. Filter by Exam Title
+                            if (resultsExamTitleFilter) {
+                              const examTitle = res.quizTitle || res.quizId?.title || "";
+                              if (examTitle.trim().toLowerCase() !== resultsExamTitleFilter.trim().toLowerCase()) {
+                                return false;
+                              }
+                            }
+
+                            // 3. Filter by Date Range (Start Date to End Date)
+                            const resultDateObj = res.date ? new Date(res.date) : res.createdAt ? new Date(res.createdAt) : null;
+                            if (resultDateObj && !isNaN(resultDateObj.getTime())) {
+                              if (resultsStartDate) {
+                                const start = new Date(resultsStartDate);
+                                start.setHours(0, 0, 0, 0);
+                                if (resultDateObj < start) return false;
+                              }
+                              if (resultsEndDate) {
+                                const end = new Date(resultsEndDate);
+                                end.setHours(23, 59, 59, 999);
+                                if (resultDateObj > end) return false;
+                              }
+                            }
+
+                            // 4. Search Query filter
                             if (resultsSearchQuery) {
                               const query = resultsSearchQuery.toLowerCase();
                               const studentName = res.candidateId?.name?.toLowerCase() || "";
                               const regId = res.candidateId?.registrationId?.toLowerCase() || "";
                               const course = res.candidateId?.course?.toLowerCase() || "";
-                              const examTitle = res.quizTitle?.toLowerCase() || "";
+                              const examTitle = (res.quizTitle || res.quizId?.title || "").toLowerCase();
 
                               return studentName.includes(query) || regId.includes(query) || course.includes(query) || examTitle.includes(query);
                             }
@@ -5121,10 +5584,10 @@ export default function AdminDashboardPage() {
                   </div>
 
                   {studentsList.filter(student => {
-                    const course = coursesList.find(c => c.title === student.course || c.code === student.course);
-                    return course?.isPaid;
+                    const statusInfo = getStudentPaymentStatus(student, coursesList);
+                    return statusInfo.status === "paid" || statusInfo.status === "pending";
                   }).length === 0 ? (
-                    <p className="text-xs text-slate-400 py-10 text-center font-medium">No students enrolled in paid courses found.</p>
+                    <p className="text-xs text-slate-400 py-10 text-center font-medium">No candidate payment records found.</p>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs border-collapse">
@@ -5141,16 +5604,23 @@ export default function AdminDashboardPage() {
                         <tbody className="divide-y divide-slate-100">
                           {studentsList
                             .filter(student => {
-                              const course = coursesList.find(c => c.title === student.course || c.code === student.course);
+                              const statusInfo = getStudentPaymentStatus(student, coursesList);
+                              const isPaymentRelevant = statusInfo.status === "paid" || statusInfo.status === "pending";
                               const query = searchQuery.toLowerCase();
                               const matchesSearch = student.name.toLowerCase().includes(query) ||
                                 student.registrationId.toLowerCase().includes(query) ||
                                 student.course.toLowerCase().includes(query);
-                              return course?.isPaid && matchesSearch;
+                              return isPaymentRelevant && matchesSearch;
+                            })
+                            .sort((a, b) => {
+                              const timeA = a.createdAt ? new Date(a.createdAt).getTime() : (a._id ? parseInt(String(a._id).substring(0, 8), 16) * 1000 : 0);
+                              const timeB = b.createdAt ? new Date(b.createdAt).getTime() : (b._id ? parseInt(String(b._id).substring(0, 8), 16) * 1000 : 0);
+                              return timeB - timeA;
                             })
                             .map((stud, idx) => {
-                              const course = coursesList.find(c => c.title === stud.course || c.code === stud.course);
-                              const amount = course?.price || 0;
+                              const course = getCourseForStudent(stud.course, coursesList);
+                              const amount = stud.paymentDetails?.amount || course?.price || 0;
+                              const statusInfo = getStudentPaymentStatus(stud, coursesList);
                               return (
                                 <tr key={idx} className="text-slate-700 hover:bg-slate-50/50 hover:text-slate-900 transition-colors">
                                   <td className="py-3.5 pl-4 pr-3 whitespace-nowrap">
@@ -5165,11 +5635,11 @@ export default function AdminDashboardPage() {
                                   <td className="py-3.5 px-3 text-slate-500 font-semibold min-w-[200px] whitespace-normal">{stud.course}</td>
                                   <td className="py-3.5 px-3 font-bold text-slate-800 whitespace-nowrap">₹{amount}</td>
                                   <td className="py-3.5 px-3 text-center whitespace-nowrap">
-                                    <span className={`px-2.5 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${stud.isPaid
+                                    <span className={`px-2.5 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider ${statusInfo.status === "paid"
                                       ? "bg-emerald-50 text-emerald-650 border border-emerald-100"
                                       : "bg-amber-50 text-amber-655 border border-amber-100"
                                       }`}>
-                                      {stud.isPaid ? "SUCCESS / PAID" : "PENDING / UNPAID"}
+                                      {statusInfo.badgeText}
                                     </span>
                                   </td>
                                   <td className="py-3.5 px-3 text-slate-505 font-mono text-[10px] whitespace-nowrap">
@@ -5184,7 +5654,7 @@ export default function AdminDashboardPage() {
                                   </td>
                                   <td className="py-3.5 pr-4 pl-3 text-slate-400 font-medium whitespace-nowrap">
                                     {stud.isPaid && stud.paymentDetails?.paidAt ? (
-                                      new Date(stud.paymentDetails.paidAt).toLocaleString()
+                                      formatSafeDate(stud.paymentDetails.paidAt, true)
                                     ) : (
                                       <span className="text-slate-300">—</span>
                                     )}
@@ -5205,10 +5675,24 @@ export default function AdminDashboardPage() {
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start animate-fade-in">
                 {/* Left Column: Create Live Class Form */}
                 <form onSubmit={handleSaveLiveClass} className="md:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-6">
-                  <div className="border-b border-slate-100 pb-3">
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900">
-                      Live Class Scheduler
-                    </h3>
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3 gap-3">
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900">
+                        {editingClassId ? "Edit Live Class" : "Live Class Scheduler"}
+                      </h3>
+                      <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                        {editingClassId ? "Modify live meeting session & assigned candidates" : "Schedule online meeting for candidates"}
+                      </p>
+                    </div>
+                    {editingClassId && (
+                      <button
+                        type="button"
+                        onClick={handleCancelEditLiveClass}
+                        className="text-[10px] font-bold text-slate-500 hover:text-slate-800 px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer"
+                      >
+                        Cancel Edit
+                      </button>
+                    )}
                   </div>
 
                   <div className="space-y-4">
@@ -5344,27 +5828,69 @@ export default function AdminDashboardPage() {
                       </div>
                     )}
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Start Date & Time</label>
-                        <input
-                          type="datetime-local"
-                          required
-                          value={classForm.startTime}
-                          onChange={e => setClassForm(prev => ({ ...prev, startTime: e.target.value }))}
-                          className="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white"
-                        />
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Class Start Schedule</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="date"
+                            required
+                            value={splitDateTimeString(classForm.startTime).date}
+                            onChange={e => {
+                              const { time } = splitDateTimeString(classForm.startTime);
+                              setClassForm(prev => ({
+                                ...prev,
+                                startTime: combineDateTimeString(e.target.value, time || "09:00")
+                              }));
+                            }}
+                            className="block w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white font-semibold"
+                          />
+                          <input
+                            type="time"
+                            required
+                            value={splitDateTimeString(classForm.startTime).time}
+                            onChange={e => {
+                              const { date } = splitDateTimeString(classForm.startTime);
+                              setClassForm(prev => ({
+                                ...prev,
+                                startTime: combineDateTimeString(date || new Date().toISOString().slice(0, 10), e.target.value)
+                              }));
+                            }}
+                            className="block w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white font-semibold"
+                          />
+                        </div>
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">End Date & Time</label>
-                        <input
-                          type="datetime-local"
-                          required
-                          value={classForm.endTime}
-                          onChange={e => setClassForm(prev => ({ ...prev, endTime: e.target.value }))}
-                          className="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white"
-                        />
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Class End Schedule</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="date"
+                            required
+                            value={splitDateTimeString(classForm.endTime).date}
+                            onChange={e => {
+                              const { time } = splitDateTimeString(classForm.endTime);
+                              setClassForm(prev => ({
+                                ...prev,
+                                endTime: combineDateTimeString(e.target.value, time || "10:00")
+                              }));
+                            }}
+                            className="block w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white font-semibold"
+                          />
+                          <input
+                            type="time"
+                            required
+                            value={splitDateTimeString(classForm.endTime).time}
+                            onChange={e => {
+                              const { date } = splitDateTimeString(classForm.endTime);
+                              setClassForm(prev => ({
+                                ...prev,
+                                endTime: combineDateTimeString(date || new Date().toISOString().slice(0, 10), e.target.value)
+                              }));
+                            }}
+                            className="block w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white font-semibold"
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -5390,8 +5916,8 @@ export default function AdminDashboardPage() {
                       <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
                       <>
-                        <LinkIcon className="h-4 w-4" />
-                        <span>Schedule Live Class</span>
+                        {editingClassId ? <Pencil className="h-4 w-4" /> : <LinkIcon className="h-4 w-4" />}
+                        <span>{editingClassId ? "Save Class Changes" : "Schedule Live Class"}</span>
                       </>
                     )}
                   </button>
@@ -5418,34 +5944,50 @@ export default function AdminDashboardPage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                          {classesList.map((lc, idx) => (
-                            <tr key={lc._id || idx} className="text-slate-700 hover:bg-slate-50/50 hover:text-slate-900 transition-colors">
-                              <td className="py-3 pl-2">
-                                <div className="font-bold text-slate-900">{lc.className}</div>
-                                <div className="text-[10px] text-slate-400 mt-0.5 font-semibold">{lc.course}</div>
-                              </td>
-                              <td className="py-3">
-                                <div className="font-semibold text-slate-700">
-                                  {new Date(lc.startTime).toLocaleDateString()}
-                                </div>
-                                <div className="text-[10px] text-slate-400 mt-0.5">
-                                  {new Date(lc.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(lc.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </div>
-                              </td>
-                              <td className="py-3 text-center font-bold text-slate-800">
-                                {lc.students?.length || 0} Students
-                              </td>
-                              <td className="py-3 text-right pr-2">
-                                <button
-                                  onClick={() => handleDeleteLiveClass(lc._id)}
-                                  className="text-[10px] font-bold text-rose-650 hover:text-white border border-rose-200 hover:bg-rose-600 hover:border-rose-600 px-3 py-1.5 rounded-lg transition-all active:scale-95 cursor-pointer inline-flex items-center gap-1"
-                                >
-                                  <Trash className="h-3.5 w-3.5" />
-                                  <span>Cancel</span>
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
+                          {classesList
+                            .slice()
+                            .sort((a, b) => {
+                              const timeA = new Date(a.createdAt || a.startTime).getTime();
+                              const timeB = new Date(b.createdAt || b.startTime).getTime();
+                              return timeB - timeA;
+                            })
+                            .map((lc, idx) => (
+                              <tr key={lc._id || idx} className="text-slate-700 hover:bg-slate-50/50 hover:text-slate-900 transition-colors">
+                                <td className="py-3 pl-2">
+                                  <div className="font-bold text-slate-900">{lc.className}</div>
+                                  <div className="text-[10px] text-slate-400 mt-0.5 font-semibold">{lc.course}</div>
+                                </td>
+                                <td className="py-3">
+                                  <div className="font-semibold text-slate-700">
+                                    {new Date(lc.startTime).toLocaleDateString()}
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 mt-0.5">
+                                    {new Date(lc.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(lc.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </div>
+                                </td>
+                                <td className="py-3 text-center font-bold text-slate-800">
+                                  {lc.students?.length || 0} Students
+                                </td>
+                                <td className="py-3 text-right pr-2 space-x-1.5 whitespace-nowrap">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEditLiveClass(lc)}
+                                    className="text-[10px] font-bold text-slate-700 hover:text-white border border-slate-200 bg-white hover:bg-deepskyblue hover:border-deepskyblue px-2.5 py-1.5 rounded-lg transition-all active:scale-95 cursor-pointer inline-flex items-center gap-1 shadow-xs"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                    <span>Edit</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteLiveClass(lc._id)}
+                                    className="text-[10px] font-bold text-rose-650 hover:text-white border border-rose-200 hover:bg-rose-600 hover:border-rose-600 px-2.5 py-1.5 rounded-lg transition-all active:scale-95 cursor-pointer inline-flex items-center gap-1 shadow-xs"
+                                  >
+                                    <Trash className="h-3.5 w-3.5" />
+                                    <span>Cancel</span>
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
                         </tbody>
                       </table>
                     </div>
@@ -5453,6 +5995,231 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
             )}
+
+            {/* MANAGE COUPONS TAB */}
+            {activeTab === "coupons" && (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start animate-fade-in">
+                {/* Left Column: Create Coupon Form */}
+                <form onSubmit={handleSaveCoupon} className="md:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-6">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3 gap-3">
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-slate-900">
+                        {editingCouponId ? "Edit Discount Coupon" : "Coupon Code Generator"}
+                      </h3>
+                      <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                        {editingCouponId ? "Modify discount amount & usage limit" : "Generate promo code for paid student courses"}
+                      </p>
+                    </div>
+                    {editingCouponId && (
+                      <button
+                        type="button"
+                        onClick={handleCancelEditCoupon}
+                        className="text-[10px] font-bold text-slate-500 hover:text-slate-800 px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer"
+                      >
+                        Cancel Edit
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* Coupon Code */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Coupon Code (Uppercase)</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. SAVE200, SMI50OFF"
+                          value={couponForm.code}
+                          onChange={e => setCouponForm(prev => ({ ...prev, code: e.target.value.toUpperCase() }))}
+                          className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white font-mono font-bold tracking-wider"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const randCode = "SMI" + Math.floor(100 + Math.random() * 900);
+                            setCouponForm(prev => ({ ...prev, code: randCode }));
+                          }}
+                          className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-[10px] font-bold whitespace-nowrap transition cursor-pointer"
+                        >
+                          Auto Code
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Discount Amount & Max Usage Limit */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Discount Amount (₹)</label>
+                        <input
+                          type="number"
+                          required
+                          min={1}
+                          placeholder="e.g. 200"
+                          value={couponForm.discountAmount}
+                          onChange={e => setCouponForm(prev => ({ ...prev, discountAmount: e.target.value ? parseInt(e.target.value) || 0 : 0 }))}
+                          className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white font-semibold"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Usage Limit (Max Uses)</label>
+                        <input
+                          type="number"
+                          required
+                          min={1}
+                          placeholder="e.g. 50"
+                          value={couponForm.maxUses}
+                          onChange={e => setCouponForm(prev => ({ ...prev, maxUses: e.target.value ? parseInt(e.target.value) || 0 : 0 }))}
+                          className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white font-semibold"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Target Course */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Applicable Course Program</label>
+                      <select
+                        value={couponForm.course}
+                        onChange={e => setCouponForm(prev => ({ ...prev, course: e.target.value }))}
+                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white font-semibold cursor-pointer"
+                      >
+                        <option value="ALL">All Paid Courses (Universal Coupon)</option>
+                        {courseOptions.map((co, idx) => (
+                          <option key={idx} value={co} className="bg-white">{co}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Expiry Date */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Expiry Date (Optional)</label>
+                      <input
+                        type="date"
+                        value={couponForm.expiryDate}
+                        onChange={e => setCouponForm(prev => ({ ...prev, expiryDate: e.target.value }))}
+                        className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white font-semibold"
+                      />
+                      <p className="text-[9px] text-slate-400 font-medium">Leave empty for no expiration date.</p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={submittingCoupon}
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-xs shadow-md transition-all disabled:opacity-60 cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    {submittingCoupon ? (
+                      <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Tag className="h-4 w-4" />
+                        <span>{editingCouponId ? "Save Coupon Changes" : "Generate Discount Coupon"}</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+
+                {/* Right Column: Coupons Directory */}
+                <div className="md:col-span-7 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-5">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Created Coupons Directory</h3>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Manage promo codes, usage limits, and student discount rates</p>
+                  </div>
+
+                  {couponsList.length === 0 ? (
+                    <p className="text-xs text-slate-400 py-12 text-center font-medium">No discount coupons generated in database yet.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-slate-100 text-slate-400 uppercase text-[9px] tracking-wider font-bold">
+                            <th className="pb-3 pl-2">Coupon Code</th>
+                            <th className="pb-3 text-center">Discount (₹)</th>
+                            <th className="pb-3 text-center">Usage Count</th>
+                            <th className="pb-3">Course Target</th>
+                            <th className="pb-3 text-center">Status</th>
+                            <th className="pb-3 text-right pr-2">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {couponsList.map((cp, idx) => {
+                            const isLimitReached = cp.usedCount >= cp.maxUses;
+                            const isExpired = cp.expiryDate && new Date(cp.expiryDate) < new Date();
+                            return (
+                              <tr key={cp._id || idx} className="text-slate-700 hover:bg-slate-50/50 transition-colors">
+                                <td className="py-3 pl-2 font-mono font-bold text-slate-900">
+                                  <span className="bg-slate-100 border border-slate-200 text-deepskyblue-dark px-2.5 py-1 rounded-lg text-xs tracking-wider">
+                                    {cp.code}
+                                  </span>
+                                </td>
+                                <td className="py-3 text-center font-extrabold text-emerald-600 text-xs">
+                                  ₹{cp.discountAmount} OFF
+                                </td>
+                                <td className="py-3 text-center">
+                                  <div className="font-bold text-slate-800">
+                                    {cp.usedCount} / {cp.maxUses}
+                                  </div>
+                                  <div className="w-20 bg-slate-100 rounded-full h-1.5 mx-auto mt-1 overflow-hidden">
+                                    <div
+                                      className={`h-full ${isLimitReached ? "bg-rose-500" : "bg-deepskyblue"}`}
+                                      style={{ width: `${Math.min(100, Math.round((cp.usedCount / cp.maxUses) * 100))}%` }}
+                                    />
+                                  </div>
+                                </td>
+                                <td className="py-3 font-medium text-slate-600">
+                                  {cp.course === "ALL" ? (
+                                    <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold">All Courses</span>
+                                  ) : (
+                                    <span className="text-[10px] text-slate-800 font-semibold">{cp.course}</span>
+                                  )}
+                                </td>
+                                <td className="py-3 text-center whitespace-nowrap">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleCouponStatus(cp)}
+                                    className={`px-2.5 py-1 rounded-full text-[9.5px] font-black uppercase tracking-wider cursor-pointer transition ${
+                                      !cp.isActive
+                                        ? "bg-slate-100 text-slate-400 border border-slate-200"
+                                        : isLimitReached
+                                        ? "bg-rose-50 text-rose-600 border border-rose-200"
+                                        : isExpired
+                                        ? "bg-amber-50 text-amber-600 border border-amber-200"
+                                        : "bg-emerald-50 text-emerald-600 border border-emerald-200"
+                                    }`}
+                                  >
+                                    {!cp.isActive ? "Inactive" : isLimitReached ? "Limit Reached" : isExpired ? "Expired" : "Active"}
+                                  </button>
+                                </td>
+                                <td className="py-3 text-right pr-2 space-x-1.5 whitespace-nowrap">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEditCoupon(cp)}
+                                    className="text-[10px] font-bold text-slate-700 hover:text-white border border-slate-200 bg-white hover:bg-deepskyblue hover:border-deepskyblue px-2.5 py-1.5 rounded-lg transition-all cursor-pointer inline-flex items-center gap-1"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                    <span>Edit</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteCoupon(cp._id)}
+                                    className="text-[10px] font-bold text-rose-600 hover:text-white border border-rose-200 bg-rose-50 hover:bg-rose-600 px-2.5 py-1.5 rounded-lg transition-all cursor-pointer inline-flex items-center gap-1"
+                                  >
+                                    <Trash className="h-3.5 w-3.5" />
+                                    <span>Delete</span>
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
 
           </main>
         </div>{/* end scrollable body */}
@@ -5797,6 +6564,10 @@ export default function AdminDashboardPage() {
                         <span className="font-semibold text-slate-800">{studentDetails.student.state || "—"}</span>
                       </div>
                       <div className="py-2.5 border-b border-slate-100 flex justify-between">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Last Qualification</span>
+                        <span className="font-semibold text-slate-800">{studentDetails.student.lastQualification || "N/A"}</span>
+                      </div>
+                      <div className="py-2.5 border-b border-slate-100 flex justify-between">
                         <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Enrolled Course</span>
                         <span className="font-semibold text-deepskyblue-dark">{studentDetails.student.course}</span>
                       </div>
@@ -5854,16 +6625,26 @@ export default function AdminDashboardPage() {
                               : "Deactivated candidate status. The student profile is currently disabled. Login access is blocked."}
                           </span>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleToggleStudentAccess(studentDetails.student._id)}
-                          className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer shrink-0 ${studentDetails.student.isActive !== false
-                            ? "bg-rose-50 text-rose-600 border border-rose-250 hover:bg-rose-600 hover:text-white"
-                            : "bg-emerald-50 text-emerald-650 border border-emerald-250 hover:bg-emerald-650 hover:text-white"
-                            }`}
-                        >
-                          {studentDetails.student.isActive !== false ? "Deactivate Profile" : "Activate Profile"}
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleStudentAccess(studentDetails.student._id)}
+                            className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer shrink-0 ${studentDetails.student.isActive !== false
+                              ? "bg-amber-50 text-amber-600 border border-amber-250 hover:bg-amber-600 hover:text-white"
+                              : "bg-emerald-50 text-emerald-650 border border-emerald-250 hover:bg-emerald-650 hover:text-white"
+                              }`}
+                          >
+                            {studentDetails.student.isActive !== false ? "Deactivate Profile" : "Activate Profile"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteStudent(studentDetails.student._id, studentDetails.student.name, studentDetails.student.registrationId)}
+                            className="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-600 border border-rose-250 hover:bg-rose-600 hover:text-white transition-all cursor-pointer shrink-0 inline-flex items-center gap-1"
+                          >
+                            <Trash className="h-3.5 w-3.5" />
+                            <span>Delete Student</span>
+                          </button>
+                        </div>
                       </div>
                       <div className="sm:col-span-2 space-y-2 pt-2">
                         <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px] block">Uploaded Documents (S3 Links)</span>

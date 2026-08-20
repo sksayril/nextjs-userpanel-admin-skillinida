@@ -13,6 +13,7 @@ export interface ICandidate extends Document {
   qualificationUrl: string;
   extraQualificationUrl?: string;
   signatureUrl?: string;
+  lastQualification?: string;
   course: string;
   category: string;
   gender: string;
@@ -22,6 +23,8 @@ export interface ICandidate extends Document {
   agentCode?: string | null;
   profilePicUrl?: string | null;
   isPaid: boolean;
+  isFreeRegistration?: boolean;
+  registeredPrice?: number;
   isActive: boolean;
   paymentDetails?: {
     orderId: string;
@@ -48,6 +51,7 @@ const CandidateSchema = new Schema<ICandidate>({
   qualificationUrl: { type: String, required: true },
   extraQualificationUrl: { type: String },
   signatureUrl: { type: String },
+  lastQualification: { type: String },
   course: { type: String, required: true },
   category: { type: String, default: "GEN", enum: ["GEN", "OBC", "SC", "ST"] },
   gender: { type: String, default: "MALE", enum: ["MALE", "FEMALE", "OTHER"] },
@@ -57,6 +61,8 @@ const CandidateSchema = new Schema<ICandidate>({
   agentCode: { type: String, default: null, index: true },
   profilePicUrl: { type: String, default: null },
   isPaid: { type: Boolean, default: false },
+  isFreeRegistration: { type: Boolean, default: false },
+  registeredPrice: { type: Number, default: 0 },
   isActive: { type: Boolean, default: true },
   paymentDetails: {
     orderId: { type: String },

@@ -32,6 +32,7 @@ type ReferredStudent = {
   state: string;
   pincode: string;
   course: string;
+  lastQualification?: string;
   category: string;
   gender: string;
   registrationId: string;
@@ -108,26 +109,34 @@ export default function AssociateDashboardPage() {
 
   const formatDate = (value?: string) => {
     if (!value) return "N/A";
-    return new Date(value).toLocaleDateString("en-IN", {
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return "N/A";
+    return d.toLocaleDateString("en-IN", {
       year: "numeric",
       month: "short",
       day: "numeric",
     });
   };
 
-  const filteredStudents = students.filter((student) => {
-    const term = searchQuery.toLowerCase().trim();
-    if (!term) return true;
-    return (
-      student.name?.toLowerCase().includes(term) ||
-      student.email?.toLowerCase().includes(term) ||
-      student.phone?.includes(term) ||
-      student.registrationId?.toLowerCase().includes(term) ||
-      student.course?.toLowerCase().includes(term) ||
-      student.district?.toLowerCase().includes(term) ||
-      student.fatherName?.toLowerCase().includes(term)
-    );
-  });
+  const filteredStudents = students
+    .filter((student) => {
+      const term = searchQuery.toLowerCase().trim();
+      if (!term) return true;
+      return (
+        student.name?.toLowerCase().includes(term) ||
+        student.email?.toLowerCase().includes(term) ||
+        student.phone?.includes(term) ||
+        student.registrationId?.toLowerCase().includes(term) ||
+        student.course?.toLowerCase().includes(term) ||
+        student.district?.toLowerCase().includes(term) ||
+        student.fatherName?.toLowerCase().includes(term)
+      );
+    })
+    .sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeB - timeA;
+    });
 
   if (loading) {
     return (
@@ -375,6 +384,7 @@ export default function AssociateDashboardPage() {
                 <DetailItem label="Gender" value={selectedStudent.gender} />
                 <DetailItem label="Category" value={selectedStudent.category} />
                 <DetailItem label="Course" value={selectedStudent.course} />
+                <DetailItem label="Last Qualification" value={selectedStudent.lastQualification || "N/A"} />
                 <DetailItem label="Email" value={selectedStudent.email} />
                 <DetailItem label="Phone" value={selectedStudent.phone} />
                 <DetailItem label="District" value={selectedStudent.district} />

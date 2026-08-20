@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import { Candidate } from "@/models/Candidate";
 import { Associate } from "@/models/Associate";
+import { Course } from "@/models/Course";
 import bcrypt from "bcryptjs";
 
 export async function POST(request: Request) {
@@ -21,6 +22,7 @@ export async function POST(request: Request) {
       admitUrl,
       qualificationUrl,
       extraQualificationUrl,
+      lastQualification,
       course,
       category,
       gender,
@@ -46,12 +48,13 @@ export async function POST(request: Request) {
       !state ||
       !admitUrl ||
       !qualificationUrl ||
+      !lastQualification ||
       !profilePicUrl ||
       !signatureUrl ||
       !course ||
       !password
     ) {
-      return NextResponse.json({ error: "Missing required registration fields (Name, PIN Code, State, Documents, Profile Picture, Signature, etc.)" }, { status: 400 });
+      return NextResponse.json({ error: "Missing required registration fields (Name, PIN Code, State, Last Qualification, Documents, etc.)" }, { status: 400 });
     }
 
     const cleanPhone = phone.replace(/\D/g, "");
@@ -113,6 +116,17 @@ export async function POST(request: Request) {
     const allowedGenders = ["MALE", "FEMALE", "OTHER"];
     const finalGender = allowedGenders.includes(gender?.toUpperCase()) ? gender.toUpperCase() : "MALE";
 
+    // Check registered course pricing policy at registration time
+    const registeredCourseDoc = await Course.findOne({
+      $or: [
+        { title: { $regex: new RegExp(`^${course.trim().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}$`, "i") } },
+        { code: { $regex: new RegExp(`^${course.trim().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}$`, "i") } }
+      ]
+    });
+
+    const isCoursePaidAtRegistration = registeredCourseDoc ? Boolean(registeredCourseDoc.isPaid && registeredCourseDoc.price > 0) : false;
+    const registeredPrice = registeredCourseDoc ? (registeredCourseDoc.price || 0) : 0;
+
     // 5. Store Candidate Document in MongoDB
     const candidateDoc = new Candidate({
       name,
@@ -126,6 +140,7 @@ export async function POST(request: Request) {
       admitUrl,
       qualificationUrl,
       extraQualificationUrl: extraQualificationUrl || undefined,
+      lastQualification,
       course,
       category: finalCategory,
       gender: finalGender,
@@ -137,6 +152,10 @@ export async function POST(request: Request) {
       signatureUrl: signatureUrl || null,
       pincode: pincode || undefined,
       state: state || undefined,
+      isPaid: !isCoursePaidAtRegistration,
+      isFreeRegistration: !isCoursePaidAtRegistration,
+      registeredPrice: registeredPrice,
+      createdAt: new Date(),
     });
 
     await candidateDoc.save();

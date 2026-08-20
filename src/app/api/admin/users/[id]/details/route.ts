@@ -99,6 +99,7 @@ export async function PUT(
       admitUrl,
       qualificationUrl,
       extraQualificationUrl,
+      lastQualification,
       profilePicUrl,
       signatureUrl,
       course,
@@ -122,6 +123,7 @@ export async function PUT(
     if (profilePicUrl) student.profilePicUrl = profilePicUrl;
     if (signatureUrl) student.signatureUrl = signatureUrl;
     if (extraQualificationUrl !== undefined) student.extraQualificationUrl = extraQualificationUrl;
+    if (lastQualification) student.lastQualification = lastQualification;
 
     if (email) {
       student.email = email.toLowerCase().trim();

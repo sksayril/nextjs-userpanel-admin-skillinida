@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import { Candidate } from "@/models/Candidate";
+import { Course } from "@/models/Course";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
@@ -31,7 +32,18 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
     }
 
-    const students = await Candidate.find({}).select("-password").sort({ createdAt: -1 });
+    const rawStudents = await Candidate.find({}).select("-password").sort({ createdAt: -1, _id: -1 }).lean();
+    const students = rawStudents.map((s: any) => {
+      let createdAt = s.createdAt;
+      if (!createdAt && s._id) {
+        try {
+          createdAt = new Date(parseInt(String(s._id).substring(0, 8), 16) * 1000);
+        } catch {
+          createdAt = new Date();
+        }
+      }
+      return { ...s, createdAt };
+    });
     return NextResponse.json({ success: true, students });
   } catch (error: any) {
     console.error("Fetch Students Error:", error);
@@ -60,6 +72,7 @@ export async function POST(request: Request) {
       admitUrl,
       qualificationUrl,
       extraQualificationUrl,
+      lastQualification,
       course,
       category,
       gender,
@@ -126,6 +139,17 @@ export async function POST(request: Request) {
     const allowedGenders = ["MALE", "FEMALE", "OTHER"];
     const finalGender = allowedGenders.includes(gender?.toUpperCase()) ? gender.toUpperCase() : "MALE";
 
+    // Check registered course pricing policy at registration time
+    const registeredCourseDoc = await Course.findOne({
+      $or: [
+        { title: { $regex: new RegExp(`^${course.trim().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}$`, "i") } },
+        { code: { $regex: new RegExp(`^${course.trim().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}$`, "i") } }
+      ]
+    });
+
+    const isCoursePaidAtRegistration = registeredCourseDoc ? Boolean(registeredCourseDoc.isPaid && registeredCourseDoc.price > 0) : false;
+    const registeredPrice = registeredCourseDoc ? (registeredCourseDoc.price || 0) : 0;
+
     const student = new Candidate({
       name,
       fatherName,
@@ -138,6 +162,7 @@ export async function POST(request: Request) {
       admitUrl,
       qualificationUrl,
       extraQualificationUrl: extraQualificationUrl || undefined,
+      lastQualification: lastQualification || "12th Standard (Higher Secondary / H.S.)",
       course,
       category: finalCategory,
       gender: finalGender,
@@ -146,6 +171,10 @@ export async function POST(request: Request) {
       originalPassword: password,
       pincode: pincode || undefined,
       state: state || undefined,
+      isPaid: !isCoursePaidAtRegistration,
+      isFreeRegistration: !isCoursePaidAtRegistration,
+      registeredPrice: registeredPrice,
+      createdAt: new Date(),
     });
 
     await student.save();

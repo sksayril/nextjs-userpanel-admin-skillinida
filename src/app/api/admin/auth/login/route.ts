@@ -6,14 +6,19 @@ import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 
 const JWT_SECRET = process.env.JWT_SECRET || "default-secret-key-change-me";
+const ADMIN_SECRET_CODE = "1234567891";
 
 export async function POST(request: Request) {
   try {
     await dbConnect();
-    const { email, password } = await request.json();
+    const { email, password, secretCode } = await request.json();
 
     if (!email || !password) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
+    }
+
+    if (!secretCode || secretCode.trim() !== ADMIN_SECRET_CODE) {
+      return NextResponse.json({ error: "Invalid Admin Secret Security Code" }, { status: 401 });
     }
 
     const admin = await Admin.findOne({ email: email.toLowerCase().trim() });
@@ -34,7 +39,7 @@ export async function POST(request: Request) {
         role: "admin",
       },
       JWT_SECRET,
-      { expiresIn: "1d" } // 1 day expiry for admins
+      { expiresIn: "1d" }
     );
 
     const cookieStore = await cookies();
@@ -42,7 +47,7 @@ export async function POST(request: Request) {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      maxAge: 60 * 60 * 24, // 1 day
+      maxAge: 60 * 60 * 24,
       path: "/",
     });
 

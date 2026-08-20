@@ -3,6 +3,7 @@ import dbConnect from "@/lib/dbConnect";
 import { Settings } from "@/models/Settings";
 import { Candidate } from "@/models/Candidate";
 import { Course } from "@/models/Course";
+import { Coupon } from "@/models/Coupon";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 import crypto from "crypto";
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
     }
 
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = await request.json();
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, couponCode } = await request.json();
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return NextResponse.json({ error: "Missing required payment verification details" }, { status: 400 });
@@ -77,10 +78,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Candidate profile not found" }, { status: 404 });
     }
 
+    const courseQuery = candidate.course ? candidate.course.trim() : "";
     const course = await Course.findOne({
       $or: [
-        { title: candidate.course },
-        { code: candidate.course }
+        { title: { $regex: new RegExp(`^${courseQuery.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}$`, "i") } },
+        { code: { $regex: new RegExp(`^${courseQuery.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}$`, "i") } }
       ]
     });
 
@@ -97,6 +99,19 @@ export async function POST(request: Request) {
     };
 
     await candidate.save({ validateBeforeSave: false });
+
+    if (couponCode) {
+      try {
+        const cleanCode = couponCode.trim().toUpperCase();
+        const appliedCoupon = await Coupon.findOne({ code: cleanCode });
+        if (appliedCoupon) {
+          appliedCoupon.usedCount += 1;
+          await appliedCoupon.save();
+        }
+      } catch (cErr) {
+        console.error("Failed to increment coupon count:", cErr);
+      }
+    }
 
     return NextResponse.json({
       success: true,

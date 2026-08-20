@@ -32,7 +32,7 @@ export async function GET() {
 
     const classes = await LiveClass.find({})
       .populate("students", "name email registrationId")
-      .sort({ startTime: 1 });
+      .sort({ createdAt: -1, startTime: -1, _id: -1 });
 
     return NextResponse.json({ success: true, classes });
   } catch (error: any) {

@@ -11,6 +11,7 @@ import {
 } from "@/components/RegistrationIdCard";
 import { registrationIdCardPrintStyles } from "@/components/registrationIdCardPrintStyles";
 import { WEST_BENGAL_DISTRICTS } from "@/lib/westBengalDistricts";
+import { QUALIFICATION_OPTIONS } from "@/lib/qualifications";
 import {
   User,
   Users,
@@ -45,6 +46,7 @@ export default function SignupPage() {
     phone: "",
     district: "",
     address: "",
+    lastQualification: "",
     course: "",
     admitUrl: "",
     qualificationUrl: "",
@@ -264,8 +266,8 @@ export default function SignupPage() {
       }
     }
     if (step === 2) {
-      if (!formData.course || !formData.admitUrl || !formData.qualificationUrl || !formData.profilePicUrl || !formData.signatureUrl) {
-        setErrorMsg("Interested course, Admit Card, Profile photo, Qualification certificate, and Candidate Signature are required");
+      if (!formData.course || !formData.lastQualification || !formData.admitUrl || !formData.qualificationUrl || !formData.profilePicUrl || !formData.signatureUrl) {
+        setErrorMsg("Interested course, Last Qualification, Admit Card, Profile photo, Qualification certificate, and Candidate Signature are required");
         return;
       }
     }
@@ -619,7 +621,7 @@ export default function SignupPage() {
               {/* Interested Course */}
               <div className="space-y-1.5">
                 <label htmlFor="course" className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  Interested Course
+                  Interested Course <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
@@ -639,6 +641,35 @@ export default function SignupPage() {
                     {coursesList.map((courseOption, index) => (
                       <option key={index} value={courseOption.title} className="bg-white text-slate-850">
                         {courseOption.title} ({courseOption.code}) — {courseOption.isPaid ? `Paid (₹${courseOption.price})` : "Free"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Last Qualification */}
+              <div className="space-y-1.5">
+                <label htmlFor="lastQualification" className="block text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  Last Educational Qualification <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
+                    <FileText className="h-4 w-4" />
+                  </span>
+                  <select
+                    id="lastQualification"
+                    suppressHydrationWarning
+                    required
+                    value={formData.lastQualification}
+                    onChange={handleChange}
+                    className="block w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:outline-none focus:border-deepskyblue focus:ring-4 focus:ring-deepskyblue/10"
+                  >
+                    <option value="" disabled>
+                      Select Last Qualification
+                    </option>
+                    {QUALIFICATION_OPTIONS.map((qualOption, index) => (
+                      <option key={index} value={qualOption} className="bg-white text-slate-850">
+                        {qualOption}
                       </option>
                     ))}
                   </select>
@@ -1094,6 +1125,7 @@ export default function SignupPage() {
                       phone: "",
                       district: "",
                       address: "",
+                      lastQualification: "",
                       course: "",
                       admitUrl: "",
                       qualificationUrl: "",

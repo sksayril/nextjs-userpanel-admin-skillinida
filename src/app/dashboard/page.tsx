@@ -21,7 +21,8 @@ import {
   ChevronDown,
   BookMarked,
   ExternalLink,
-  Shield
+  Shield,
+  Tag
 } from "lucide-react";
 import { resolveFileUrl } from "@/lib/fileUrl";
 import { formatExamSchedule, isExamNotStarted, isExamWindowClosed, formatExamWindowEnd } from "@/lib/examSchedule";
@@ -89,6 +90,11 @@ export default function DashboardPage() {
 
   const { printTarget, triggerPrint } = usePrintTrigger();
   const [paymentLoading, setPaymentLoading] = useState<boolean>(false);
+
+  // Coupon Code States
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
 
   // Exam Review States
   const [reviewResult, setReviewResult] = useState<any>(null);
@@ -320,6 +326,43 @@ export default function DashboardPage() {
     }
   };
 
+  const handleApplyCoupon = async () => {
+    if (!couponInput || !couponInput.trim()) {
+      toast.error("Please enter a coupon code");
+      return;
+    }
+    setApplyingCoupon(true);
+    try {
+      const res = await fetch("/api/coupons/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: couponInput.trim(),
+          courseTitle: candidate?.course
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.coupon) {
+        setAppliedCoupon(data.coupon);
+        toast.success(data.message || `Coupon "${data.coupon.code}" applied! You get ₹${data.coupon.discountAmount} OFF.`);
+      } else {
+        setAppliedCoupon(null);
+        toast.error(data.error || "Invalid or expired coupon code.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Network error applying coupon.");
+    } finally {
+      setApplyingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponInput("");
+    toast.success("Coupon code removed.");
+  };
+
   const handlePayment = async () => {
     setPaymentLoading(true);
     try {
@@ -334,9 +377,21 @@ export default function DashboardPage() {
 
       // 2. Create payment order via /api/payment/create-order
       const orderRes = await fetch("/api/payment/create-order", {
-        method: "POST"
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          couponCode: appliedCoupon?.code || ""
+        })
       });
       const orderData = await orderRes.json();
+
+      if (orderRes.ok && orderData.success && orderData.isFreeWithCoupon) {
+        toast.success(orderData.message || "100% Discount coupon applied! Full course access granted.");
+        setCandidate((prev: any) => ({ ...prev, isPaid: true }));
+        setPaymentLoading(false);
+        return;
+      }
+
       if (!orderRes.ok || !orderData.success || !orderData.order) {
         toast.error(orderData.error || "Failed to initialize enrollment payment order.");
         setPaymentLoading(false);
@@ -383,7 +438,8 @@ export default function DashboardPage() {
               body: JSON.stringify({
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature
+                razorpay_signature: response.razorpay_signature,
+                couponCode: appliedCoupon?.code || ""
               })
             });
             const verifyData = await verifyRes.json();
@@ -674,7 +730,14 @@ export default function DashboardPage() {
       </div>
     );
 
-  const isDashboardLocked = courseData?.isPaid && !candidate?.isPaid;
+  const isCandidatePaymentExempt = Boolean(
+    candidate?.isPaid ||
+    candidate?.isFreeRegistration ||
+    candidate?.registeredPrice === 0 ||
+    (courseData && (!courseData.isPaid || courseData.price === 0))
+  );
+
+  const isDashboardLocked = !isCandidatePaymentExempt;
 
 
   const renderPrintIdCard = (student: any) => {
@@ -1012,7 +1075,7 @@ export default function DashboardPage() {
                 <div className="flex items-center">
                   <span className="w-[38%] text-slate-700 font-bold">Educational Qualification</span>
                   <span className="w-[4%] font-bold text-slate-500">:</span>
-                  <span className="w-[58%] font-semibold text-slate-800">Graduate</span>
+                  <span className="w-[58%] font-semibold text-slate-800">{candidate?.lastQualification || student?.lastQualification || "N/A"}</span>
                 </div>
                 <div className="flex items-center">
                   <span className="w-[38%] text-slate-700 font-bold">Course</span>
@@ -1646,29 +1709,85 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            <div className="w-full bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
-              <div className="text-left">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Course Enrollment Fee</span>
-                <span className="text-3xl font-black text-slate-900 leading-tight">₹{courseData?.price || 0}</span>
-                <span className="text-[10px] text-slate-400 font-medium block mt-0.5">One-time payment, lifetime syllabus access</span>
+            <div className="w-full bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div className="text-left">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Course Enrollment Fee</span>
+                  <div className="flex items-baseline gap-2">
+                    {appliedCoupon ? (
+                      <>
+                        <span className="text-xl font-bold text-slate-400 line-through">₹{courseData?.price || 500}</span>
+                        <span className="text-3xl font-black text-emerald-600 leading-tight">₹{appliedCoupon.finalPrice}</span>
+                      </>
+                    ) : (
+                      <span className="text-3xl font-black text-slate-900 leading-tight">₹{courseData?.price || 0}</span>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-medium block mt-0.5">One-time payment, lifetime syllabus access</span>
+                </div>
+
+                <button
+                  onClick={handlePayment}
+                  disabled={paymentLoading}
+                  className="w-full sm:w-auto py-3 px-8 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-sm shadow-md shadow-deepskyblue/25 cursor-pointer disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                >
+                  {paymentLoading ? (
+                    <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <span>{appliedCoupon && appliedCoupon.finalPrice === 0 ? "Activate Free Access Now" : "Unlock Enrolled Course"}</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                      </svg>
+                    </>
+                  )}
+                </button>
               </div>
 
-              <button
-                onClick={handlePayment}
-                disabled={paymentLoading}
-                className="w-full sm:w-auto py-3 px-8 rounded-xl bg-gradient-to-r from-deepskyblue to-sky-600 hover:from-deepskyblue-dark hover:to-sky-700 font-bold text-white text-sm shadow-md shadow-deepskyblue/25 cursor-pointer disabled:opacity-50 transition-all flex items-center justify-center gap-2"
-              >
-                {paymentLoading ? (
-                  <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              {/* Coupon Input Box */}
+              <div className="border-t border-slate-100 pt-4 text-left space-y-2">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block flex items-center gap-1">
+                  <Tag className="h-3 w-3 text-deepskyblue" />
+                  <span>Have a Promo / Discount Coupon Code?</span>
+                </span>
+
+                {appliedCoupon ? (
+                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
+                      <div>
+                        <span className="text-xs font-mono font-bold text-emerald-800 tracking-wider uppercase">{appliedCoupon.code}</span>
+                        <span className="text-[10px] text-emerald-600 font-semibold block">₹{appliedCoupon.discountAmount} OFF Discount Applied!</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemoveCoupon}
+                      className="text-[10px] font-bold text-rose-600 hover:underline px-2 py-1 cursor-pointer"
+                    >
+                      Remove
+                    </button>
+                  </div>
                 ) : (
-                  <>
-                    <span>Unlock Enrolled Course</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                    </svg>
-                  </>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Enter Coupon Code (e.g. SAVE200)"
+                      value={couponInput}
+                      onChange={e => setCouponInput(e.target.value.toUpperCase())}
+                      className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:outline-none focus:border-deepskyblue focus:bg-white font-mono font-bold tracking-wider"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyCoupon}
+                      disabled={applyingCoupon || !couponInput.trim()}
+                      className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition disabled:opacity-50 cursor-pointer shrink-0"
+                    >
+                      {applyingCoupon ? "Checking..." : "Apply Coupon"}
+                    </button>
+                  </div>
                 )}
-              </button>
+              </div>
             </div>
 
             <div className="pt-4">
