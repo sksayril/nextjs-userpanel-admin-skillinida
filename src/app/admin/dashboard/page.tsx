@@ -56,7 +56,8 @@ import {
   DollarSign,
   Copy,
   Eye,
-  Tag
+  Tag,
+  Download
 } from "lucide-react";
 
 // ── Sidebar Theme Definitions ────────────────────────────────────────────────
@@ -366,7 +367,8 @@ export default function AdminDashboardPage() {
     description: "",
     duration: "",
     isPaid: false,
-    price: 0
+    price: 0,
+    isActive: true
   });
 
   // 2. Register Student
@@ -878,7 +880,7 @@ export default function AdminDashboardPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         setSuccessMsg("Course created successfully!");
-        setCourseForm({ title: "", code: "", description: "", duration: "", isPaid: false, price: 0 });
+        setCourseForm({ title: "", code: "", description: "", duration: "", isPaid: false, price: 0, isActive: true });
         await fetchAllData();
         setTimeout(() => setSuccessMsg(""), 4000);
       } else {
@@ -898,12 +900,13 @@ export default function AdminDashboardPage() {
       duration: course.duration,
       isPaid: !!course.isPaid,
       price: course.price || 0,
+      isActive: course.isActive !== false,
     });
   };
 
   const handleCancelEditCourse = () => {
     setEditingCourseId(null);
-    setCourseForm({ title: "", code: "", description: "", duration: "", isPaid: false, price: 0 });
+    setCourseForm({ title: "", code: "", description: "", duration: "", isPaid: false, price: 0, isActive: true });
   };
 
   const handleUpdateCourse = async (e: React.FormEvent) => {
@@ -921,7 +924,7 @@ export default function AdminDashboardPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         setSuccessMsg("Course updated successfully!");
-        setCourseForm({ title: "", code: "", description: "", duration: "", isPaid: false, price: 0 });
+        setCourseForm({ title: "", code: "", description: "", duration: "", isPaid: false, price: 0, isActive: true });
         setEditingCourseId(null);
         await fetchAllData();
         setTimeout(() => setSuccessMsg(""), 4000);
@@ -930,6 +933,32 @@ export default function AdminDashboardPage() {
       }
     } catch (err) {
       setErrorMsg("Network error updating course.");
+    }
+  };
+
+  const handleToggleCourseActive = async (course: any) => {
+    const newStatus = course.isActive === false ? true : false;
+    const actionLabel = newStatus ? "activate" : "deactivate";
+    if (!confirm(`Are you sure you want to ${actionLabel} "${course.title}"?\n\n${!newStatus ? "Note: Deactivating will hide this course from new student registration, but existing students will retain full access to their materials & exams." : "Activating will make this course available on student registration forms."}`)) return;
+
+    setErrorMsg("");
+    setSuccessMsg("");
+    try {
+      const res = await fetch(`/api/admin/courses/${course._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: newStatus })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSuccessMsg(`Course ${newStatus ? "activated" : "deactivated"} successfully!`);
+        await fetchAllData();
+        setTimeout(() => setSuccessMsg(""), 4000);
+      } else {
+        setErrorMsg(data.error || `Failed to ${actionLabel} course.`);
+      }
+    } catch (err) {
+      setErrorMsg(`Network error ${actionLabel}ing course.`);
     }
   };
 
@@ -1068,6 +1097,100 @@ export default function AdminDashboardPage() {
     link.click();
     document.body.removeChild(link);
     toast.success("Attendance history report exported successfully!");
+  };
+
+  const filteredResults = resultsList.filter(res => {
+    if (resultsCourseFilter && res.candidateId?.course !== resultsCourseFilter) {
+      return false;
+    }
+    if (resultsExamTitleFilter) {
+      const examTitle = res.quizTitle || res.quizId?.title || "";
+      if (examTitle.trim().toLowerCase() !== resultsExamTitleFilter.trim().toLowerCase()) {
+        return false;
+      }
+    }
+    const resultDateObj = res.date ? new Date(res.date) : res.createdAt ? new Date(res.createdAt) : null;
+    if (resultDateObj && !isNaN(resultDateObj.getTime())) {
+      if (resultsStartDate) {
+        const start = new Date(resultsStartDate);
+        start.setHours(0, 0, 0, 0);
+        if (resultDateObj < start) return false;
+      }
+      if (resultsEndDate) {
+        const end = new Date(resultsEndDate);
+        end.setHours(23, 59, 59, 999);
+        if (resultDateObj > end) return false;
+      }
+    }
+    if (resultsSearchQuery) {
+      const query = resultsSearchQuery.toLowerCase();
+      const studentName = res.candidateId?.name?.toLowerCase() || "";
+      const regId = res.candidateId?.registrationId?.toLowerCase() || "";
+      const course = res.candidateId?.course?.toLowerCase() || "";
+      const examTitle = (res.quizTitle || res.quizId?.title || "").toLowerCase();
+
+      return studentName.includes(query) || regId.includes(query) || course.includes(query) || examTitle.includes(query);
+    }
+    return true;
+  });
+
+  const exportResultsToExcel = async () => {
+    if (resultsList.length === 0) {
+      toast.error("No exam results available to export.");
+      return;
+    }
+
+    const targetList = filteredResults;
+    if (targetList.length === 0) {
+      toast.error("No results match your active search/filter criteria.");
+      return;
+    }
+
+    try {
+      const XLSX = await import("xlsx");
+
+      const reportRows = targetList.map(r => {
+        const studentName = r.candidateId?.name || "Deleted Candidate";
+        const regId = r.candidateId?.registrationId || "N/A";
+        const course = r.candidateId?.course || "N/A";
+        const examTitle = r.quizTitle || r.quizId?.title || "N/A";
+
+        const counts = getResultQuestionCounts(r);
+        const score = r.score ?? 0;
+        const total = r.totalMarks || r.total || counts.totalQuestions || 100;
+        const percentage = r.percentage !== undefined ? `${r.percentage}%` : `${Math.round((score / Math.max(1, total)) * 100)}%`;
+        const passStatus = (r.percentage || 0) >= 50 ? "PASS" : "FAIL";
+        const markStatus = r.isRevealed ? "Approved / Revealed" : "Pending / Hidden";
+        const certStatus = r.certificateAssigned ? "Approved / Assigned" : "Not Assigned";
+        const dateTaken = formatSafeDate(r.date || r.createdAt, true);
+
+        return {
+          "Reg ID": regId,
+          "Student Name": studentName,
+          "Course Cohort": course,
+          "Exam Title": examTitle,
+          "Total Questions": counts.totalQuestions || "--",
+          "Correct": counts.correctCount || 0,
+          "Wrong": counts.incorrectCount || 0,
+          "Score": `${score} / ${total}`,
+          "Percentage": percentage,
+          "Result Status": passStatus,
+          "Marksheet Reveal": markStatus,
+          "Certificate Status": certStatus,
+          "Date Taken": dateTaken,
+        };
+      });
+
+      const worksheet = XLSX.utils.json_to_sheet(reportRows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Exam Results Ledger");
+
+      XLSX.writeFile(workbook, `exam_results_report_${new Date().toISOString().split('T')[0]}.xlsx`);
+      toast.success(`Successfully exported ${targetList.length} exam result records to Excel!`);
+    } catch (err) {
+      console.error("Excel Export Error:", err);
+      toast.error("Failed to generate Excel report.");
+    }
   };
 
   const handleSaveSettings = async (e: React.FormEvent) => {
@@ -1662,6 +1785,38 @@ export default function AdminDashboardPage() {
     } catch (err) {
       console.error(err);
       toast.error("Network error updating student status");
+    }
+  };
+
+  const handleApprovePayment = async (student: any) => {
+    const studentName = student.name || "Student";
+    const regId = student.registrationId || "";
+    if (!confirm(`Are you sure you want to approve payment for "${studentName}" (${regId})?\n\nThis will grant full paid access to course materials, modules, and exams.`)) return;
+
+    try {
+      const res = await fetch(`/api/admin/users/${student._id}/approve-payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isPaid: true })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success(data.message || `Payment approved for ${studentName}`);
+        setStudentsList((prev: any[]) =>
+          prev.map((s: any) => (s._id === student._id ? { ...s, isPaid: true, isFreeRegistration: false } : s))
+        );
+        if (selectedStudentId === student._id && studentDetails?.student) {
+          setStudentDetails((prev: any) => ({
+            ...prev,
+            student: { ...prev.student, isPaid: true, isFreeRegistration: false }
+          }));
+        }
+      } else {
+        toast.error(data.error || "Failed to approve payment");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Network error approving payment");
     }
   };
 
@@ -2769,7 +2924,12 @@ export default function AdminDashboardPage() {
     );
   }
 
-  const courseOptions = coursesList.map(c => c.title);
+  const courseOptions = Array.from(
+    new Set([
+      ...coursesList.map(c => c.title),
+      ...studentsList.map(s => s.course).filter(Boolean)
+    ])
+  ).sort((a, b) => a.localeCompare(b));
   const districtOptions = Array.from(
     new Set([
       ...ALL_INDIA_DISTRICTS,
@@ -3655,9 +3815,19 @@ export default function AdminDashboardPage() {
                                   }
                                   if (statusInfo.status === "pending") {
                                     return (
-                                      <span className="px-2 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider bg-amber-50 text-amber-655 border border-amber-100">
-                                        Pending
-                                      </span>
+                                      <div className="flex flex-col items-center gap-1">
+                                        <span className="px-2 py-0.5 rounded-full text-[9px] uppercase font-black tracking-wider bg-amber-50 text-amber-655 border border-amber-200">
+                                          Pending
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleApprovePayment(stud)}
+                                          className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[8.5px] font-black uppercase tracking-wider transition cursor-pointer shadow-xs"
+                                          title="Approve payment for this student"
+                                        >
+                                          Approve
+                                        </button>
+                                      </div>
                                     );
                                   }
                                   return (
@@ -3676,11 +3846,19 @@ export default function AdminDashboardPage() {
                                   <span className="text-[10px] text-slate-400 italic">Direct</span>
                                 )}
                               </td>
-                              <td className="py-3.5 px-3 text-slate-400 font-medium whitespace-nowrap">
-                                {formatSafeDate(stud.createdAt)}
-                              </td>
-                              <td className="py-3.5 pr-4 pl-3 text-right min-w-max">
+                              <td className="py-3.5 px-3 text-slate-400 font-medium">
                                 <div className="flex items-center justify-end gap-2">
+                                  {getStudentPaymentStatus(stud, coursesList).status === "pending" && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleApprovePayment(stud)}
+                                      className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-[10px] font-extrabold text-white shadow shadow-emerald-600/20 transition cursor-pointer shrink-0 flex items-center gap-1"
+                                      title="Approve student payment"
+                                    >
+                                      <CheckCircle className="h-3 w-3" />
+                                      <span>Approve Pay</span>
+                                    </button>
+                                  )}
                                   <button
                                     onClick={() => handleViewStudentDetails(stud._id)}
                                     className="p-1.5 rounded-xl bg-deepskyblue/10 text-deepskyblue-dark hover:bg-deepskyblue hover:text-white transition cursor-pointer shrink-0 inline-flex items-center justify-center"
@@ -3820,6 +3998,19 @@ export default function AdminDashboardPage() {
                     />
                   </div>
 
+                  <div className="flex items-center gap-2 pt-1 pb-1">
+                    <input
+                      type="checkbox"
+                      id="courseIsActiveCheckbox"
+                      checked={courseForm.isActive !== false}
+                      onChange={e => setCourseForm(prev => ({ ...prev, isActive: e.target.checked }))}
+                      className="h-4 w-4 rounded border-slate-300 text-deepskyblue focus:ring-deepskyblue cursor-pointer"
+                    />
+                    <label htmlFor="courseIsActiveCheckbox" className="text-xs font-bold text-slate-700 cursor-pointer">
+                      Course Active <span className="text-[10px] text-slate-400 font-normal">(Visible on registration)</span>
+                    </label>
+                  </div>
+
                   <div className="space-y-2">
                     <button
                       type="submit"
@@ -3861,9 +4052,15 @@ export default function AdminDashboardPage() {
                               <div className="space-y-1">
                                 <div className="flex flex-wrap items-center gap-1.5">
                                   <span className="text-[9px] font-bold bg-deepskyblue/10 text-deepskyblue-dark px-2 py-0.5 rounded-full uppercase tracking-wider">{course.code}</span>
+                                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${course.isActive !== false
+                                    ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                                    : "bg-rose-500/10 text-rose-600 border-rose-500/20"
+                                    }`}>
+                                    {course.isActive !== false ? "Active" : "Deactivated"}
+                                  </span>
                                   <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${course.isPaid
                                     ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
-                                    : "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                                    : "bg-slate-500/10 text-slate-600 border-slate-500/20"
                                     }`}>
                                     {course.isPaid ? `Paid (₹${course.price})` : "Free"}
                                   </span>
@@ -3871,11 +4068,21 @@ export default function AdminDashboardPage() {
                                 <h4 className="text-xs font-bold text-slate-800 mt-1">{course.title}</h4>
                                 <p className="text-[10px] text-slate-400 font-semibold">{course.duration} duration</p>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-xl h-fit">
+                              <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
+                                <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1.5 rounded-xl h-fit">
                                   <BookOpen className="h-3.5 w-3.5 text-deepskyblue" />
                                   <span>{course.modules?.length || 0} Modules</span>
                                 </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleCourseActive(course)}
+                                  className={`px-2.5 py-1.5 rounded-xl text-[10px] font-bold cursor-pointer transition border ${course.isActive !== false
+                                    ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+                                    : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                                    }`}
+                                >
+                                  <span>{course.isActive !== false ? "Deactivate" : "Activate"}</span>
+                                </button>
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -3893,7 +4100,7 @@ export default function AdminDashboardPage() {
                                 <button
                                   type="button"
                                   onClick={() => handleEditCourseClick(course)}
-                                  className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-655 hover:text-slate-850 rounded-xl text-[10px] font-bold cursor-pointer transition flex items-center gap-1"
+                                  className="px-2 py-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-655 hover:text-slate-850 rounded-xl text-[10px] font-bold cursor-pointer transition flex items-center gap-1"
                                 >
                                   <Pencil className="h-3.5 w-3.5" />
                                   <span>Edit</span>
@@ -3901,7 +4108,7 @@ export default function AdminDashboardPage() {
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteCourse(course._id)}
-                                  className="px-2.5 py-1.5 bg-rose-50 border border-rose-150 hover:bg-rose-600 hover:border-transparent text-rose-600 hover:text-white rounded-xl text-[10px] font-bold cursor-pointer transition flex items-center gap-1"
+                                  className="px-2 py-1.5 bg-rose-50 border border-rose-150 hover:bg-rose-600 hover:border-transparent text-rose-600 hover:text-white rounded-xl text-[10px] font-bold cursor-pointer transition flex items-center gap-1"
                                 >
                                   <Trash className="h-3.5 w-3.5" />
                                   <span>Delete</span>
@@ -5140,11 +5347,22 @@ export default function AdminDashboardPage() {
 
             {activeTab === "results" && (
               <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-md shadow-slate-200/40 space-y-5">
-                <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-4">
                   <div>
                     <h3 className="text-sm font-bold text-slate-900">Exam Results Registry</h3>
                     <p className="text-[10px] text-slate-400 mt-0.5">Master ledger of completed student examinations</p>
                   </div>
+                  {resultsList.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={exportResultsToExcel}
+                      className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 transition cursor-pointer flex items-center gap-2 self-start sm:self-auto"
+                      title="Export all filtered exam results to Excel (.xlsx)"
+                    >
+                      <Download className="h-4 w-4" />
+                      <span>Export Excel Report</span>
+                    </button>
+                  )}
                 </div>
 
                 {resultsList.length > 0 && (
@@ -5270,50 +5488,7 @@ export default function AdminDashboardPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {resultsList
-                          .filter(res => {
-                            // 1. Filter by Course
-                            if (resultsCourseFilter && res.candidateId?.course !== resultsCourseFilter) {
-                              return false;
-                            }
-
-                            // 2. Filter by Exam Title
-                            if (resultsExamTitleFilter) {
-                              const examTitle = res.quizTitle || res.quizId?.title || "";
-                              if (examTitle.trim().toLowerCase() !== resultsExamTitleFilter.trim().toLowerCase()) {
-                                return false;
-                              }
-                            }
-
-                            // 3. Filter by Date Range (Start Date to End Date)
-                            const resultDateObj = res.date ? new Date(res.date) : res.createdAt ? new Date(res.createdAt) : null;
-                            if (resultDateObj && !isNaN(resultDateObj.getTime())) {
-                              if (resultsStartDate) {
-                                const start = new Date(resultsStartDate);
-                                start.setHours(0, 0, 0, 0);
-                                if (resultDateObj < start) return false;
-                              }
-                              if (resultsEndDate) {
-                                const end = new Date(resultsEndDate);
-                                end.setHours(23, 59, 59, 999);
-                                if (resultDateObj > end) return false;
-                              }
-                            }
-
-                            // 4. Search Query filter
-                            if (resultsSearchQuery) {
-                              const query = resultsSearchQuery.toLowerCase();
-                              const studentName = res.candidateId?.name?.toLowerCase() || "";
-                              const regId = res.candidateId?.registrationId?.toLowerCase() || "";
-                              const course = res.candidateId?.course?.toLowerCase() || "";
-                              const examTitle = (res.quizTitle || res.quizId?.title || "").toLowerCase();
-
-                              return studentName.includes(query) || regId.includes(query) || course.includes(query) || examTitle.includes(query);
-                            }
-
-                            return true;
-                          })
-                          .map((res, idx) => (
+                        {filteredResults.map((res, idx) => (
                             <tr key={idx} className="text-slate-700 hover:bg-slate-50/50 hover:text-slate-900 transition-colors">
                               <td className="py-3.5 pl-4 pr-3 font-semibold whitespace-nowrap">
                                 {res.candidateId?.name || "Deleted Candidate"}
@@ -6615,6 +6790,31 @@ export default function AdminDashboardPage() {
                             )}
                           </div>
                         )}
+                      </div>
+                      <div className="py-3 px-4 bg-slate-50 border border-slate-200/65 rounded-2xl sm:col-span-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Payment Access Status</span>
+                          <span className="text-[10.5px] text-slate-500 font-medium leading-relaxed">
+                            {(() => {
+                              const payStatus = getStudentPaymentStatus(studentDetails.student, coursesList);
+                              return payStatus.status === "paid"
+                                ? "Payment status is Approved / Paid. Student has 100% access to study materials and online exams."
+                                : "Payment status is Pending / Unpaid. Course material and exam access is restricted.";
+                            })()}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {getStudentPaymentStatus(studentDetails.student, coursesList).status === "pending" && (
+                            <button
+                              type="button"
+                              onClick={() => handleApprovePayment(studentDetails.student)}
+                              className="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white transition-all cursor-pointer shrink-0 inline-flex items-center gap-1 shadow-xs"
+                            >
+                              <CheckCircle className="h-3.5 w-3.5" />
+                              <span>Approve Payment</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <div className="py-3 px-4 bg-slate-50 border border-slate-200/65 rounded-2xl sm:col-span-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div className="flex flex-col gap-0.5">

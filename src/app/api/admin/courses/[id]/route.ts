@@ -34,15 +34,26 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { title, description, duration, code, modules, isPaid, price } = body;
-
-    if (!title || !description || !duration || !code) {
-      return NextResponse.json({ error: "Title, description, duration, and code are required" }, { status: 400 });
-    }
+    const { title, description, duration, code, modules, isPaid, price, isActive } = body;
 
     const course = await Course.findById(id);
     if (!course) {
       return NextResponse.json({ error: "Course not found" }, { status: 404 });
+    }
+
+    // Quick toggle mode: if only isActive is passed
+    if (isActive !== undefined && !title && !code) {
+      course.isActive = !!isActive;
+      await course.save();
+      return NextResponse.json({
+        success: true,
+        message: `Course ${course.isActive ? "activated" : "deactivated"} successfully`,
+        course,
+      });
+    }
+
+    if (!title || !description || !duration || !code) {
+      return NextResponse.json({ error: "Title, description, duration, and code are required" }, { status: 400 });
     }
 
     // Check code uniqueness (if code is changed)
@@ -70,6 +81,7 @@ export async function PUT(
     if (modules) course.modules = modules;
     course.isPaid = !!isPaid;
     course.price = price ? Number(price) : 0;
+    if (isActive !== undefined) course.isActive = !!isActive;
 
     await course.save();
 

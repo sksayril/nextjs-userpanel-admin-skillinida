@@ -116,13 +116,20 @@ export async function POST(request: Request) {
     const allowedGenders = ["MALE", "FEMALE", "OTHER"];
     const finalGender = allowedGenders.includes(gender?.toUpperCase()) ? gender.toUpperCase() : "MALE";
 
-    // Check registered course pricing policy at registration time
+    // Check registered course pricing policy & active status at registration time
     const registeredCourseDoc = await Course.findOne({
       $or: [
         { title: { $regex: new RegExp(`^${course.trim().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}$`, "i") } },
         { code: { $regex: new RegExp(`^${course.trim().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}$`, "i") } }
       ]
     });
+
+    if (registeredCourseDoc && registeredCourseDoc.isActive === false) {
+      return NextResponse.json(
+        { error: "The selected course is currently deactivated and not accepting new student registrations." },
+        { status: 400 }
+      );
+    }
 
     const isCoursePaidAtRegistration = registeredCourseDoc ? Boolean(registeredCourseDoc.isPaid && registeredCourseDoc.price > 0) : false;
     const registeredPrice = registeredCourseDoc ? (registeredCourseDoc.price || 0) : 0;

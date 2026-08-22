@@ -14,6 +14,7 @@ export interface ICourse extends Document {
   code: string;
   isPaid: boolean;
   price: number;
+  isActive: boolean;
   modules: ICourseModule[];
   createdAt: Date;
 }
@@ -32,6 +33,7 @@ const CourseSchema = new Schema<ICourse>({
   code: { type: String, required: true, unique: true, index: true },
   isPaid: { type: Boolean, default: false },
   price: { type: Number, default: 0 },
+  isActive: { type: Boolean, default: true },
   modules: [CourseModuleSchema],
   createdAt: { type: Date, default: Date.now },
 });

@@ -5,7 +5,8 @@ import { Course } from "@/models/Course";
 export async function GET() {
   try {
     await dbConnect();
-    const courses = await Course.find({}).sort({ title: 1 });
+    // Only return active courses for student registration / public selection
+    const courses = await Course.find({ isActive: { $ne: false } }).sort({ title: 1 });
     return NextResponse.json({ success: true, courses });
   } catch (error: any) {
     console.error("Public Fetch Courses Error:", error);

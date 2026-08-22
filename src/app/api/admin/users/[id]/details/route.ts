@@ -109,7 +109,21 @@ export async function PUT(
       pincode,
       state,
       agentCode,
+      isPaid,
     } = body;
+
+    if (isPaid !== undefined) {
+      student.isPaid = !!isPaid;
+      if (student.isPaid && !student.paymentDetails?.paidAt) {
+        student.paymentDetails = {
+          orderId: student.paymentDetails?.orderId || `MANUAL-${Date.now()}`,
+          paymentId: student.paymentDetails?.paymentId || `PAY-ADMIN-GRANT-${Date.now()}`,
+          signature: student.paymentDetails?.signature || "MANUAL_APPROVAL_ADMIN",
+          amount: student.paymentDetails?.amount || student.registeredPrice || 0,
+          paidAt: new Date(),
+        };
+      }
+    }
 
     if (name) student.name = name;
     if (fatherName) student.fatherName = fatherName;
